@@ -1,15 +1,16 @@
 {
-	"name": "obsidian-sample-plugin",
+	"name": "backlink-cache",
 	"version": "1.0.0",
-	"description": "This is a sample plugin for Obsidian (https://obsidian.md)",
+	"description": "Stores backlink cache to speed up `app.metadataCache.getBacklinksForFile`",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
-		"version": "node version-bump.mjs && git add manifest.json versions.json"
+		"version": "node version-bump.mjs && git add manifest.json versions.json",
+		"lint": "eslint . --ext .ts --fix"
 	},
 	"keywords": [],
-	"author": "",
+	"author": "mnaoumov",
 	"license": "MIT",
 	"devDependencies": {
 		"@types/node": "^16.11.6",
