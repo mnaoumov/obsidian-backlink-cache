@@ -24,6 +24,7 @@ export default class BacklinkCachePlugin extends Plugin {
 
         this.registerEvent(this.app.metadataCache.on('changed', (file, _, cache) => {
             console.debug(`Handling cache change for ${file.path}`);
+            this.removeLinkedPathEntries(file.path);
             this.processBacklinks(cache, file.path);
         }));
 
@@ -48,6 +49,11 @@ export default class BacklinkCachePlugin extends Plugin {
     removePathEntries(path: string) {
         console.debug(`Removing ${path} entries`);
         this._backlinksMap.delete(path);
+        this.removeLinkedPathEntries(path);
+    }
+
+    removeLinkedPathEntries(path: string) {
+        console.debug(`Removing linked entries for ${path}`);
         const linkedNotePaths = this._linksMap.get(path) || [];
 
         for (const linkedNotePath of linkedNotePaths) {
