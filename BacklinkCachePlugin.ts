@@ -1,8 +1,8 @@
 import { CachedMetadata, LinkCache, Plugin, TFile } from 'obsidian';
-import { GetBacklinksForFileFunc } from 'types';
+import { GetBacklinksForFileResult } from 'types';
 
 export default class BacklinkCachePlugin extends Plugin {
-    private _defaultGetBacklinksForFile!: GetBacklinksForFileFunc;
+    private _defaultGetBacklinksForFile!: (file: TFile) => GetBacklinksForFileResult;
     private _linksMap = new Map<string, Set<string>>();
     private _backlinksMap = new Map<string, Map<string, Set<LinkCache>>>();
 
@@ -46,13 +46,13 @@ export default class BacklinkCachePlugin extends Plugin {
         }));
     }
 
-    removePathEntries(path: string) {
+    removePathEntries(path: string): void {
         console.debug(`Removing ${path} entries`);
         this._backlinksMap.delete(path);
         this.removeLinkedPathEntries(path);
     }
 
-    removeLinkedPathEntries(path: string) {
+    removeLinkedPathEntries(path: string): void {
         console.debug(`Removing linked entries for ${path}`);
         const linkedNotePaths = this._linksMap.get(path) || [];
 
@@ -67,7 +67,7 @@ export default class BacklinkCachePlugin extends Plugin {
         this.app.metadataCache.getBacklinksForFile = this._defaultGetBacklinksForFile;
     }
 
-    getBacklinksForFile(file: TFile) {
+    getBacklinksForFile(file: TFile): GetBacklinksForFileResult {
         const notePathLinksMap = this._backlinksMap.get(file.path) || new Map<string, Set<LinkCache>>();
         const data = {} as Record<string, LinkCache[]>;
 
@@ -80,11 +80,11 @@ export default class BacklinkCachePlugin extends Plugin {
         };
     }
 
-    extractLinkPath(link: string) {
+    extractLinkPath(link: string): string {
         return link.replace(/\u00A0/g, ' ').normalize('NFC').split('#')[0];
     }
 
-    processBacklinks(cache: CachedMetadata, notePath: string) {
+    processBacklinks(cache: CachedMetadata, notePath: string): void {
         console.debug(`Processing backlinks for ${notePath}`);
 
         if (!this._linksMap.has(notePath)) {
