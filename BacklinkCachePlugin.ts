@@ -7,43 +7,46 @@ export default class BacklinkCachePlugin extends Plugin {
     private _backlinksMap = new Map<string, Map<string, Set<LinkCache>>>();
 
     async onload(): Promise<void> {
-        const noteFiles = this.app.vault.getMarkdownFiles();
-        console.log(`Processing ${noteFiles.length} note files`);
-        let i = 0;
-        for (const noteFile of noteFiles) {
-            i++;
-            console.debug(`Processing ${i} / ${noteFiles.length} - ${noteFile.path}`);
-            const cache = this.app.metadataCache.getFileCache(noteFile);
-            if (cache) {
-                this.processBacklinks(cache, noteFile.path);
-            }
-        }
-
         this._defaultGetBacklinksForFile = this.app.metadataCache.getBacklinksForFile
-        this.app.metadataCache.getBacklinksForFile = this.getBacklinksForFile.bind(this);
 
-        this.registerEvent(this.app.metadataCache.on('changed', (file, _, cache) => {
-            console.debug(`Handling cache change for ${file.path}`);
-            this.removeLinkedPathEntries(file.path);
-            this.processBacklinks(cache, file.path);
-        }));
-
-        this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
-            console.debug(`Handling rename from ${oldPath} to ${file.path}`);
-            this.removePathEntries(oldPath);
-
-            if (file instanceof TFile) {
-                const cache = this.app.metadataCache.getFileCache(file);
+        this.app.workspace.onLayoutReady(() => {
+            const noteFiles = this.app.vault.getMarkdownFiles();
+            console.log(`Processing ${noteFiles.length} note files`);
+            let i = 0;
+            for (const noteFile of noteFiles) {
+                i++;
+                console.debug(`Processing ${i} / ${noteFiles.length} - ${noteFile.path}`);
+                const cache = this.app.metadataCache.getFileCache(noteFile);
                 if (cache) {
-                    this.processBacklinks(cache, file.path);
+                    this.processBacklinks(cache, noteFile.path);
                 }
             }
-        }));
-
-        this.registerEvent(this.app.vault.on('delete', (file) => {
-            console.debug(`Handling deletion ${file.path}`);
-            this.removePathEntries(file.path);
-        }));
+    
+            this.app.metadataCache.getBacklinksForFile = this.getBacklinksForFile.bind(this);
+    
+            this.registerEvent(this.app.metadataCache.on('changed', (file, _, cache) => {
+                console.debug(`Handling cache change for ${file.path}`);
+                this.removeLinkedPathEntries(file.path);
+                this.processBacklinks(cache, file.path);
+            }));
+    
+            this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
+                console.debug(`Handling rename from ${oldPath} to ${file.path}`);
+                this.removePathEntries(oldPath);
+    
+                if (file instanceof TFile) {
+                    const cache = this.app.metadataCache.getFileCache(file);
+                    if (cache) {
+                        this.processBacklinks(cache, file.path);
+                    }
+                }
+            }));
+    
+            this.registerEvent(this.app.vault.on('delete', (file) => {
+                console.debug(`Handling deletion ${file.path}`);
+                this.removePathEntries(file.path);
+            }));
+        });
     }
 
     removePathEntries(path: string): void {
