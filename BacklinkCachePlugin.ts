@@ -53,7 +53,7 @@ export default class BacklinkCachePlugin extends Plugin {
         }
     }
 
-    private readonly processHandlersQueueDebounced = debounce(this.processHandlersQueue, this.DEBOUNCE_TIMEOUT_IN_MILLISECONDS, true);
+    private readonly processHandlersQueueDebounced = debounce(this.processHandlersQueue, this.DEBOUNCE_TIMEOUT_IN_MILLISECONDS);
 
     private readonly handleMetadataChanged = (file: TFile, data: string, cache: CachedMetadata): void => {
         console.debug(`Handling cache change for ${file.path}`);
