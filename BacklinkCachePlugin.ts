@@ -6,7 +6,7 @@ export default class BacklinkCachePlugin extends Plugin {
     private _linksMap = new Map<string, Set<string>>();
     private _backlinksMap = new Map<string, Map<string, Set<LinkCache>>>();
 
-    async onload(): Promise<void> {
+    public readonly onload = async (): Promise<void> => {
         this._defaultGetBacklinksForFile = this.app.metadataCache.getBacklinksForFile
 
         this.app.workspace.onLayoutReady(() => {
@@ -49,13 +49,17 @@ export default class BacklinkCachePlugin extends Plugin {
         });
     }
 
-    removePathEntries(path: string): void {
+    public readonly onunload = async (): Promise<void> => {
+        this.app.metadataCache.getBacklinksForFile = this._defaultGetBacklinksForFile;
+    }
+
+    private readonly removePathEntries = (path: string): void => {
         console.debug(`Removing ${path} entries`);
         this._backlinksMap.delete(path);
         this.removeLinkedPathEntries(path);
     }
 
-    removeLinkedPathEntries(path: string): void {
+    private readonly removeLinkedPathEntries = (path: string): void => {
         console.debug(`Removing linked entries for ${path}`);
         const linkedNotePaths = this._linksMap.get(path) || [];
 
@@ -66,11 +70,7 @@ export default class BacklinkCachePlugin extends Plugin {
         this._linksMap.delete(path);
     }
 
-    async onunload(): Promise<void> {
-        this.app.metadataCache.getBacklinksForFile = this._defaultGetBacklinksForFile;
-    }
-
-    getBacklinksForFile(file: TFile): GetBacklinksForFileResult {
+    private readonly getBacklinksForFile = (file: TFile): GetBacklinksForFileResult => {
         const notePathLinksMap = this._backlinksMap.get(file.path) || new Map<string, Set<LinkCache>>();
         const data = {} as Record<string, LinkCache[]>;
 
@@ -83,11 +83,11 @@ export default class BacklinkCachePlugin extends Plugin {
         };
     }
 
-    extractLinkPath(link: string): string {
+    private readonly extractLinkPath = (link: string): string => {
         return link.replace(/\u00A0/g, ' ').normalize('NFC').split('#')[0];
     }
 
-    processBacklinks(cache: CachedMetadata, notePath: string): void {
+    private readonly processBacklinks = (cache: CachedMetadata, notePath: string): void => {
         console.debug(`Processing backlinks for ${notePath}`);
 
         if (!this._linksMap.has(notePath)) {
