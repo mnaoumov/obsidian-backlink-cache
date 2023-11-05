@@ -1,10 +1,12 @@
-import { CachedMetadata, LinkCache, Plugin, TFile } from 'obsidian';
+import { debounce, CachedMetadata, LinkCache, Plugin, TAbstractFile, TFile } from 'obsidian';
 import { GetBacklinksForFileResult } from 'types';
 
 export default class BacklinkCachePlugin extends Plugin {
     private _defaultGetBacklinksForFile!: (file: TFile) => GetBacklinksForFileResult;
     private _linksMap = new Map<string, Set<string>>();
     private _backlinksMap = new Map<string, Map<string, Set<LinkCache>>>();
+    private readonly DEBOUNCE_TIMEOUT_IN_MILLISECONDS = 1000;
+    private _handlersQueue = [] as (() => void)[];
 
     public readonly onload = async (): Promise<void> => {
         this._defaultGetBacklinksForFile = this.app.metadataCache.getBacklinksForFile
@@ -23,34 +25,57 @@ export default class BacklinkCachePlugin extends Plugin {
             }
     
             this.app.metadataCache.getBacklinksForFile = this.getBacklinksForFile.bind(this);
-    
-            this.registerEvent(this.app.metadataCache.on('changed', (file, _, cache) => {
-                console.debug(`Handling cache change for ${file.path}`);
-                this.removeLinkedPathEntries(file.path);
-                this.processBacklinks(cache, file.path);
-            }));
-    
-            this.registerEvent(this.app.vault.on('rename', (file, oldPath) => {
-                console.debug(`Handling rename from ${oldPath} to ${file.path}`);
-                this.removePathEntries(oldPath);
-    
-                if (file instanceof TFile) {
-                    const cache = this.app.metadataCache.getFileCache(file);
-                    if (cache) {
-                        this.processBacklinks(cache, file.path);
-                    }
-                }
-            }));
-    
-            this.registerEvent(this.app.vault.on('delete', (file) => {
-                console.debug(`Handling deletion ${file.path}`);
-                this.removePathEntries(file.path);
-            }));
+            this.registerEvent(this.app.metadataCache.on('changed', this.makeDebounced(this.handleMetadataChanged)));
+            this.registerEvent(this.app.vault.on('rename', this.makeDebounced(this.handleFileRename)));
+            this.registerEvent(this.app.vault.on('delete', this.makeDebounced(this.handleFileDelete)));
         });
     }
 
     public readonly onunload = async (): Promise<void> => {
         this.app.metadataCache.getBacklinksForFile = this._defaultGetBacklinksForFile;
+    }
+
+    private readonly makeDebounced = <T extends unknown[]>(handler: (...args: T) => void): (...args: T) => void => {
+        return (...args) => {
+            this._handlersQueue.push(() => handler.apply(this, args));
+            this.processHandlersQueueDebounced();
+        };
+    }
+
+    private readonly processHandlersQueue = (): void => {
+        while (true) {
+            const handler = this._handlersQueue.shift();
+            if (!handler) {
+                return;
+            }
+
+            handler();
+        }
+    }
+
+    private readonly processHandlersQueueDebounced = debounce(this.processHandlersQueue, this.DEBOUNCE_TIMEOUT_IN_MILLISECONDS, true);
+
+    private readonly handleMetadataChanged = (file: TFile, data: string, cache: CachedMetadata): void => {
+        console.debug(`Handling cache change for ${file.path}`);
+        this.removeLinkedPathEntries(file.path);
+        this.processBacklinks(cache, file.path);
+    }
+
+    private readonly handleFileRename = (file: TAbstractFile, oldPath: string): void => {
+        console.debug(`Handling rename from ${oldPath} to ${file.path}`);
+        this.removePathEntries(oldPath);
+
+        if (file instanceof TFile) {
+            const cache = this.app.metadataCache.getFileCache(file);
+            if (cache) {
+                this.processBacklinks(cache, file.path);
+            }
+        }
+    }
+
+    private readonly handleFileDelete = (file: TAbstractFile): void => {
+        console.debug(`Handling deletion ${file.path}`);
+        this.removePathEntries(file.path);
     }
 
     private readonly removePathEntries = (path: string): void => {
