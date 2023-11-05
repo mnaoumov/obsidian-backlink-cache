@@ -12,7 +12,7 @@ export default class BacklinkCachePlugin extends Plugin {
         this._defaultGetBacklinksForFile = this.app.metadataCache.getBacklinksForFile
 
         this.app.workspace.onLayoutReady(() => {
-            const noteFiles = this.app.vault.getMarkdownFiles();
+            const noteFiles = this.app.vault.getMarkdownFiles().sort((a, b) => a.path.localeCompare(b.path));
             console.log(`Processing ${noteFiles.length} note files`);
             let i = 0;
             for (const noteFile of noteFiles) {
