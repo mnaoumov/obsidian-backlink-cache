@@ -2,7 +2,7 @@
 
 This is a plugin for [Obsidian](https://obsidian.md/) that maintains backlink cache to speed up undocumented `app.metadataCache.getBacklinksForFile` function.
 
-It's mostly useful for uses with the large vaults. On smaller vaults the difference might be unnoticeable.
+It's mostly useful for users with the large vaults. On smaller vaults the difference might be unnoticeable.
 
 It speeds up `Backlinks Pane` performance and plugins that deal with the backlinks.
 
