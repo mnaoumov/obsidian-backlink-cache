@@ -8,5 +8,6 @@ Its idea came from the [forum](https://forum.obsidian.md/t/store-backlinks-in-me
 
 ## Installation
 
-- `Backlink Cache` is not available on [the official Community Plugins repository](https://obsidian.md/plugins) yet.
+
+- `Backlink Cache` is available in [the official Community Plugins repository](https://obsidian.md/plugins) now.
 - Beta releases can be installed through [BRAT](https://github.com/TfTHacker/obsidian42-brat)
