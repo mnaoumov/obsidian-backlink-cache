@@ -105,8 +105,8 @@ export default class BacklinkCachePlugin extends Plugin {
         this._linksMap.delete(path);
     }
 
-    private readonly getBacklinksForFile = (file: TFile): GetBacklinksForFileResult => {
-        const notePathLinksMap = this._backlinksMap.get(file.path) || new Map<string, Set<LinkCache>>();
+    private readonly getBacklinksForFile = (file?: TFile): GetBacklinksForFileResult => {
+        const notePathLinksMap = this._backlinksMap.get(file?.path ?? '') || new Map<string, Set<LinkCache>>();
         const dict = new CustomArrayDictImpl<LinkCache>();
 
         for (const [notePath, links] of notePathLinksMap.entries()) {
