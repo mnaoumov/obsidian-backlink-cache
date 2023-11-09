@@ -97,15 +97,15 @@ export default class BacklinkCachePlugin extends Plugin {
 
     private readonly getBacklinksForFile = (file: TFile): GetBacklinksForFileResult => {
         const notePathLinksMap = this._backlinksMap.get(file.path) || new Map<string, Set<LinkCache>>();
-        const data = {} as Record<string, LinkCache[]>;
+        const dict = new CustomArrayDictImpl<LinkCache>();
 
         for (const [notePath, links] of notePathLinksMap.entries()) {
-            data[notePath] = [...links].sort((a, b) => a.position.start.offset - b.position.start.offset);
+            for (const link of [...links].sort((a, b) => a.position.start.offset - b.position.start.offset)) {
+                dict.add(notePath, link);
+            }
         }
 
-        return {
-            data
-        };
+        return dict;
     }
 
     private readonly extractLinkPath = (link: string): string => {
