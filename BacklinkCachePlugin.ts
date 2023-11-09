@@ -1,4 +1,12 @@
-import { debounce, CachedMetadata, LinkCache, Plugin, TAbstractFile, TFile } from 'obsidian';
+import CustomArrayDictImpl from 'CustomArrayDictImpl';
+import {
+    debounce,
+    CachedMetadata,
+    LinkCache,
+    Plugin,
+    TAbstractFile,
+    TFile
+} from 'obsidian';
 import { GetBacklinksForFileResult } from 'types';
 
 export default class BacklinkCachePlugin extends Plugin {
