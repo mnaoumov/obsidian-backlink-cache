@@ -18,6 +18,6 @@ interface CustomArrayDict<T> {
 
 declare module 'obsidian' {
     interface MetadataCache {
-        getBacklinksForFile: (file: TFile) => GetBacklinksForFileResult;
+        getBacklinksForFile: ((file: TFile) => GetBacklinksForFileResult) & { originalFunc?: (file: TFile) => GetBacklinksForFileResult };
     }
 }
