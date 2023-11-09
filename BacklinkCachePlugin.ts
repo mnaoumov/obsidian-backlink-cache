@@ -2,15 +2,12 @@ import { debounce, CachedMetadata, LinkCache, Plugin, TAbstractFile, TFile } fro
 import { GetBacklinksForFileResult } from 'types';
 
 export default class BacklinkCachePlugin extends Plugin {
-    private _defaultGetBacklinksForFile!: (file: TFile) => GetBacklinksForFileResult;
     private _linksMap = new Map<string, Set<string>>();
     private _backlinksMap = new Map<string, Map<string, Set<LinkCache>>>();
     private readonly DEBOUNCE_TIMEOUT_IN_MILLISECONDS = 1000;
     private _handlersQueue = [] as (() => void)[];
 
     public readonly onload = async (): Promise<void> => {
-        this._defaultGetBacklinksForFile = this.app.metadataCache.getBacklinksForFile
-
         this.app.workspace.onLayoutReady(() => {
             const noteFiles = this.app.vault.getMarkdownFiles().sort((a, b) => a.path.localeCompare(b.path));
             console.log(`Processing ${noteFiles.length} note files`);
@@ -23,8 +20,10 @@ export default class BacklinkCachePlugin extends Plugin {
                     this.processBacklinks(cache, noteFile.path);
                 }
             }
-    
+ 
+            const originalFunc = this.app.metadataCache.getBacklinksForFile.bind(this.app.metadataCache);
             this.app.metadataCache.getBacklinksForFile = this.getBacklinksForFile.bind(this);
+            this.app.metadataCache.getBacklinksForFile.originalFunc = originalFunc;
             this.registerEvent(this.app.metadataCache.on('changed', this.makeDebounced(this.handleMetadataChanged)));
             this.registerEvent(this.app.vault.on('rename', this.makeDebounced(this.handleFileRename)));
             this.registerEvent(this.app.vault.on('delete', this.makeDebounced(this.handleFileDelete)));
@@ -32,7 +31,10 @@ export default class BacklinkCachePlugin extends Plugin {
     }
 
     public readonly onunload = async (): Promise<void> => {
-        this.app.metadataCache.getBacklinksForFile = this._defaultGetBacklinksForFile;
+        const originalFunc = this.app.metadataCache.getBacklinksForFile.originalFunc;
+        if (originalFunc) {
+            this.app.metadataCache.getBacklinksForFile = originalFunc;
+        }
     }
 
     private readonly makeDebounced = <T extends unknown[]>(handler: (...args: T) => void): (...args: T) => void => {
