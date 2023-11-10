@@ -1,4 +1,4 @@
-import { CustomArrayDict } from "types";
+import { CustomArrayDict } from 'obsidian-typings';
 
 export default class CustomArrayDictImpl<T> implements CustomArrayDict<T> {
     public data: Record<string, T[]> = {};
