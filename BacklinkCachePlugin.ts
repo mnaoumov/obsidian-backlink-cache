@@ -1,5 +1,9 @@
 import CustomArrayDictImpl from 'CustomArrayDictImpl';
 import {
+    getOriginalFunc,
+    setOriginalFunc
+} from 'OriginalFunc';
+import {
     debounce,
     CachedMetadata,
     LinkCache,
@@ -7,7 +11,7 @@ import {
     TAbstractFile,
     TFile
 } from 'obsidian';
-import { GetBacklinksForFileResult } from 'types';
+import { CustomArrayDict } from 'obsidian-typings';
 
 export default class BacklinkCachePlugin extends Plugin {
     private _linksMap = new Map<string, Set<string>>();
@@ -31,7 +35,7 @@ export default class BacklinkCachePlugin extends Plugin {
  
             const originalFunc = this.app.metadataCache.getBacklinksForFile.bind(this.app.metadataCache);
             this.app.metadataCache.getBacklinksForFile = this.getBacklinksForFile.bind(this);
-            this.app.metadataCache.getBacklinksForFile.originalFunc = originalFunc;
+            setOriginalFunc(this.app.metadataCache.getBacklinksForFile, originalFunc);
             this.registerEvent(this.app.metadataCache.on('changed', this.makeDebounced(this.handleMetadataChanged)));
             this.registerEvent(this.app.vault.on('rename', this.makeDebounced(this.handleFileRename)));
             this.registerEvent(this.app.vault.on('delete', this.makeDebounced(this.handleFileDelete)));
@@ -39,7 +43,7 @@ export default class BacklinkCachePlugin extends Plugin {
     }
 
     public readonly onunload = async (): Promise<void> => {
-        const originalFunc = this.app.metadataCache.getBacklinksForFile.originalFunc;
+        const originalFunc = getOriginalFunc(this.app.metadataCache.getBacklinksForFile);
         if (originalFunc) {
             this.app.metadataCache.getBacklinksForFile = originalFunc;
         }
@@ -105,7 +109,7 @@ export default class BacklinkCachePlugin extends Plugin {
         this._linksMap.delete(path);
     }
 
-    private readonly getBacklinksForFile = (file?: TFile): GetBacklinksForFileResult => {
+    private readonly getBacklinksForFile = (file?: TFile): CustomArrayDict<LinkCache> => {
         const notePathLinksMap = this._backlinksMap.get(file?.path ?? '') || new Map<string, Set<LinkCache>>();
         const dict = new CustomArrayDictImpl<LinkCache>();
 
