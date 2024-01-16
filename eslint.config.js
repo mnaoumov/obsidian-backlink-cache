@@ -38,7 +38,8 @@ export default [
       "@stylistic/indent": ["error", 2],
       "@stylistic/quotes": ["error", "double"],
       semi: "error",
-      "no-extra-semi": "error"
+      "no-extra-semi": "error",
+      "@typescript-eslint/explicit-member-accessibility": "error"
     },
     settings: {
       "import/resolver": {

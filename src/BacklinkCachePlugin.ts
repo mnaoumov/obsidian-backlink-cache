@@ -19,11 +19,11 @@ export default class BacklinkCachePlugin extends Plugin {
   private readonly _handlersQueue: (() => void)[] = [];
   private readonly processHandlersQueueDebounced = debounce(this.processHandlersQueue, this.DEBOUNCE_TIMEOUT_IN_MILLISECONDS);
 
-  onload(): void {
+  public onload(): void {
     this.app.workspace.onLayoutReady(this.onLayoutReady.bind(this));
   }
 
-  onLayoutReady(): void {
+  private onLayoutReady(): void {
     const noteFiles = this.app.vault.getMarkdownFiles().sort((a, b) => a.path.localeCompare(b.path));
     console.log(`Processing ${noteFiles.length} note files`);
     let i = 0;
