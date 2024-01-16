@@ -24,7 +24,7 @@
     "eslint-import-resolver-typescript": "latest",
     "eslint-plugin-import": "latest",
     "eslint-plugin-modules-newlines": "latest",
-    "globals": "^13.24.0",
+    "globals": "latest",
     "obsidian": "latest",
     "tsx": "latest"
   },
