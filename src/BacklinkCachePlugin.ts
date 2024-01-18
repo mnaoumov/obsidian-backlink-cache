@@ -1,7 +1,5 @@
 import CustomArrayDictImpl from "./CustomArrayDictImpl";
-import {
-  setOriginalFunc
-} from "./OriginalFunc";
+import { setOriginalFunc } from "./OriginalFunc";
 import {
   debounce,
   CachedMetadata,
@@ -13,10 +11,10 @@ import {
 import type { CustomArrayDict } from "obsidian-typings";
 
 export default class BacklinkCachePlugin extends Plugin {
-  private readonly _linksMap = new Map<string, Set<string>>();
-  private readonly _backlinksMap = new Map<string, Map<string, Set<LinkCache>>>();
+  private readonly linksMap = new Map<string, Set<string>>();
+  private readonly backlinksMap = new Map<string, Map<string, Set<LinkCache>>>();
   private readonly DEBOUNCE_TIMEOUT_IN_MILLISECONDS = 1000;
-  private readonly _handlersQueue: (() => void)[] = [];
+  private readonly handlersQueue: (() => void)[] = [];
   private readonly processHandlersQueueDebounced = debounce(this.processHandlersQueue, this.DEBOUNCE_TIMEOUT_IN_MILLISECONDS);
 
   public onload(): void {
@@ -49,14 +47,14 @@ export default class BacklinkCachePlugin extends Plugin {
 
   private makeDebounced<T extends unknown[]>(handler: (...args: T) => void): (...args: T) => void {
     return (...args) => {
-      this._handlersQueue.push(() => handler.apply(this, args));
+      this.handlersQueue.push(() => handler.apply(this, args));
       this.processHandlersQueueDebounced();
     };
   }
 
   private processHandlersQueue(): void {
     while (true) {
-      const handler = this._handlersQueue.shift();
+      const handler = this.handlersQueue.shift();
       if (!handler) {
         return;
       }
@@ -90,23 +88,23 @@ export default class BacklinkCachePlugin extends Plugin {
 
   private removePathEntries(path: string): void {
     console.debug(`Removing ${path} entries`);
-    this._backlinksMap.delete(path);
+    this.backlinksMap.delete(path);
     this.removeLinkedPathEntries(path);
   }
 
   private removeLinkedPathEntries(path: string): void {
     console.debug(`Removing linked entries for ${path}`);
-    const linkedNotePaths = this._linksMap.get(path) || [];
+    const linkedNotePaths = this.linksMap.get(path) || [];
 
     for (const linkedNotePath of linkedNotePaths) {
-      this._backlinksMap.get(linkedNotePath)?.delete(path);
+      this.backlinksMap.get(linkedNotePath)?.delete(path);
     }
 
-    this._linksMap.delete(path);
+    this.linksMap.delete(path);
   }
 
   private getBacklinksForFile(file?: TFile): CustomArrayDict<LinkCache> {
-    const notePathLinksMap = this._backlinksMap.get(file?.path ?? "") || new Map<string, Set<LinkCache>>();
+    const notePathLinksMap = this.backlinksMap.get(file?.path ?? "") || new Map<string, Set<LinkCache>>();
     const dict = new CustomArrayDictImpl<LinkCache>();
 
     for (const [notePath, links] of notePathLinksMap.entries()) {
@@ -125,8 +123,8 @@ export default class BacklinkCachePlugin extends Plugin {
   private processBacklinks(cache: CachedMetadata, notePath: string): void {
     console.debug(`Processing backlinks for ${notePath}`);
 
-    if (!this._linksMap.has(notePath)) {
-      this._linksMap.set(notePath, new Set<string>());
+    if (!this.linksMap.has(notePath)) {
+      this.linksMap.set(notePath, new Set<string>());
     }
 
     const allLinks: LinkCache[] = [];
@@ -144,11 +142,11 @@ export default class BacklinkCachePlugin extends Plugin {
         continue;
       }
 
-      let notePathLinksMap = this._backlinksMap.get(linkFile.path);
+      let notePathLinksMap = this.backlinksMap.get(linkFile.path);
 
       if (!notePathLinksMap) {
         notePathLinksMap = new Map<string, Set<LinkCache>>();
-        this._backlinksMap.set(linkFile.path, notePathLinksMap);
+        this.backlinksMap.set(linkFile.path, notePathLinksMap);
       }
 
       let linkSet = notePathLinksMap.get(notePath);
@@ -159,7 +157,7 @@ export default class BacklinkCachePlugin extends Plugin {
       }
 
       linkSet.add(link);
-      this._linksMap.get(notePath)?.add(linkFile.path);
+      this.linksMap.get(notePath)?.add(linkFile.path);
     }
   }
 }

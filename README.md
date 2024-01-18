@@ -14,6 +14,9 @@ If you need to call the original version, you can use `app.metadataCache.getBack
 
 ## Installation
 
-
 - `Backlink Cache` is available in [the official Community Plugins repository](https://obsidian.md/plugins) now.
 - Beta releases can be installed through [BRAT](https://github.com/TfTHacker/obsidian42-brat)
+
+## License
+
+ © [Michael Naumov](https://github.com/mnaoumov/)

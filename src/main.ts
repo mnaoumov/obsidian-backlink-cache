@@ -1,1 +1,1 @@
-export {default} from "./BacklinkCachePlugin";
+export { default } from "./BacklinkCachePlugin";
