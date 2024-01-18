@@ -1,5 +1,5 @@
-type OriginalFuncWrapper<T> = { originalFunc?: T };
+type OriginalFuncWrapper<T> = T & { originalFunc?: T };
 
-export function setOriginalFunc<T>(func: T, originalFunc: T): void {
-  (func as OriginalFuncWrapper<T>).originalFunc = originalFunc;
+export function setOriginalFunc<T>(func: OriginalFuncWrapper<T>, originalFunc: T): void {
+  func.originalFunc = originalFunc;
 }
