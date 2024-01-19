@@ -1,5 +1,5 @@
-import CustomArrayDictImpl from "./CustomArrayDictImpl";
-import { setOriginalFunc } from "./OriginalFunc";
+import CustomArrayDictImpl from "./CustomArrayDictImpl.ts";
+import { setOriginalFunc } from "./OriginalFunc.ts";
 import {
   debounce,
   CachedMetadata,
@@ -17,7 +17,7 @@ export default class BacklinkCachePlugin extends Plugin {
   private readonly handlersQueue: (() => void)[] = [];
   private readonly processHandlersQueueDebounced = debounce(this.processHandlersQueue, this.DEBOUNCE_TIMEOUT_IN_MILLISECONDS);
 
-  public onload(): void {
+  public override onload(): void {
     this.app.workspace.onLayoutReady(this.onLayoutReady.bind(this));
   }
 
@@ -63,7 +63,7 @@ export default class BacklinkCachePlugin extends Plugin {
     }
   }
 
-  private handleMetadataChanged(file: TFile, data: string, cache: CachedMetadata): void {
+  private handleMetadataChanged(file: TFile, _data: string, cache: CachedMetadata): void {
     console.debug(`Handling cache change for ${file.path}`);
     this.removeLinkedPathEntries(file.path);
     this.processBacklinks(cache, file.path);
@@ -117,7 +117,7 @@ export default class BacklinkCachePlugin extends Plugin {
   }
 
   private extractLinkPath(link: string): string {
-    return link.replace(/\u00A0/g, " ").normalize("NFC").split("#")[0];
+    return link.replace(/\u00A0/g, " ").normalize("NFC").split("#")[0]!;
   }
 
   private processBacklinks(cache: CachedMetadata, notePath: string): void {

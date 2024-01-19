@@ -8,7 +8,7 @@ export default class CustomArrayDictImpl<T> implements CustomArrayDict<T> {
       this.data[key] = [] as T[];
     }
 
-    const values = this.data[key];
+    const values = this.data[key]!;
 
     if (!values.includes(value)) {
       values.push(value);
@@ -32,7 +32,7 @@ export default class CustomArrayDictImpl<T> implements CustomArrayDict<T> {
   }
 
   public get(key: string): T[] | null {
-    return this.data.hasOwnProperty(key) ? this.data[key] : null;
+    return this.data.hasOwnProperty(key) ? this.data[key]! : null;
   }
 
   public keys(): string[] {
@@ -49,14 +49,14 @@ export default class CustomArrayDictImpl<T> implements CustomArrayDict<T> {
 
   public contains(key: string, value: T): boolean {
     const values = this.data[key];
-    return values && values.contains(value);
+    return values && values.contains(value) || false;
   }
 
   public count(): number {
     let ans = 0;
     for (const key in this.data) {
       if (this.data.hasOwnProperty(key)) {
-        ans += this.data[key].length;
+        ans += this.data[key]!.length;
       }
     }
 
