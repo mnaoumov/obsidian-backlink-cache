@@ -3,16 +3,18 @@
 	"version": "1.5.1",
 	"description": "Stores backlink cache to speed up `app.metadataCache.getBacklinksForFile`",
   "scripts": {
-    "build": "tsx esbuild.config.ts production",
-    "dev": "tsx esbuild.config.ts",
-    "lint": "eslint . --fix",
-    "version": "tsx version-bump.ts && git add manifest.json versions.json"
+    "build": "tsc --build && tsx esbuild.config.ts production",
+    "dev": "tsc --build && tsx esbuild.config.ts",
+    "lint": "eslint-ts . --fix",
+    "version": "tsx version-bump.ts && git add manifest.json package.json versions.json"
   },
   "keywords": [],
   "author": "mnaoumov",
   "license": "MIT",
   "devDependencies": {
     "@stylistic/eslint-plugin": "latest",
+    "@tsconfig/strictest": "latest",
+    "@types/eslint": "latest",
     "@types/node": "latest",
     "@types/obsidian-typings": "github:Fevol/obsidian-typings",
     "@typescript-eslint/eslint-plugin": "latest",
@@ -20,10 +22,10 @@
     "builtin-modules": "latest",
     "esbuild": "latest",
     "eslint": "latest",
-    "eslint-config-prettier": "latest",
     "eslint-import-resolver-typescript": "latest",
     "eslint-plugin-import": "latest",
     "eslint-plugin-modules-newlines": "latest",
+    "eslint-ts-patch": "latest",
     "globals": "latest",
     "obsidian": "latest",
     "tsx": "latest"
