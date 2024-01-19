@@ -15,7 +15,7 @@ export default class BacklinkCachePlugin extends Plugin {
   private readonly backlinksMap = new Map<string, Map<string, Set<LinkCache>>>();
   private readonly DEBOUNCE_TIMEOUT_IN_MILLISECONDS = 1000;
   private readonly handlersQueue: (() => void)[] = [];
-  private readonly processHandlersQueueDebounced = debounce(this.processHandlersQueue, this.DEBOUNCE_TIMEOUT_IN_MILLISECONDS);
+  private readonly processHandlersQueueDebounced = debounce(this.processHandlersQueue.bind(this), this.DEBOUNCE_TIMEOUT_IN_MILLISECONDS);
 
   public override onload(): void {
     this.app.workspace.onLayoutReady(this.onLayoutReady.bind(this));
@@ -37,9 +37,9 @@ export default class BacklinkCachePlugin extends Plugin {
     const originalFunc = this.app.metadataCache.getBacklinksForFile;
     this.app.metadataCache.getBacklinksForFile = this.getBacklinksForFile.bind(this);
     setOriginalFunc(this.app.metadataCache.getBacklinksForFile, originalFunc.bind(this.app.metadataCache));
-    this.registerEvent(this.app.metadataCache.on("changed", this.makeDebounced(this.handleMetadataChanged)));
-    this.registerEvent(this.app.vault.on("rename", this.makeDebounced(this.handleFileRename)));
-    this.registerEvent(this.app.vault.on("delete", this.makeDebounced(this.handleFileDelete)));
+    this.registerEvent(this.app.metadataCache.on("changed", this.makeDebounced(this.handleMetadataChanged.bind(this))));
+    this.registerEvent(this.app.vault.on("rename", this.makeDebounced(this.handleFileRename.bind(this))));
+    this.registerEvent(this.app.vault.on("delete", this.makeDebounced(this.handleFileDelete.bind(this))));
     this.register(() => {
       this.app.metadataCache.getBacklinksForFile = originalFunc;
     });
@@ -47,7 +47,7 @@ export default class BacklinkCachePlugin extends Plugin {
 
   private makeDebounced<T extends unknown[]>(handler: (...args: T) => void): (...args: T) => void {
     return (...args) => {
-      this.handlersQueue.push(() => handler.apply(this, args));
+      this.handlersQueue.push(() => handler(...args));
       this.processHandlersQueueDebounced();
     };
   }
