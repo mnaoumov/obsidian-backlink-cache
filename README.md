@@ -19,4 +19,4 @@ If you need to call the original version, you can use `app.metadataCache.getBack
 
 ## License
 
- © [Michael Naumov](https://github.com/mnaoumov/)
+© [Michael Naumov](https://github.com/mnaoumov/)
