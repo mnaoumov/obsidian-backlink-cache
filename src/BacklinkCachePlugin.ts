@@ -10,7 +10,7 @@ import {
 } from "obsidian";
 import type { CustomArrayDict } from "obsidian-typings";
 
-const DEBOUNCE_TIMEOUT_IN_MILLISECONDS = 1000;
+const DEBOUNCE_TIMEOUT_IN_MILLISECONDS = 60000;
 
 export default class BacklinkCachePlugin extends Plugin {
   private readonly _linksMap = new Map<string, Set<string>>();
