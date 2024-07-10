@@ -1,4 +1,4 @@
-import CustomArrayDictImpl from "./CustomArrayDictImpl.ts";
+import { CustomArrayDictImpl } from "obsidian-typings/implementations";
 import { setOriginalFunc } from "./OriginalFunc.ts";
 import {
   debounce,
