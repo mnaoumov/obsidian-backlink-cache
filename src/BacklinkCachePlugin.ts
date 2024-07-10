@@ -35,8 +35,11 @@ export default class BacklinkCachePlugin extends Plugin {
       }
     }
 
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     const originalFunc = this.app.metadataCache.getBacklinksForFile;
     this.app.metadataCache.getBacklinksForFile = this.getBacklinksForFile.bind(this);
+
+    // eslint-disable-next-line @typescript-eslint/unbound-method
     setOriginalFunc(this.app.metadataCache.getBacklinksForFile, originalFunc.bind(this.app.metadataCache));
     this.registerEvent(this.app.metadataCache.on("changed", this.makeDebounced(this.handleMetadataChanged.bind(this))));
     this.registerEvent(this.app.vault.on("rename", this.makeDebounced(this.handleFileRename.bind(this))));
