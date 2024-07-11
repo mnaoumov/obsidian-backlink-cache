@@ -1,0 +1,22 @@
+{
+  "version": "0.2",
+  "ignorePaths": [],
+  "dictionaryDefinitions": [],
+  "dictionaries": [],
+  "words": [
+    "Backlink",
+    "backlinks",
+    "collab",
+    "hotreload",
+    "lezer",
+    "Linkpath",
+    "mnaoumov",
+    "Naumov",
+    "outfile",
+    "postversion",
+    "preversion"
+  ],
+  "ignoreWords": [],
+  "import": [],
+  "enabled": true
+}
