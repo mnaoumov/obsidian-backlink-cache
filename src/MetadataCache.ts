@@ -30,6 +30,8 @@ export async function getCacheSafe(app: App, file: TFile): Promise<CachedMetadat
         return true;
       }
     }
+  }, {
+    timeoutInMilliseconds: 30000
   });
 
   return cache!;
