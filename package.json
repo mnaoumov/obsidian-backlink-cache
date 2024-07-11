@@ -1,6 +1,6 @@
 {
   "name": "backlink-cache",
-  "version": "1.5.6",
+  "version": "1.6.0",
   "description": "Stores backlink cache to speed up `app.metadataCache.getBacklinksForFile`",
   "scripts": {
     "build": "tsx scripts/npmScriptExecutor.ts build",
