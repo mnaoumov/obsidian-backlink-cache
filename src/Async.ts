@@ -1,11 +1,14 @@
-const RETRY_DELAY_IN_MILLISECONDS = 100;
-const TIMEOUT_IN_MILLISECONDS = 5000;
-
-export async function retryWithTimeout(asyncFn: () => Promise<boolean>, options = {
-  timeoutInMilliseconds: TIMEOUT_IN_MILLISECONDS,
-  retryDelayInMilliseconds: RETRY_DELAY_IN_MILLISECONDS
-}): Promise<void> {
-  await runWithTimeout(options.timeoutInMilliseconds, async () => {
+export async function retryWithTimeout(
+  asyncFn: () => Promise<boolean>,
+  {
+    timeoutInMilliseconds = 5000,
+    retryDelayInMilliseconds = 100,
+  }: {
+    timeoutInMilliseconds?: number,
+    retryDelayInMilliseconds?: number,
+  } = {}
+): Promise<void> {
+  await runWithTimeout(timeoutInMilliseconds, async () => {
     let failedBefore = false;
     while (true) {
       if (await asyncFn()) {
@@ -16,8 +19,8 @@ export async function retryWithTimeout(asyncFn: () => Promise<boolean>, options 
       }
 
       failedBefore = true;
-      console.debug(`Retry completed unsuccessfully. Trying again in ${options.retryDelayInMilliseconds} milliseconds`);
-      await delay(options.retryDelayInMilliseconds);
+      console.debug(`Retry completed unsuccessfully. Trying again in ${retryDelayInMilliseconds} milliseconds`);
+      await delay(retryDelayInMilliseconds);
     }
   });
 }
