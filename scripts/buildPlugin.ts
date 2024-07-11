@@ -110,6 +110,9 @@ if you want to view the source, please visit the github repository of this plugi
         name: "lint",
         setup(build): void {
           build.onEnd(() => {
+            if (isProductionBuild) {
+              return;
+            }
             console.log("[watch] lint started");
             execFromRoot("npx eslint . --fix", true);
             console.log("[watch] lint finished");
