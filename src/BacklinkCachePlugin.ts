@@ -84,7 +84,14 @@ export default class BacklinkCachePlugin extends Plugin {
       this.linksMap.set(notePath, new Set<string>());
     }
 
-    const cache = await getCacheSafe(this.app, noteFile);
+    let cache;
+
+    try {
+      cache = await getCacheSafe(this.app, noteFile);
+    } catch (e) {
+      console.error(`Error getting cache for ${notePath}`, e);
+      return;
+    }
 
     const allLinks: LinkCache[] = [];
     if (cache.links) {
