@@ -1,39 +1,43 @@
 import { CustomArrayDictImpl } from "obsidian-typings/implementations";
 import { setOriginalFunc } from "./OriginalFunc.ts";
 import {
-  debounce,
-  type CachedMetadata,
   type LinkCache,
+  Notice,
   Plugin,
   TAbstractFile,
   TFile
 } from "obsidian";
 import type { CustomArrayDict } from "obsidian-typings";
+import { getCacheSafe } from "./MetadataCache.ts";
 
-const DEBOUNCE_TIMEOUT_IN_MILLISECONDS = 60000;
+const INTERVAL_IN_MILLISECONDS = 5000;
+
+enum Action {
+  Refresh,
+  Remove
+}
 
 export default class BacklinkCachePlugin extends Plugin {
-  private readonly _linksMap = new Map<string, Set<string>>();
-  private readonly _backlinksMap = new Map<string, Map<string, Set<LinkCache>>>();
-  private readonly _handlersQueue: (() => void)[] = [];
-  private readonly processHandlersQueueDebounced = debounce(this.processHandlersQueue.bind(this), DEBOUNCE_TIMEOUT_IN_MILLISECONDS);
+  private readonly linksMap = new Map<string, Set<string>>();
+  private readonly backlinksMap = new Map<string, Map<string, Set<LinkCache>>>();
+  private readonly pendingActions = new Map<string, Action>();
 
   public override onload(): void {
     this.app.workspace.onLayoutReady(this.onLayoutReady.bind(this));
   }
 
-  private onLayoutReady(): void {
+  private async onLayoutReady(): Promise<void> {
     const noteFiles = this.app.vault.getMarkdownFiles().sort((a, b) => a.path.localeCompare(b.path));
-    console.log(`Processing ${noteFiles.length} note files`);
+    const notice = new Notice("", 0);
     let i = 0;
     for (const noteFile of noteFiles) {
       i++;
-      console.debug(`Processing ${i} / ${noteFiles.length} - ${noteFile.path}`);
-      const cache = this.app.metadataCache.getFileCache(noteFile);
-      if (cache) {
-        this.processBacklinks(cache, noteFile.path);
-      }
+      const message = `Processing backlinks # ${i} / ${noteFiles.length} - ${noteFile.path}`;
+      console.debug(message);
+      notice.setMessage(message);
+      await this.refreshBacklinks(noteFile.path);
     }
+    notice.hide();
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     const originalFunc = this.app.metadataCache.getBacklinksForFile;
@@ -41,95 +45,46 @@ export default class BacklinkCachePlugin extends Plugin {
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     setOriginalFunc(this.app.metadataCache.getBacklinksForFile, originalFunc.bind(this.app.metadataCache));
-    this.registerEvent(this.app.metadataCache.on("changed", this.makeDebounced(this.handleMetadataChanged.bind(this))));
-    this.registerEvent(this.app.vault.on("rename", this.makeDebounced(this.handleFileRename.bind(this))));
-    this.registerEvent(this.app.vault.on("delete", this.makeDebounced(this.handleFileDelete.bind(this))));
+    this.registerEvent(this.app.metadataCache.on("changed", this.handleMetadataChanged.bind(this)));
+    this.registerEvent(this.app.vault.on("rename", this.handleFileRename.bind(this)));
+    this.registerEvent(this.app.vault.on("delete", this.handleFileDelete.bind(this)));
     this.register(() => {
       this.app.metadataCache.getBacklinksForFile = originalFunc;
     });
+    this.registerInterval(window.setInterval(() => void this.processPendingActions().catch(console.error), INTERVAL_IN_MILLISECONDS));
   }
 
-  private makeDebounced<T extends unknown[]>(handler: (...args: T) => void): (...args: T) => void {
-    return (...args) => {
-      this._handlersQueue.push(() => handler(...args));
-      this.processHandlersQueueDebounced();
-    };
-  }
+  private async processPendingActions(): Promise<void> {
+    const pathActions = Array.from(this.pendingActions.entries());
+    this.pendingActions.clear();
 
-  private processHandlersQueue(): void {
-    while (true) {
-      const handler = this._handlersQueue.shift();
-      if (!handler) {
-        return;
-      }
-
-      handler();
-    }
-  }
-
-  private handleMetadataChanged(file: TFile, _data: string, cache: CachedMetadata): void {
-    console.debug(`Handling cache change for ${file.path}`);
-    this.removeLinkedPathEntries(file.path);
-    this.processBacklinks(cache, file.path);
-  }
-
-  private handleFileRename(file: TAbstractFile, oldPath: string): void {
-    console.debug(`Handling rename from ${oldPath} to ${file.path}`);
-    this.removePathEntries(oldPath);
-
-    if (file instanceof TFile) {
-      const cache = this.app.metadataCache.getFileCache(file);
-      if (cache) {
-        this.processBacklinks(cache, file.path);
+    for (const [path, action] of pathActions) {
+      switch (action) {
+        case Action.Refresh:
+          await this.refreshBacklinks(path);
+          break;
+        case Action.Remove:
+          this.removeBacklinks(path);
+          break;
       }
     }
   }
 
-  private handleFileDelete(file: TAbstractFile): void {
-    console.debug(`Handling deletion ${file.path}`);
-    this.removePathEntries(file.path);
-  }
+  private async refreshBacklinks(notePath: string): Promise<void> {
+    console.debug(`Refreshing backlinks for ${notePath}`);
+    this.removeLinkedPathEntries(notePath);
 
-  private removePathEntries(path: string): void {
-    console.debug(`Removing ${path} entries`);
-    this._backlinksMap.delete(path);
-    this.removeLinkedPathEntries(path);
-  }
+    const noteFile = this.app.vault.getFileByPath(notePath);
 
-  private removeLinkedPathEntries(path: string): void {
-    console.debug(`Removing linked entries for ${path}`);
-    const linkedNotePaths = this._linksMap.get(path) || [];
-
-    for (const linkedNotePath of linkedNotePaths) {
-      this._backlinksMap.get(linkedNotePath)?.delete(path);
+    if (!noteFile) {
+      return;
     }
 
-    this._linksMap.delete(path);
-  }
-
-  private getBacklinksForFile(file?: TFile): CustomArrayDict<LinkCache> {
-    const notePathLinksMap = this._backlinksMap.get(file?.path ?? "") || new Map<string, Set<LinkCache>>();
-    const dict = new CustomArrayDictImpl<LinkCache>();
-
-    for (const [notePath, links] of notePathLinksMap.entries()) {
-      for (const link of [...links].sort((a, b) => a.position.start.offset - b.position.start.offset)) {
-        dict.add(notePath, link);
-      }
+    if (!this.linksMap.has(notePath)) {
+      this.linksMap.set(notePath, new Set<string>());
     }
 
-    return dict;
-  }
-
-  private extractLinkPath(link: string): string {
-    return link.replace(/\u00A0/g, " ").normalize("NFC").split("#")[0]!;
-  }
-
-  private processBacklinks(cache: CachedMetadata, notePath: string): void {
-    console.debug(`Processing backlinks for ${notePath}`);
-
-    if (!this._linksMap.has(notePath)) {
-      this._linksMap.set(notePath, new Set<string>());
-    }
+    const cache = await getCacheSafe(this.app, noteFile);
 
     const allLinks: LinkCache[] = [];
     if (cache.links) {
@@ -146,11 +101,11 @@ export default class BacklinkCachePlugin extends Plugin {
         continue;
       }
 
-      let notePathLinksMap = this._backlinksMap.get(linkFile.path);
+      let notePathLinksMap = this.backlinksMap.get(linkFile.path);
 
       if (!notePathLinksMap) {
         notePathLinksMap = new Map<string, Set<LinkCache>>();
-        this._backlinksMap.set(linkFile.path, notePathLinksMap);
+        this.backlinksMap.set(linkFile.path, notePathLinksMap);
       }
 
       let linkSet = notePathLinksMap.get(notePath);
@@ -161,7 +116,58 @@ export default class BacklinkCachePlugin extends Plugin {
       }
 
       linkSet.add(link);
-      this._linksMap.get(notePath)?.add(linkFile.path);
+      this.linksMap.get(notePath)?.add(linkFile.path);
     }
+  }
+
+  private removeBacklinks(path: string): void {
+    console.debug(`Removing backlinks for ${path}`);
+    this.removePathEntries(path);
+  }
+
+  private handleMetadataChanged(file: TFile): void {
+    this.pendingActions.set(file.path, Action.Refresh);
+  }
+
+  private handleFileRename(file: TAbstractFile, oldPath: string): void {
+    this.pendingActions.set(oldPath, Action.Remove);
+    this.pendingActions.set(file.path, Action.Refresh);
+  }
+
+  private handleFileDelete(file: TAbstractFile): void {
+    this.pendingActions.set(file.path, Action.Remove);
+  }
+
+  private removePathEntries(path: string): void {
+    console.debug(`Removing ${path} entries`);
+    this.backlinksMap.delete(path);
+    this.removeLinkedPathEntries(path);
+  }
+
+  private removeLinkedPathEntries(path: string): void {
+    const linkedNotePaths = this.linksMap.get(path) || [];
+
+    for (const linkedNotePath of linkedNotePaths) {
+      this.backlinksMap.get(linkedNotePath)?.delete(path);
+    }
+
+    this.linksMap.delete(path);
+  }
+
+  private getBacklinksForFile(file?: TFile): CustomArrayDict<LinkCache> {
+    const notePathLinksMap = this.backlinksMap.get(file?.path ?? "") || new Map<string, Set<LinkCache>>();
+    const dict = new CustomArrayDictImpl<LinkCache>();
+
+    for (const [notePath, links] of notePathLinksMap.entries()) {
+      for (const link of [...links].sort((a, b) => a.position.start.offset - b.position.start.offset)) {
+        dict.add(notePath, link);
+      }
+    }
+
+    return dict;
+  }
+
+  private extractLinkPath(link: string): string {
+    return link.replace(/\u00A0/g, " ").normalize("NFC").split("#")[0]!;
   }
 }
