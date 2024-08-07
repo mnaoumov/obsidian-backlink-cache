@@ -28,6 +28,10 @@
 
 - Refactor
 
+## 1.5.1
+
+- Refactor
+
 ## 1.5.0
 
 - Add support for missing file argument
@@ -46,5 +50,9 @@
 - Update cache only when layout is ready
 
 ## 1.1.0
+
+- Fixed inaccurate cache updates on edit
+
+## 1.0.0
 
 - Initial implementation
