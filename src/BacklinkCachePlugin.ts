@@ -8,7 +8,10 @@ import {
   TFile
 } from "obsidian";
 import type { CustomArrayDict } from "obsidian-typings";
-import { getCacheSafe } from "./MetadataCache.ts";
+import {
+  getAllLinks,
+  getCacheSafe
+} from "./MetadataCache.ts";
 
 const INTERVAL_IN_MILLISECONDS = 5000;
 
@@ -93,16 +96,11 @@ export default class BacklinkCachePlugin extends Plugin {
       return;
     }
 
-    const allLinks: LinkCache[] = [];
-    if (cache.links) {
-      allLinks.push(...cache.links);
+    if (!cache) {
+      return;
     }
 
-    if (cache.embeds) {
-      allLinks.push(...cache.embeds);
-    }
-
-    for (const link of allLinks) {
+    for (const link of getAllLinks(cache)) {
       const linkFile = this.app.metadataCache.getFirstLinkpathDest(this.extractLinkPath(link.link), notePath);
       if (!linkFile) {
         continue;
