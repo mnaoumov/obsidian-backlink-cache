@@ -1,0 +1,50 @@
+# CHANGELOG
+
+## 1.7.0
+
+- Fix race conditions
+
+## 1.6.0
+
+- Skip file if the cache could not be loaded
+
+## 1.5.6
+
+- Refactor
+
+## 1.5.5
+
+- Refactor
+
+## 1.5.4
+
+- Avoid repetitive actions to improve performance
+
+## 1.5.3
+
+- Switch debounce timeout to one minute
+
+## 1.5.2
+
+- Refactor
+
+## 1.5.0
+
+- Add support for missing file argument
+
+## 1.4.0
+
+- Keep original func
+
+## 1.3.0
+
+- Process in alphabetic order
+- Debounce bulk operations
+
+## 1.2.0
+
+- Update cache only when layout is ready
+
+## 1.1.0
+
+- Initial implementation
