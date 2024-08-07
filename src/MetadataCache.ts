@@ -1,14 +1,25 @@
 import type {
   App,
   CachedMetadata,
+  MarkdownView,
+  ReferenceCache,
   TFile
 } from "obsidian";
 import { retryWithTimeout } from "./Async.ts";
 
-export async function getCacheSafe(app: App, file: TFile): Promise<CachedMetadata> {
+export async function getCacheSafe(app: App, fileOrPath: TFile | string): Promise<CachedMetadata | null> {
   let cache: CachedMetadata | null = null;
 
   await retryWithTimeout(async () => {
+    const file = typeof fileOrPath === "string" ? app.vault.getFileByPath(fileOrPath) : fileOrPath;
+
+    if (!file) {
+      cache = null;
+      return true;
+    }
+
+    await saveNote(app, file);
+
     const fileInfo = app.metadataCache.getFileInfo(file.path);
     const stat = await app.vault.adapter.stat(file.path);
 
@@ -31,8 +42,45 @@ export async function getCacheSafe(app: App, file: TFile): Promise<CachedMetadat
       }
     }
   }, {
-    timeoutInMilliseconds: 30000
+    timeoutInMilliseconds: 60000
   });
 
-  return cache!;
+  return cache;
+}
+
+async function saveNote(app: App, note: TFile): Promise<void> {
+  if (note.extension.toLowerCase() !== "md") {
+    return;
+  }
+
+  for (const leaf of app.workspace.getLeavesOfType("markdown")) {
+    const view = leaf.view as MarkdownView;
+    if (view.file?.path === note.path) {
+      await view.save();
+    }
+  }
+}
+
+export function getAllLinks(cache: CachedMetadata): ReferenceCache[] {
+  let links: ReferenceCache[] = [];
+
+  if (cache.links) {
+    links.push(...cache.links);
+  }
+
+  if (cache.embeds) {
+    links.push(...cache.embeds);
+  }
+
+  links.sort((a, b) => a.position.start.offset - b.position.start.offset);
+
+  // BUG: https://forum.obsidian.md/t/bug-duplicated-links-in-metadatacache-inside-footnotes/85551
+  links = links.filter((link, index) => {
+    if (index === 0) {
+      return true;
+    }
+    return link.position.start.offset !== links[index - 1]!.position.start.offset;
+  });
+
+  return links;
 }
