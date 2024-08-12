@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.8.1
+
+- Fix init order
+
 ## 1.8.0
 
 - Stop initializing if unloaded
