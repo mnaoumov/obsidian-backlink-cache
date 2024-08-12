@@ -24,9 +24,13 @@ export default class BacklinkCachePlugin extends Plugin {
   private readonly linksMap = new Map<string, Set<string>>();
   private readonly backlinksMap = new Map<string, Map<string, Set<LinkCache>>>();
   private readonly pendingActions = new Map<string, Action>();
+  private abortSignal!: AbortSignal;
 
   public override onload(): void {
     this.app.workspace.onLayoutReady(this.onLayoutReady.bind(this));
+    const abortController = new AbortController();
+    this.register(() => abortController.abort());
+    this.abortSignal = abortController.signal;
   }
 
   private async onLayoutReady(): Promise<void> {
@@ -34,6 +38,10 @@ export default class BacklinkCachePlugin extends Plugin {
     const notice = new Notice("", 0);
     let i = 0;
     for (const noteFile of noteFiles) {
+      if (this.abortSignal.aborted) {
+        notice.hide();
+        return;
+      }
       i++;
       const message = `Processing backlinks # ${i} / ${noteFiles.length} - ${noteFile.path}`;
       console.debug(message);
