@@ -27,10 +27,10 @@ export default class BacklinkCachePlugin extends Plugin {
   private abortSignal!: AbortSignal;
 
   public override onload(): void {
-    this.app.workspace.onLayoutReady(this.onLayoutReady.bind(this));
     const abortController = new AbortController();
     this.register(() => abortController.abort());
     this.abortSignal = abortController.signal;
+    this.app.workspace.onLayoutReady(this.onLayoutReady.bind(this));
   }
 
   private async onLayoutReady(): Promise<void> {
