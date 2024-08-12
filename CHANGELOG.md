@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.8.0
+
+- Stop initializing if unloaded
+
 ## 1.7.0
 
 - Fix race conditions
