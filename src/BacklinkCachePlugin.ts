@@ -6,6 +6,7 @@ import {
   TFile
 } from 'obsidian';
 import type { MaybePromise } from 'obsidian-dev-utils/Async';
+import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import {
   getAllLinks,
   getCacheSafe
@@ -16,6 +17,7 @@ import type { CustomArrayDict } from 'obsidian-typings';
 import { CustomArrayDictImpl } from 'obsidian-typings/implementations';
 
 import { setOriginalFunc } from './OriginalFunc.ts';
+import { getFileOrNull } from 'obsidian-dev-utils/obsidian/FileSystem';
 
 const INTERVAL_IN_MILLISECONDS = 5000;
 
@@ -52,7 +54,7 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
         return;
       }
       i++;
-      const message = `Processing backlinks # ${i} / ${noteFiles.length} - ${noteFile.path}`;
+      const message = `Processing backlinks # ${i.toString()} / ${noteFiles.length.toString()} - ${noteFile.path}`;
       console.debug(message);
       notice.setMessage(message);
       await this.refreshBacklinks(noteFile.path);
@@ -71,7 +73,9 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
     this.register(() => {
       this.app.metadataCache.getBacklinksForFile = originalFunc;
     });
-    this.registerInterval(window.setInterval(() => void this.processPendingActions().catch(console.error), INTERVAL_IN_MILLISECONDS));
+    this.registerInterval(window.setInterval(() => {
+      invokeAsyncSafely(this.processPendingActions.bind(this));
+    }, INTERVAL_IN_MILLISECONDS));
   }
 
   private async processPendingActions(): Promise<void> {
@@ -94,7 +98,7 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
     console.debug(`Refreshing backlinks for ${notePath}`);
     this.removeLinkedPathEntries(notePath);
 
-    const noteFile = this.app.vault.getFileByPath(notePath);
+    const noteFile = getFileOrNull(this.app, notePath);
 
     if (!noteFile) {
       return;
@@ -167,7 +171,7 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
   }
 
   private removeLinkedPathEntries(path: string): void {
-    const linkedNotePaths = this.linksMap.get(path) || [];
+    const linkedNotePaths = this.linksMap.get(path) ?? [];
 
     for (const linkedNotePath of linkedNotePaths) {
       this.backlinksMap.get(linkedNotePath)?.delete(path);
@@ -177,7 +181,7 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
   }
 
   private getBacklinksForFile(file?: TFile): CustomArrayDict<LinkCache> {
-    const notePathLinksMap = this.backlinksMap.get(file?.path ?? '') || new Map<string, Set<LinkCache>>();
+    const notePathLinksMap = this.backlinksMap.get(file?.path ?? '') ?? new Map<string, Set<LinkCache>>();
     const dict = new CustomArrayDictImpl<LinkCache>();
 
     for (const [notePath, links] of notePathLinksMap.entries()) {
@@ -190,6 +194,6 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
   }
 
   private extractLinkPath(link: string): string {
-    return link.replace(/\u00A0/g, ' ').normalize('NFC').split('#')[0]!;
+    return link.replace(/\u00A0/g, ' ').normalize('NFC').split('#')[0] ?? '';
   }
 }
