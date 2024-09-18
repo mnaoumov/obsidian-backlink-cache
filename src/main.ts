@@ -1,1 +1,1 @@
-export { default } from "./BacklinkCachePlugin.ts";
+export { default } from './BacklinkCachePlugin.ts';

@@ -1,17 +1,21 @@
-import { CustomArrayDictImpl } from "obsidian-typings/implementations";
-import { setOriginalFunc } from "./OriginalFunc.ts";
+import type { LinkCache } from 'obsidian';
 import {
-  type LinkCache,
   Notice,
-  Plugin,
+  PluginSettingTab,
   TAbstractFile,
   TFile
-} from "obsidian";
-import type { CustomArrayDict } from "obsidian-typings";
+} from 'obsidian';
+import type { MaybePromise } from 'obsidian-dev-utils/Async';
 import {
   getAllLinks,
   getCacheSafe
-} from "./MetadataCache.ts";
+} from 'obsidian-dev-utils/obsidian/MetadataCache';
+import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
+import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
+import type { CustomArrayDict } from 'obsidian-typings';
+import { CustomArrayDictImpl } from 'obsidian-typings/implementations';
+
+import { setOriginalFunc } from './OriginalFunc.ts';
 
 const INTERVAL_IN_MILLISECONDS = 5000;
 
@@ -20,22 +24,27 @@ enum Action {
   Remove
 }
 
-export default class BacklinkCachePlugin extends Plugin {
+export default class BacklinkCachePlugin extends PluginBase<object> {
+  protected override createDefaultPluginSettings(): object {
+    return {};
+  }
+
+  protected override createPluginSettingsTab(): PluginSettingTab | null {
+    return null;
+  }
+
+  protected override onloadComplete(): MaybePromise<void> {
+    // Do nothing
+  }
+
   private readonly linksMap = new Map<string, Set<string>>();
   private readonly backlinksMap = new Map<string, Map<string, Set<LinkCache>>>();
   private readonly pendingActions = new Map<string, Action>();
-  private abortSignal!: AbortSignal;
 
-  public override onload(): void {
-    const abortController = new AbortController();
-    this.register(() => abortController.abort());
-    this.abortSignal = abortController.signal;
-    this.app.workspace.onLayoutReady(this.onLayoutReady.bind(this));
-  }
+  protected override async onLayoutReady(): Promise<void> {
+    const noteFiles = getMarkdownFilesSorted(this.app);
 
-  private async onLayoutReady(): Promise<void> {
-    const noteFiles = this.app.vault.getMarkdownFiles().sort((a, b) => a.path.localeCompare(b.path));
-    const notice = new Notice("", 0);
+    const notice = new Notice('', 0);
     let i = 0;
     for (const noteFile of noteFiles) {
       if (this.abortSignal.aborted) {
@@ -56,9 +65,9 @@ export default class BacklinkCachePlugin extends Plugin {
 
     // eslint-disable-next-line @typescript-eslint/unbound-method
     setOriginalFunc(this.app.metadataCache.getBacklinksForFile, originalFunc.bind(this.app.metadataCache));
-    this.registerEvent(this.app.metadataCache.on("changed", this.handleMetadataChanged.bind(this)));
-    this.registerEvent(this.app.vault.on("rename", this.handleFileRename.bind(this)));
-    this.registerEvent(this.app.vault.on("delete", this.handleFileDelete.bind(this)));
+    this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
+    this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
+    this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
     this.register(() => {
       this.app.metadataCache.getBacklinksForFile = originalFunc;
     });
@@ -168,7 +177,7 @@ export default class BacklinkCachePlugin extends Plugin {
   }
 
   private getBacklinksForFile(file?: TFile): CustomArrayDict<LinkCache> {
-    const notePathLinksMap = this.backlinksMap.get(file?.path ?? "") || new Map<string, Set<LinkCache>>();
+    const notePathLinksMap = this.backlinksMap.get(file?.path ?? '') || new Map<string, Set<LinkCache>>();
     const dict = new CustomArrayDictImpl<LinkCache>();
 
     for (const [notePath, links] of notePathLinksMap.entries()) {
@@ -181,6 +190,6 @@ export default class BacklinkCachePlugin extends Plugin {
   }
 
   private extractLinkPath(link: string): string {
-    return link.replace(/\u00A0/g, " ").normalize("NFC").split("#")[0]!;
+    return link.replace(/\u00A0/g, ' ').normalize('NFC').split('#')[0]!;
   }
 }

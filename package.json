@@ -3,37 +3,22 @@
   "version": "1.8.1",
   "description": "Stores backlink cache to speed up `app.metadataCache.getBacklinksForFile`",
   "scripts": {
-    "build": "tsx scripts/npmScriptExecutor.ts build",
-    "dev": "tsx scripts/npmScriptExecutor.ts dev",
-    "lint": "tsx scripts/npmScriptExecutor.ts lint",
-    "version": "tsx scripts/npmScriptExecutor.ts version",
-    "postversion": "tsx scripts/npmScriptExecutor.ts postversion",
-    "preversion": "tsx scripts/npmScriptExecutor.ts preversion",
-    "spellcheck": "tsx scripts/npmScriptExecutor.ts spellcheck"
+    "build": "obsidian-dev-utils build",
+    "build:validate": "obsidian-dev-utils build:validate",
+    "dev": "obsidian-dev-utils dev",
+    "lint": "obsidian-dev-utils lint",
+    "lint:fix": "obsidian-dev-utils lint:fix",
+    "version": "obsidian-dev-utils version",
+    "spellcheck": "obsidian-dev-utils spellcheck"
   },
   "keywords": [],
   "author": "mnaoumov",
   "license": "MIT",
   "devDependencies": {
-    "@stylistic/eslint-plugin": "^2.3.0",
     "@tsconfig/strictest": "^2.0.5",
-    "@types/eslint": "^8.56.10",
-    "@types/node": "^20.14.9",
-    "@types/obsidian-typings": "file:../obsidian-typings",
-    "@typescript-eslint/eslint-plugin": "^7.15.0",
-    "@typescript-eslint/parser": "^7.15.0",
-    "builtin-modules": "^4.0.0",
-    "cspell": "^8.10.4",
-    "esbuild": "^0.23.0",
-    "eslint": "^8.57.0",
-    "eslint-import-resolver-typescript": "^3.6.1",
-    "eslint-plugin-deprecation": "^3.0.0",
-    "eslint-plugin-import": "^2.29.1",
-    "eslint-plugin-modules-newlines": "^0.0.7",
-    "globals": "^15.8.0",
-    "obsidian": "^1.5.7-1",
-    "obsidian-typings": "mnaoumov/obsidian-typings#main",
-    "tsx": "^4.16.2"
+    "obsidian": "^1.6.6",
+    "obsidian-dev-utils": "^3.25.0",
+    "obsidian-typings": "^2.2.1-beta.15"
   },
   "type": "module"
 }
