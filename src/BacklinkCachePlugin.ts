@@ -1,3 +1,4 @@
+import { around } from 'monkey-around';
 import type { LinkCache } from 'obsidian';
 import {
   Notice,
@@ -7,6 +8,9 @@ import {
 } from 'obsidian';
 import type { MaybePromise } from 'obsidian-dev-utils/Async';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
+import { getFileOrNull } from 'obsidian-dev-utils/obsidian/FileSystem';
+import { extractLinkFile } from 'obsidian-dev-utils/obsidian/Link';
+import type { GetBacklinksForFileSafeWrapper } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import {
   getAllLinks,
   getCacheSafe
@@ -16,9 +20,6 @@ import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
 import type { CustomArrayDict } from 'obsidian-typings';
 import { CustomArrayDictImpl } from 'obsidian-typings/implementations';
 
-import { setOriginalFunc } from './OriginalFunc.ts';
-import { getFileOrNull } from 'obsidian-dev-utils/obsidian/FileSystem';
-
 const INTERVAL_IN_MILLISECONDS = 5000;
 
 enum Action {
@@ -26,7 +27,13 @@ enum Action {
   Remove
 }
 
+type GetBacklinksForFileFn = (file: TFile) => CustomArrayDict<LinkCache>;
+
 export default class BacklinkCachePlugin extends PluginBase<object> {
+  private readonly linksMap = new Map<string, Set<string>>();
+  private readonly backlinksMap = new Map<string, Map<string, Set<LinkCache>>>();
+  private readonly pendingActions = new Map<string, Action>();
+
   protected override createDefaultPluginSettings(): object {
     return {};
   }
@@ -39,19 +46,33 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
     // Do nothing
   }
 
-  private readonly linksMap = new Map<string, Set<string>>();
-  private readonly backlinksMap = new Map<string, Map<string, Set<LinkCache>>>();
-  private readonly pendingActions = new Map<string, Action>();
-
   protected override async onLayoutReady(): Promise<void> {
+    this.register(around(this.app.metadataCache, {
+      getBacklinksForFile: (originalFn: GetBacklinksForFileFn): GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper =>
+        Object.assign(this.getBacklinksForFile.bind(this), {
+          originalFn,
+          safe: this.getBacklinksForFileSafe.bind(this)
+        })
+    }));
+
+    this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
+    this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
+    this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
+    this.registerInterval(window.setInterval(() => {
+      invokeAsyncSafely(this.processPendingActions.bind(this));
+    }, INTERVAL_IN_MILLISECONDS));
+
+    await this.processAllNotes();
+  }
+
+  private async processAllNotes(): Promise<void> {
     const noteFiles = getMarkdownFilesSorted(this.app);
 
     const notice = new Notice('', 0);
     let i = 0;
     for (const noteFile of noteFiles) {
       if (this.abortSignal.aborted) {
-        notice.hide();
-        return;
+        break;
       }
       i++;
       const message = `Processing backlinks # ${i.toString()} / ${noteFiles.length.toString()} - ${noteFile.path}`;
@@ -60,22 +81,6 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
       await this.refreshBacklinks(noteFile.path);
     }
     notice.hide();
-
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    const originalFunc = this.app.metadataCache.getBacklinksForFile;
-    this.app.metadataCache.getBacklinksForFile = this.getBacklinksForFile.bind(this);
-
-    // eslint-disable-next-line @typescript-eslint/unbound-method
-    setOriginalFunc(this.app.metadataCache.getBacklinksForFile, originalFunc.bind(this.app.metadataCache));
-    this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
-    this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
-    this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
-    this.register(() => {
-      this.app.metadataCache.getBacklinksForFile = originalFunc;
-    });
-    this.registerInterval(window.setInterval(() => {
-      invokeAsyncSafely(this.processPendingActions.bind(this));
-    }, INTERVAL_IN_MILLISECONDS));
   }
 
   private async processPendingActions(): Promise<void> {
@@ -108,21 +113,14 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
       this.linksMap.set(notePath, new Set<string>());
     }
 
-    let cache;
-
-    try {
-      cache = await getCacheSafe(this.app, noteFile);
-    } catch (e) {
-      console.error(`Error getting cache for ${notePath}`, e);
-      return;
-    }
+    const cache = await getCacheSafe(this.app, noteFile);
 
     if (!cache) {
       return;
     }
 
     for (const link of getAllLinks(cache)) {
-      const linkFile = this.app.metadataCache.getFirstLinkpathDest(this.extractLinkPath(link.link), notePath);
+      const linkFile = extractLinkFile(this.app, link, notePath);
       if (!linkFile) {
         continue;
       }
@@ -180,8 +178,8 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
     this.linksMap.delete(path);
   }
 
-  private getBacklinksForFile(file?: TFile): CustomArrayDict<LinkCache> {
-    const notePathLinksMap = this.backlinksMap.get(file?.path ?? '') ?? new Map<string, Set<LinkCache>>();
+  private getBacklinksForFile(file: TFile): CustomArrayDict<LinkCache> {
+    const notePathLinksMap = this.backlinksMap.get(file.path) ?? new Map<string, Set<LinkCache>>();
     const dict = new CustomArrayDictImpl<LinkCache>();
 
     for (const [notePath, links] of notePathLinksMap.entries()) {
@@ -193,7 +191,8 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
     return dict;
   }
 
-  private extractLinkPath(link: string): string {
-    return link.replace(/\u00A0/g, ' ').normalize('NFC').split('#')[0] ?? '';
+  private async getBacklinksForFileSafe(file: TFile): Promise<CustomArrayDict<LinkCache>> {
+    await this.processPendingActions();
+    return this.getBacklinksForFile(file);
   }
 }
