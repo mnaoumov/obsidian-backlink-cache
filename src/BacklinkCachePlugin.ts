@@ -179,6 +179,7 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
   }
 
   private getBacklinksForFile(file: TFile): CustomArrayDict<LinkCache> {
+    invokeAsyncSafely(this.processPendingActions.bind(this));
     const notePathLinksMap = this.backlinksMap.get(file.path) ?? new Map<string, Set<LinkCache>>();
     const dict = new CustomArrayDictImpl<LinkCache>();
 
