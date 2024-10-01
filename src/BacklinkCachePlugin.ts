@@ -8,7 +8,11 @@ import {
 } from 'obsidian';
 import type { MaybePromise } from 'obsidian-dev-utils/Async';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
-import { getFileOrNull } from 'obsidian-dev-utils/obsidian/FileSystem';
+import type { PathOrFile } from 'obsidian-dev-utils/obsidian/FileSystem';
+import {
+  getFileOrNull,
+  getPath
+} from 'obsidian-dev-utils/obsidian/FileSystem';
 import { extractLinkFile } from 'obsidian-dev-utils/obsidian/Link';
 import type { GetBacklinksForFileSafeWrapper } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import {
@@ -178,9 +182,9 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
     this.linksMap.delete(path);
   }
 
-  private getBacklinksForFile(file: TFile): CustomArrayDict<LinkCache> {
+  private getBacklinksForFile(pathOrFile: PathOrFile): CustomArrayDict<LinkCache> {
     invokeAsyncSafely(this.processPendingActions.bind(this));
-    const notePathLinksMap = this.backlinksMap.get(file.path) ?? new Map<string, Set<LinkCache>>();
+    const notePathLinksMap = this.backlinksMap.get(getPath(pathOrFile)) ?? new Map<string, Set<LinkCache>>();
     const dict = new CustomArrayDictImpl<LinkCache>();
 
     for (const [notePath, links] of notePathLinksMap.entries()) {
@@ -192,8 +196,8 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
     return dict;
   }
 
-  private async getBacklinksForFileSafe(file: TFile): Promise<CustomArrayDict<LinkCache>> {
+  private async getBacklinksForFileSafe(pathOrFile: PathOrFile): Promise<CustomArrayDict<LinkCache>> {
     await this.processPendingActions();
-    return this.getBacklinksForFile(file);
+    return this.getBacklinksForFile(pathOrFile);
   }
 }
