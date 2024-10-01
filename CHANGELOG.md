@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.10.0
+
+- Allow passing path or file
+
 ## 1.9.0
 
 - Invoke `processPendingActions` sync
