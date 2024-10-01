@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.9.0
+
+- Invoke `processPendingActions` sync
+- Refactor to `monkey-around`
+
 ## 1.8.1
 
 - Fix init order
