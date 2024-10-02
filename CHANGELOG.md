@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.11.0
+
+- update lib
+
 ## 1.10.0
 
 - Allow passing path or file
