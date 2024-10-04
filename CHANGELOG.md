@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.11.1
+
+- Update lib
+
 ## 1.11.0
 
 - update lib
