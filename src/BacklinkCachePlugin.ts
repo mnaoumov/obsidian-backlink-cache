@@ -184,7 +184,6 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
   }
 
   private getBacklinksForFile(pathOrFile: PathOrFile): CustomArrayDict<Reference> {
-    invokeAsyncSafely(this.processPendingActions.bind(this));
     const notePathLinksMap = this.backlinksMap.get(getPath(pathOrFile)) ?? new Map<string, Set<Reference>>();
     const dict = new CustomArrayDictImpl<Reference>();
 
@@ -194,6 +193,7 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
       }
     }
 
+    invokeAsyncSafely(this.processPendingActions.bind(this));
     return dict;
   }
 
