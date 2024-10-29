@@ -1,5 +1,5 @@
 import { around } from 'monkey-around';
-import type { LinkCache } from 'obsidian';
+import type { Reference } from 'obsidian';
 import {
   Notice,
   PluginSettingTab,
@@ -20,6 +20,7 @@ import {
   getCacheSafe
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
+import { sortReferences } from 'obsidian-dev-utils/obsidian/Reference';
 import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
 import type { CustomArrayDict } from 'obsidian-typings';
 import { CustomArrayDictImpl } from 'obsidian-typings/implementations';
@@ -31,11 +32,11 @@ enum Action {
   Remove
 }
 
-type GetBacklinksForFileFn = (file: TFile) => CustomArrayDict<LinkCache>;
+type GetBacklinksForFileFn = (file: TFile) => CustomArrayDict<Reference>;
 
 export default class BacklinkCachePlugin extends PluginBase<object> {
   private readonly linksMap = new Map<string, Set<string>>();
-  private readonly backlinksMap = new Map<string, Map<string, Set<LinkCache>>>();
+  private readonly backlinksMap = new Map<string, Map<string, Set<Reference>>>();
   private readonly pendingActions = new Map<string, Action>();
 
   protected override createDefaultPluginSettings(): object {
@@ -132,14 +133,14 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
       let notePathLinksMap = this.backlinksMap.get(linkFile.path);
 
       if (!notePathLinksMap) {
-        notePathLinksMap = new Map<string, Set<LinkCache>>();
+        notePathLinksMap = new Map<string, Set<Reference>>();
         this.backlinksMap.set(linkFile.path, notePathLinksMap);
       }
 
       let linkSet = notePathLinksMap.get(notePath);
 
       if (!linkSet) {
-        linkSet = new Set<LinkCache>();
+        linkSet = new Set<Reference>();
         notePathLinksMap.set(notePath, linkSet);
       }
 
@@ -182,13 +183,13 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
     this.linksMap.delete(path);
   }
 
-  private getBacklinksForFile(pathOrFile: PathOrFile): CustomArrayDict<LinkCache> {
+  private getBacklinksForFile(pathOrFile: PathOrFile): CustomArrayDict<Reference> {
     invokeAsyncSafely(this.processPendingActions.bind(this));
-    const notePathLinksMap = this.backlinksMap.get(getPath(pathOrFile)) ?? new Map<string, Set<LinkCache>>();
-    const dict = new CustomArrayDictImpl<LinkCache>();
+    const notePathLinksMap = this.backlinksMap.get(getPath(pathOrFile)) ?? new Map<string, Set<Reference>>();
+    const dict = new CustomArrayDictImpl<Reference>();
 
     for (const [notePath, links] of notePathLinksMap.entries()) {
-      for (const link of [...links].sort((a, b) => a.position.start.offset - b.position.start.offset)) {
+      for (const link of sortReferences(Array.from(links))) {
         dict.add(notePath, link);
       }
     }
@@ -196,7 +197,7 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
     return dict;
   }
 
-  private async getBacklinksForFileSafe(pathOrFile: PathOrFile): Promise<CustomArrayDict<LinkCache>> {
+  private async getBacklinksForFileSafe(pathOrFile: PathOrFile): Promise<CustomArrayDict<Reference>> {
     await this.processPendingActions();
     return this.getBacklinksForFile(pathOrFile);
   }
