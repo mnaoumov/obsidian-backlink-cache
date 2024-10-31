@@ -1,12 +1,15 @@
 import { around } from 'monkey-around';
-import type { Reference } from 'obsidian';
+import type {
+  Debouncer,
+  Reference
+} from 'obsidian';
 import {
+  debounce,
   Notice,
   PluginSettingTab,
   TAbstractFile,
   TFile
 } from 'obsidian';
-import type { MaybePromise } from 'obsidian-dev-utils/Async';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import type { PathOrFile } from 'obsidian-dev-utils/obsidian/FileSystem';
 import {
@@ -25,7 +28,7 @@ import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
 import type { CustomArrayDict } from 'obsidian-typings';
 import { CustomArrayDictImpl } from 'obsidian-typings/implementations';
 
-const INTERVAL_IN_MILLISECONDS = 5000;
+const INTERVAL_IN_MILLISECONDS = 500;
 
 enum Action {
   Refresh,
@@ -38,6 +41,7 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
   private readonly linksMap = new Map<string, Set<string>>();
   private readonly backlinksMap = new Map<string, Map<string, Set<Reference>>>();
   private readonly pendingActions = new Map<string, Action>();
+  private debouncedProcessPendingActions!: Debouncer<[], Promise<void>>;
 
   protected override createDefaultPluginSettings(): object {
     return {};
@@ -45,10 +49,6 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
 
   protected override createPluginSettingsTab(): PluginSettingTab | null {
     return null;
-  }
-
-  protected override onloadComplete(): MaybePromise<void> {
-    // Do nothing
   }
 
   protected override async onLayoutReady(): Promise<void> {
@@ -63,9 +63,7 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
     this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
     this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
     this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
-    this.registerInterval(window.setInterval(() => {
-      invokeAsyncSafely(this.processPendingActions.bind(this));
-    }, INTERVAL_IN_MILLISECONDS));
+    this.debouncedProcessPendingActions = debounce(this.processPendingActions.bind(this), INTERVAL_IN_MILLISECONDS, true);
 
     await this.processAllNotes();
   }
@@ -154,17 +152,22 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
     this.removePathEntries(path);
   }
 
+  private setPendingAction(path: string, action: Action): void {
+    this.pendingActions.set(path, action);
+    this.debouncedProcessPendingActions();
+  }
+
   private handleMetadataChanged(file: TFile): void {
-    this.pendingActions.set(file.path, Action.Refresh);
+    this.setPendingAction(file.path, Action.Refresh);
   }
 
   private handleFileRename(file: TAbstractFile, oldPath: string): void {
-    this.pendingActions.set(oldPath, Action.Remove);
-    this.pendingActions.set(file.path, Action.Refresh);
+    this.setPendingAction(oldPath, Action.Remove);
+    this.setPendingAction(file.path, Action.Refresh);
   }
 
   private handleFileDelete(file: TAbstractFile): void {
-    this.pendingActions.set(file.path, Action.Remove);
+    this.setPendingAction(file.path, Action.Remove);
   }
 
   private removePathEntries(path: string): void {
@@ -193,7 +196,9 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
       }
     }
 
-    invokeAsyncSafely(this.processPendingActions.bind(this));
+    window.setImmediate(() => {
+      invokeAsyncSafely(this.processPendingActions.bind(this));
+    });
     return dict;
   }
 
