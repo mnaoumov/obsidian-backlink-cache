@@ -38,6 +38,10 @@ You can access the original built-in version:
 const backlinks = app.metadataCache.getBacklinksForFile.originalFn(file);
 ```
 
+### TypeScript typings
+
+If you want to use the updated functions from your plugin, you can copy [types.d.ts](./types.d.ts) into your code.
+
 ## Installation
 
 - `Backlink Cache` is available in [the official Community Plugins repository](https://obsidian.md/plugins?id=backlink-cache).
