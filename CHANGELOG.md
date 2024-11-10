@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 1.11.3
+
+- Update libs
+
 ## 1.11.2
 
 - Refactor
