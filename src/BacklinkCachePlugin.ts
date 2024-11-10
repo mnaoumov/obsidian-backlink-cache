@@ -1,8 +1,12 @@
-import { around } from 'monkey-around';
 import type {
   Debouncer,
   Reference
 } from 'obsidian';
+import type { PathOrFile } from 'obsidian-dev-utils/obsidian/FileSystem';
+import type { GetBacklinksForFileSafeWrapper } from 'obsidian-dev-utils/obsidian/MetadataCache';
+import type { CustomArrayDict } from 'obsidian-typings';
+
+import { around } from 'monkey-around';
 import {
   debounce,
   Notice,
@@ -11,13 +15,11 @@ import {
   TFile
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
-import type { PathOrFile } from 'obsidian-dev-utils/obsidian/FileSystem';
 import {
   getFileOrNull,
   getPath
 } from 'obsidian-dev-utils/obsidian/FileSystem';
 import { extractLinkFile } from 'obsidian-dev-utils/obsidian/Link';
-import type { GetBacklinksForFileSafeWrapper } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import {
   getAllLinks,
   getCacheSafe
@@ -25,7 +27,6 @@ import {
 import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
 import { sortReferences } from 'obsidian-dev-utils/obsidian/Reference';
 import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
-import type { CustomArrayDict } from 'obsidian-typings';
 import { CustomArrayDictImpl } from 'obsidian-typings/implementations';
 
 const INTERVAL_IN_MILLISECONDS = 500;
@@ -38,16 +39,16 @@ enum Action {
 type GetBacklinksForFileFn = (file: TFile) => CustomArrayDict<Reference>;
 
 export default class BacklinkCachePlugin extends PluginBase<object> {
-  private readonly linksMap = new Map<string, Set<string>>();
   private readonly backlinksMap = new Map<string, Map<string, Set<Reference>>>();
-  private readonly pendingActions = new Map<string, Action>();
   private debouncedProcessPendingActions!: Debouncer<[], Promise<void>>;
+  private readonly linksMap = new Map<string, Set<string>>();
+  private readonly pendingActions = new Map<string, Action>();
 
   protected override createDefaultPluginSettings(): object {
     return {};
   }
 
-  protected override createPluginSettingsTab(): PluginSettingTab | null {
+  protected override createPluginSettingsTab(): null | PluginSettingTab {
     return null;
   }
 
@@ -66,6 +67,40 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
     this.debouncedProcessPendingActions = debounce(this.processPendingActions.bind(this), INTERVAL_IN_MILLISECONDS, true);
 
     await this.processAllNotes();
+  }
+
+  private getBacklinksForFile(pathOrFile: PathOrFile): CustomArrayDict<Reference> {
+    const notePathLinksMap = this.backlinksMap.get(getPath(pathOrFile)) ?? new Map<string, Set<Reference>>();
+    const dict = new CustomArrayDictImpl<Reference>();
+
+    for (const [notePath, links] of notePathLinksMap.entries()) {
+      for (const link of sortReferences(Array.from(links))) {
+        dict.add(notePath, link);
+      }
+    }
+
+    window.setImmediate(() => {
+      invokeAsyncSafely(this.processPendingActions.bind(this));
+    });
+    return dict;
+  }
+
+  private async getBacklinksForFileSafe(pathOrFile: PathOrFile): Promise<CustomArrayDict<Reference>> {
+    await this.processPendingActions();
+    return this.getBacklinksForFile(pathOrFile);
+  }
+
+  private handleFileDelete(file: TAbstractFile): void {
+    this.setPendingAction(file.path, Action.Remove);
+  }
+
+  private handleFileRename(file: TAbstractFile, oldPath: string): void {
+    this.setPendingAction(oldPath, Action.Remove);
+    this.setPendingAction(file.path, Action.Refresh);
+  }
+
+  private handleMetadataChanged(file: TFile): void {
+    this.setPendingAction(file.path, Action.Refresh);
   }
 
   private async processAllNotes(): Promise<void> {
@@ -152,30 +187,6 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
     this.removePathEntries(path);
   }
 
-  private setPendingAction(path: string, action: Action): void {
-    this.pendingActions.set(path, action);
-    this.debouncedProcessPendingActions();
-  }
-
-  private handleMetadataChanged(file: TFile): void {
-    this.setPendingAction(file.path, Action.Refresh);
-  }
-
-  private handleFileRename(file: TAbstractFile, oldPath: string): void {
-    this.setPendingAction(oldPath, Action.Remove);
-    this.setPendingAction(file.path, Action.Refresh);
-  }
-
-  private handleFileDelete(file: TAbstractFile): void {
-    this.setPendingAction(file.path, Action.Remove);
-  }
-
-  private removePathEntries(path: string): void {
-    console.debug(`Removing ${path} entries`);
-    this.backlinksMap.delete(path);
-    this.removeLinkedPathEntries(path);
-  }
-
   private removeLinkedPathEntries(path: string): void {
     const linkedNotePaths = this.linksMap.get(path) ?? [];
 
@@ -186,24 +197,14 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
     this.linksMap.delete(path);
   }
 
-  private getBacklinksForFile(pathOrFile: PathOrFile): CustomArrayDict<Reference> {
-    const notePathLinksMap = this.backlinksMap.get(getPath(pathOrFile)) ?? new Map<string, Set<Reference>>();
-    const dict = new CustomArrayDictImpl<Reference>();
-
-    for (const [notePath, links] of notePathLinksMap.entries()) {
-      for (const link of sortReferences(Array.from(links))) {
-        dict.add(notePath, link);
-      }
-    }
-
-    window.setImmediate(() => {
-      invokeAsyncSafely(this.processPendingActions.bind(this));
-    });
-    return dict;
+  private removePathEntries(path: string): void {
+    console.debug(`Removing ${path} entries`);
+    this.backlinksMap.delete(path);
+    this.removeLinkedPathEntries(path);
   }
 
-  private async getBacklinksForFileSafe(pathOrFile: PathOrFile): Promise<CustomArrayDict<Reference>> {
-    await this.processPendingActions();
-    return this.getBacklinksForFile(pathOrFile);
+  private setPendingAction(path: string, action: Action): void {
+    this.pendingActions.set(path, action);
+    this.debouncedProcessPendingActions();
   }
 }
