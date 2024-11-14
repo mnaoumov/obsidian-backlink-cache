@@ -54,9 +54,9 @@ export default class BacklinkCachePlugin extends PluginBase<object> {
 
   protected override async onLayoutReady(): Promise<void> {
     this.register(around(this.app.metadataCache, {
-      getBacklinksForFile: (originalFn: GetBacklinksForFileFn): GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper =>
+      getBacklinksForFile: (next: GetBacklinksForFileFn): GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper =>
         Object.assign(this.getBacklinksForFile.bind(this), {
-          originalFn,
+          originalFn: next,
           safe: this.getBacklinksForFileSafe.bind(this)
         })
     }));
