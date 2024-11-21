@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 1.11.5
+
+- Update libs
+- Rename next
+
 ## 1.11.4
 
 - Update libs
