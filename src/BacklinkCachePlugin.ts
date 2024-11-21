@@ -38,7 +38,7 @@ enum Action {
 
 type GetBacklinksForFileFn = (file: TFile) => CustomArrayDict<Reference>;
 
-export default class BacklinkCachePlugin extends PluginBase<object> {
+export class BacklinkCachePlugin extends PluginBase<object> {
   private readonly backlinksMap = new Map<string, Map<string, Set<Reference>>>();
   private debouncedProcessPendingActions!: Debouncer<[], Promise<void>>;
   private readonly linksMap = new Map<string, Set<string>>();
