@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.0.0
+
+- Enable backlinks for canvas files
+
 ## 1.11.5
 
 - Update libs
