@@ -197,3 +197,10 @@ function recomputeBacklink(app: App, backlinkFile: TFile, backlink: BacklinkView
     uninstallGetMarkdownFilesPatch();
   }
 }
+
+export function removeCanvasMetadataCache(app: App): void {
+  const canvasFiles = app.vault.getFiles().filter(isCanvasFile);
+  for (const file of canvasFiles) {
+    app.metadataCache.deletePath(file.path);
+  }
+}

@@ -33,7 +33,8 @@ import { CustomArrayDictImpl } from 'obsidian-typings/implementations';
 import {
   initCanvasMetadataCache,
   isCanvasPluginEnabled,
-  patchForCanvas
+  patchForCanvas,
+  removeCanvasMetadataCache
 } from './Canvas.ts';
 
 const INTERVAL_IN_MILLISECONDS = 500;
@@ -76,8 +77,9 @@ export class BacklinkCachePlugin extends PluginBase<object> {
     this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
     this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
     this.debouncedProcessPendingActions = debounce(this.processPendingActions.bind(this), INTERVAL_IN_MILLISECONDS, true);
-    patchForCanvas(this);
+    this.register(() => removeCanvasMetadataCache(this.app));
 
+    patchForCanvas(this);
     await this.processAllNotes();
   }
 
