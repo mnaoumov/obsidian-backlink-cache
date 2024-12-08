@@ -31,8 +31,9 @@ import { getNoteFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
 import { CustomArrayDictImpl } from 'obsidian-typings/implementations';
 
 import {
+  initCanvasMetadataCache,
   isCanvasPluginEnabled,
-  parseCanvasCache
+  patchForCanvas
 } from './Canvas.ts';
 
 const INTERVAL_IN_MILLISECONDS = 500;
@@ -49,6 +50,10 @@ export class BacklinkCachePlugin extends PluginBase<object> {
   private debouncedProcessPendingActions!: Debouncer<[], Promise<void>>;
   private readonly linksMap = new Map<string, Set<string>>();
   private readonly pendingActions = new Map<string, Action>();
+
+  public triggerRefresh(path: string): void {
+    this.setPendingAction(path, Action.Refresh);
+  }
 
   protected override createDefaultPluginSettings(): object {
     return {};
@@ -70,8 +75,8 @@ export class BacklinkCachePlugin extends PluginBase<object> {
     this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
     this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
     this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
-    this.registerEvent(this.app.vault.on('modify', this.handleFileModify.bind(this)));
     this.debouncedProcessPendingActions = debounce(this.processPendingActions.bind(this), INTERVAL_IN_MILLISECONDS, true);
+    patchForCanvas(this);
 
     await this.processAllNotes();
   }
@@ -101,13 +106,6 @@ export class BacklinkCachePlugin extends PluginBase<object> {
     this.setPendingAction(file.path, Action.Remove);
   }
 
-  private handleFileModify(file: TAbstractFile): void {
-    if (!isCanvasFile(file)) {
-      return;
-    }
-    this.setPendingAction(file.path, Action.Refresh);
-  }
-
   private handleFileRename(file: TAbstractFile, oldPath: string): void {
     this.setPendingAction(oldPath, Action.Remove);
     this.setPendingAction(file.path, Action.Refresh);
@@ -130,6 +128,9 @@ export class BacklinkCachePlugin extends PluginBase<object> {
       const message = `Processing backlinks # ${i.toString()} / ${noteFiles.length.toString()} - ${noteFile.path}`;
       console.debug(message);
       notice.setMessage(message);
+      if (isCanvasFile(noteFile)) {
+        await initCanvasMetadataCache(this.app, noteFile);
+      }
       await this.refreshBacklinks(noteFile.path);
     }
     notice.hide();
@@ -169,7 +170,7 @@ export class BacklinkCachePlugin extends PluginBase<object> {
       this.linksMap.set(notePath, new Set<string>());
     }
 
-    const cache = isCanvasFile(noteFile) ? await parseCanvasCache(this.app, noteFile) : await getCacheSafe(this.app, noteFile);
+    const cache = await getCacheSafe(this.app, noteFile);
 
     if (!cache) {
       return;
