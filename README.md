@@ -10,6 +10,8 @@ This plugin the most likely will be useful for other plugin developers that deal
 
 Its idea came from the [forum](https://forum.obsidian.md/t/store-backlinks-in-metadatacache/67000).
 
+Also the plugin enables backlinks for canvas files.
+
 ## Usage
 
 ### Fast version

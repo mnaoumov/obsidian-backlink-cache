@@ -183,6 +183,11 @@ function patchBacklinksPlugin(plugin: BacklinkCachePlugin): void {
 }
 
 function recomputeBacklink(app: App, backlinkFile: TFile, backlink: BacklinkView['backlink'], next: (backlinkFile: TFile) => void): void {
+  if (!isCanvasPluginEnabled(app)) {
+    next.call(backlink, backlinkFile);
+    return;
+  }
+
   const uninstallGetMarkdownFilesPatch = around(app.vault, {
     getMarkdownFiles: (): () => TFile[] => () => getNoteFilesSorted(app)
   });
