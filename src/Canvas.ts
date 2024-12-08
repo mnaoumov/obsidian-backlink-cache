@@ -2,10 +2,12 @@ import type {
   App,
   CachedMetadata,
   TAbstractFile,
-  TFile,
-  View
+  TFile
 } from 'obsidian';
-import type { BacklinkPlugin } from 'obsidian-typings';
+import type {
+  BacklinkPlugin,
+  BacklinkView
+} from 'obsidian-typings';
 import type { CanvasData } from 'obsidian/canvas.js';
 
 import { around } from 'monkey-around';
@@ -21,12 +23,6 @@ export function isCanvasPluginEnabled(app: App): boolean {
 }
 
 const canvasMetadataCacheMap = new Map<string, CachedMetadata>();
-
-interface BacklinkView extends View {
-  backlink: {
-    recomputeBacklink: (backlinkFile: TFile) => void;
-  };
-}
 
 export async function initCanvasMetadataCache(app: App, file: TFile): Promise<void> {
   if (!isCanvasFile(file)) {
