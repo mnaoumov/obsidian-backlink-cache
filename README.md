@@ -10,7 +10,7 @@ This plugin the most likely will be useful for other plugin developers that deal
 
 Its idea came from the [forum](https://forum.obsidian.md/t/store-backlinks-in-metadatacache/67000).
 
-Also the plugin enables backlinks for canvas files.
+Also the plugin includes canvas into the backlinks for the referenced files. This includes the `app.metadataCache.getBacklinksForFile` function and the `Backlinks Pane`.
 
 ## Usage
 
