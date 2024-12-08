@@ -17,7 +17,8 @@ import {
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import {
   getFileOrNull,
-  getPath
+  getPath,
+  isCanvasFile
 } from 'obsidian-dev-utils/obsidian/FileSystem';
 import { extractLinkFile } from 'obsidian-dev-utils/obsidian/Link';
 import {
@@ -26,8 +27,13 @@ import {
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
 import { sortReferences } from 'obsidian-dev-utils/obsidian/Reference';
-import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
+import { getNoteFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
 import { CustomArrayDictImpl } from 'obsidian-typings/implementations';
+
+import {
+  isCanvasPluginEnabled,
+  parseCanvasCache
+} from './Canvas.ts';
 
 const INTERVAL_IN_MILLISECONDS = 500;
 
@@ -64,6 +70,7 @@ export class BacklinkCachePlugin extends PluginBase<object> {
     this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
     this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
     this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
+    this.registerEvent(this.app.vault.on('modify', this.handleFileModify.bind(this)));
     this.debouncedProcessPendingActions = debounce(this.processPendingActions.bind(this), INTERVAL_IN_MILLISECONDS, true);
 
     await this.processAllNotes();
@@ -94,6 +101,13 @@ export class BacklinkCachePlugin extends PluginBase<object> {
     this.setPendingAction(file.path, Action.Remove);
   }
 
+  private handleFileModify(file: TAbstractFile): void {
+    if (!isCanvasFile(file)) {
+      return;
+    }
+    this.setPendingAction(file.path, Action.Refresh);
+  }
+
   private handleFileRename(file: TAbstractFile, oldPath: string): void {
     this.setPendingAction(oldPath, Action.Remove);
     this.setPendingAction(file.path, Action.Refresh);
@@ -104,7 +118,7 @@ export class BacklinkCachePlugin extends PluginBase<object> {
   }
 
   private async processAllNotes(): Promise<void> {
-    const noteFiles = getMarkdownFilesSorted(this.app);
+    const noteFiles = getNoteFilesSorted(this.app);
 
     const notice = new Notice('', 0);
     let i = 0;
@@ -147,11 +161,15 @@ export class BacklinkCachePlugin extends PluginBase<object> {
       return;
     }
 
+    if (isCanvasFile(noteFile) && !isCanvasPluginEnabled(this.app)) {
+      return;
+    }
+
     if (!this.linksMap.has(notePath)) {
       this.linksMap.set(notePath, new Set<string>());
     }
 
-    const cache = await getCacheSafe(this.app, noteFile);
+    const cache = isCanvasFile(noteFile) ? await parseCanvasCache(this.app, noteFile) : await getCacheSafe(this.app, noteFile);
 
     if (!cache) {
       return;
