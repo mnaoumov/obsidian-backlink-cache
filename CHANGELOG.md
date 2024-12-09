@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.1.2
+
+- Read JSON without console.log errors
+
 ## 2.1.1
 
 - Better check for incomplete canvas
