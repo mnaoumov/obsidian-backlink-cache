@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.1.1
+
+- Better check for incomplete canvas
+
 ## 2.1.0
 
 - Show canvas backlinks only if Canvas plugin enabled
