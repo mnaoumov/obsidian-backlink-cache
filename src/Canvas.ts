@@ -72,15 +72,20 @@ export async function initCanvasMetadataCache(app: App, file: TFile): Promise<vo
     return;
   }
 
-  let canvasData: CanvasData;
+  let partialCanvasData: Partial<CanvasData>;
+
   try {
-    canvasData = await app.vault.readJson(file.path) as CanvasData;
+    partialCanvasData = await app.vault.readJson(file.path) ?? {};
   } catch {
-    canvasData = {
-      edges: [],
-      nodes: []
-    };
+    partialCanvasData = {};
   }
+
+  const canvasData = partialCanvasData.nodes
+    ? partialCanvasData as CanvasData
+    : {
+        edges: [],
+        nodes: []
+      };
 
   const cachedMetadata: CachedMetadata = {
     frontmatterLinks: []
