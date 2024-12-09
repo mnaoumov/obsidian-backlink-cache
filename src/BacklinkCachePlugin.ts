@@ -27,14 +27,12 @@ import {
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
 import { sortReferences } from 'obsidian-dev-utils/obsidian/Reference';
-import { getNoteFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
+import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
 import { CustomArrayDictImpl } from 'obsidian-typings/implementations';
 
 import {
-  initCanvasMetadataCache,
-  isCanvasPluginEnabled,
-  patchForCanvas,
-  removeCanvasMetadataCache
+  initCanvasHandlers,
+  isCanvasPluginEnabled
 } from './Canvas.ts';
 
 const INTERVAL_IN_MILLISECONDS = 500;
@@ -54,6 +52,10 @@ export class BacklinkCachePlugin extends PluginBase<object> {
 
   public triggerRefresh(path: string): void {
     this.setPendingAction(path, Action.Refresh);
+  }
+
+  public triggerRemove(path: string): void {
+    this.setPendingAction(path, Action.Remove);
   }
 
   protected override createDefaultPluginSettings(): object {
@@ -77,9 +79,7 @@ export class BacklinkCachePlugin extends PluginBase<object> {
     this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
     this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
     this.debouncedProcessPendingActions = debounce(this.processPendingActions.bind(this), INTERVAL_IN_MILLISECONDS, true);
-    this.register(() => removeCanvasMetadataCache(this.app));
-
-    patchForCanvas(this);
+    initCanvasHandlers(this, this.abortSignal);
     await this.processAllNotes();
   }
 
@@ -118,7 +118,7 @@ export class BacklinkCachePlugin extends PluginBase<object> {
   }
 
   private async processAllNotes(): Promise<void> {
-    const noteFiles = getNoteFilesSorted(this.app);
+    const noteFiles = getMarkdownFilesSorted(this.app);
 
     const notice = new Notice('', 0);
     let i = 0;
@@ -130,9 +130,6 @@ export class BacklinkCachePlugin extends PluginBase<object> {
       const message = `Processing backlinks # ${i.toString()} / ${noteFiles.length.toString()} - ${noteFile.path}`;
       console.debug(message);
       notice.setMessage(message);
-      if (isCanvasFile(noteFile)) {
-        await initCanvasMetadataCache(this.app, noteFile);
-      }
       await this.refreshBacklinks(noteFile.path);
     }
     notice.hide();
