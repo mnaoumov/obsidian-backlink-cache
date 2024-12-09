@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.1.0
+
+- Show canvas backlinks only if Canvas plugin enabled
+- Don't fail on invalid canvas
+
 ## 2.0.0
 
 - Enable backlinks for canvas files
