@@ -75,7 +75,8 @@ export async function initCanvasMetadataCache(app: App, file: TFile): Promise<vo
   let partialCanvasData: Partial<CanvasData>;
 
   try {
-    partialCanvasData = await app.vault.readJson(file.path) ?? {};
+    const canvasJson = await app.vault.read(file);
+    partialCanvasData = JSON.parse(canvasJson) as Partial<CanvasData>;
   } catch {
     partialCanvasData = {};
   }
