@@ -79,7 +79,7 @@ export class BacklinkCachePlugin extends PluginBase<object> {
     this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
     this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
     this.debouncedProcessPendingActions = debounce(this.processPendingActions.bind(this), INTERVAL_IN_MILLISECONDS, true);
-    initCanvasHandlers(this, this.abortSignal);
+    initCanvasHandlers(this);
     await this.processAllNotes();
   }
 
