@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.2.0
+
+- Refactor loop
+
 ## 2.1.2
 
 - Read JSON without console.log errors
