@@ -25,7 +25,7 @@ export function isCanvasPluginEnabled(app: App): boolean {
 
 const canvasMetadataCacheMap = new Map<string, CachedMetadata>();
 
-export function initCanvasHandlers(plugin: BacklinkCachePlugin, abortSignal: AbortSignal): void {
+export function initCanvasHandlers(plugin: BacklinkCachePlugin): void {
   const app = plugin.app;
   plugin.register(around(app.metadataCache, {
     getCache: (next: (path: string) => CachedMetadata | null) => (path): CachedMetadata | null => getCache(app, path, next)
@@ -55,12 +55,12 @@ export function initCanvasHandlers(plugin: BacklinkCachePlugin, abortSignal: Abo
       onCanvasPluginDisable(plugin);
     },
     onUserEnable: () => (): void => {
-      onCanvasPluginEnable(plugin, abortSignal);
+      onCanvasPluginEnable(plugin);
     }
   }));
 
   if (canvasPlugin.enabled) {
-    onCanvasPluginEnable(plugin, abortSignal);
+    onCanvasPluginEnable(plugin);
   }
 
   plugin.register(() => {
@@ -184,9 +184,9 @@ function onCanvasPluginDisable(plugin: BacklinkCachePlugin): void {
   reloadBacklinksView(plugin.app);
 }
 
-function onCanvasPluginEnable(plugin: BacklinkCachePlugin, abortSignal: AbortSignal): void {
+function onCanvasPluginEnable(plugin: BacklinkCachePlugin): void {
   invokeAsyncSafely(async () => {
-    await processAllCanvasFiles(plugin, abortSignal);
+    await processAllCanvasFiles(plugin);
     reloadBacklinksView(plugin.app);
   });
 }
@@ -227,9 +227,9 @@ function patchBacklinksPlugin(plugin: BacklinkCachePlugin): void {
   }
 }
 
-async function processAllCanvasFiles(plugin: BacklinkCachePlugin, abortSignal: AbortSignal): Promise<void> {
+async function processAllCanvasFiles(plugin: BacklinkCachePlugin): Promise<void> {
   await loop({
-    abortSignal,
+    abortSignal: plugin.abortSignal,
     buildNoticeMessage: (canvasFile, iterationStr) => `Processing backlinks ${iterationStr} - ${canvasFile.path}`,
     continueOnError: true,
     items: plugin.app.vault.getFiles().filter(isCanvasFile),
