@@ -9,7 +9,6 @@ import type { CustomArrayDict } from 'obsidian-typings';
 import { around } from 'monkey-around';
 import {
   debounce,
-  Notice,
   PluginSettingTab,
   TAbstractFile,
   TFile
@@ -21,6 +20,7 @@ import {
   isCanvasFile
 } from 'obsidian-dev-utils/obsidian/FileSystem';
 import { extractLinkFile } from 'obsidian-dev-utils/obsidian/Link';
+import { loop } from 'obsidian-dev-utils/obsidian/Loop';
 import {
   getAllLinks,
   getCacheSafe
@@ -118,21 +118,15 @@ export class BacklinkCachePlugin extends PluginBase<object> {
   }
 
   private async processAllNotes(): Promise<void> {
-    const noteFiles = getMarkdownFilesSorted(this.app);
-
-    const notice = new Notice('', 0);
-    let i = 0;
-    for (const noteFile of noteFiles) {
-      if (this.abortSignal.aborted) {
-        break;
+    await loop({
+      abortSignal: this.abortSignal,
+      buildNoticeMessage: (note, iterationStr) => `Processing backlinks ${iterationStr} - ${note.path}`,
+      continueOnError: true,
+      items: getMarkdownFilesSorted(this.app),
+      processItem: async (note) => {
+        await this.refreshBacklinks(note.path);
       }
-      i++;
-      const message = `Processing backlinks # ${i.toString()} / ${noteFiles.length.toString()} - ${noteFile.path}`;
-      console.debug(message);
-      notice.setMessage(message);
-      await this.refreshBacklinks(noteFile.path);
-    }
-    notice.hide();
+    });
   }
 
   private async processPendingActions(): Promise<void> {
