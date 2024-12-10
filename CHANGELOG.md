@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.2.1
+
+- Update libs
+
 ## 2.2.0
 
 - Refactor loop
