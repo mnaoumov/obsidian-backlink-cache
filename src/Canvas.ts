@@ -14,6 +14,7 @@ import { around } from 'monkey-around';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import { getPrototypeOf } from 'obsidian-dev-utils/Object';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
+import { loop } from 'obsidian-dev-utils/obsidian/Loop';
 import { getNoteFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
 
 import type { BacklinkCachePlugin } from './BacklinkCachePlugin.ts';
@@ -227,21 +228,16 @@ function patchBacklinksPlugin(plugin: BacklinkCachePlugin): void {
 }
 
 async function processAllCanvasFiles(plugin: BacklinkCachePlugin, abortSignal: AbortSignal): Promise<void> {
-  const canvasFiles = plugin.app.vault.getFiles().filter(isCanvasFile);
-  const notice = new Notice('', 0);
-  let i = 0;
-  for (const canvasFile of canvasFiles) {
-    if (abortSignal.aborted) {
-      break;
+  await loop({
+    abortSignal,
+    buildNoticeMessage: (canvasFile, iterationStr) => `Processing backlinks ${iterationStr} - ${canvasFile.path}`,
+    continueOnError: true,
+    items: plugin.app.vault.getFiles().filter(isCanvasFile),
+    processItem: async (canvasFile) => {
+      await initCanvasMetadataCache(plugin.app, canvasFile);
+      plugin.triggerRefresh(canvasFile.path);
     }
-    i++;
-    const message = `Processing backlinks # ${i.toString()} / ${canvasFiles.length.toString()} - ${canvasFile.path}`;
-    console.debug(message);
-    notice.setMessage(message);
-    await initCanvasMetadataCache(plugin.app, canvasFile);
-    plugin.triggerRefresh(canvasFile.path);
-  }
-  notice.hide();
+  });
 }
 
 function recomputeBacklink(app: App, backlinkFile: TFile, backlink: BacklinkView['backlink'], next: (backlinkFile: TFile) => void): void {
