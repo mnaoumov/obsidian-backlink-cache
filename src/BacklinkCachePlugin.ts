@@ -84,7 +84,7 @@ export class BacklinkCachePlugin extends PluginBase<object> {
   }
 
   private getBacklinksForFile(pathOrFile: PathOrFile): CustomArrayDict<Reference> {
-    const notePathLinksMap = this.backlinksMap.get(getPath(pathOrFile)) ?? new Map<string, Set<Reference>>();
+    const notePathLinksMap = this.backlinksMap.get(getPath(this.app, pathOrFile)) ?? new Map<string, Set<Reference>>();
     const dict = new CustomArrayDictImpl<Reference>();
 
     for (const [notePath, links] of notePathLinksMap.entries()) {
@@ -121,11 +121,11 @@ export class BacklinkCachePlugin extends PluginBase<object> {
     await loop({
       abortSignal: this.abortSignal,
       buildNoticeMessage: (note, iterationStr) => `Processing backlinks ${iterationStr} - ${note.path}`,
-      continueOnError: true,
       items: getMarkdownFilesSorted(this.app),
       processItem: async (note) => {
         await this.refreshBacklinks(note.path);
-      }
+      },
+      shouldContinueOnError: true
     });
   }
 
@@ -155,7 +155,7 @@ export class BacklinkCachePlugin extends PluginBase<object> {
       return;
     }
 
-    if (isCanvasFile(noteFile) && !isCanvasPluginEnabled(this.app)) {
+    if (isCanvasFile(this.app, noteFile) && !isCanvasPluginEnabled(this.app)) {
       return;
     }
 

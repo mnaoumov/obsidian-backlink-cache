@@ -39,10 +39,10 @@ export function initCanvasHandlers(plugin: BacklinkCachePlugin): void {
     handleFileCreateOrModify(file, plugin);
   }));
   plugin.registerEvent(app.vault.on('delete', (file) => {
-    handleFileDelete(file);
+    handleFileDelete(file, plugin);
   }));
   plugin.registerEvent(app.vault.on('rename', (file, oldPath) => {
-    handleFileRename(file, oldPath);
+    handleFileRename(file, oldPath, plugin);
   }));
 
   const canvasPlugin = app.internalPlugins.getPluginById('canvas');
@@ -69,7 +69,7 @@ export function initCanvasHandlers(plugin: BacklinkCachePlugin): void {
 }
 
 export async function initCanvasMetadataCache(app: App, file: TFile): Promise<void> {
-  if (!isCanvasFile(file)) {
+  if (!isCanvasFile(app, file)) {
     return;
   }
 
@@ -134,7 +134,7 @@ function arrayBufferToHexString(buffer: ArrayBuffer): string {
 }
 
 function getCache(app: App, path: string, next: (path: string) => CachedMetadata | null): CachedMetadata | null {
-  if (isCanvasFile(path)) {
+  if (isCanvasFile(app, path)) {
     return canvasMetadataCacheMap.get(path) ?? null;
   }
 
@@ -148,7 +148,7 @@ async function getFileHash(app: App, file: TFile): Promise<string> {
 }
 
 function handleFileCreateOrModify(file: TAbstractFile, plugin: BacklinkCachePlugin): void {
-  if (!isCanvasFile(file)) {
+  if (!isCanvasFile(plugin.app, file)) {
     return;
   }
   invokeAsyncSafely(async () => {
@@ -157,15 +157,15 @@ function handleFileCreateOrModify(file: TAbstractFile, plugin: BacklinkCachePlug
   });
 }
 
-function handleFileDelete(file: TAbstractFile): void {
-  if (!isCanvasFile(file)) {
+function handleFileDelete(file: TAbstractFile, plugin: BacklinkCachePlugin): void {
+  if (!isCanvasFile(plugin.app, file)) {
     return;
   }
   canvasMetadataCacheMap.delete(file.path);
 }
 
-function handleFileRename(file: TAbstractFile, oldPath: string): void {
-  if (!isCanvasFile(file)) {
+function handleFileRename(file: TAbstractFile, oldPath: string, plugin: BacklinkCachePlugin): void {
+  if (!isCanvasFile(plugin.app, file)) {
     return;
   }
   const canvasMetadataCache = canvasMetadataCacheMap.get(oldPath);
@@ -231,12 +231,12 @@ async function processAllCanvasFiles(plugin: BacklinkCachePlugin): Promise<void>
   await loop({
     abortSignal: plugin.abortSignal,
     buildNoticeMessage: (canvasFile, iterationStr) => `Processing backlinks ${iterationStr} - ${canvasFile.path}`,
-    continueOnError: true,
-    items: plugin.app.vault.getFiles().filter(isCanvasFile),
+    items: plugin.app.vault.getFiles().filter((file) => isCanvasFile(plugin.app, file)),
     processItem: async (canvasFile) => {
       await initCanvasMetadataCache(plugin.app, canvasFile);
       plugin.triggerRefresh(canvasFile.path);
-    }
+    },
+    shouldContinueOnError: true
   });
 }
 
@@ -269,7 +269,7 @@ function reloadBacklinksView(app: App): void {
 
 function removeCanvasMetadataCache(plugin: BacklinkCachePlugin): void {
   const app = plugin.app;
-  const canvasFiles = app.vault.getFiles().filter(isCanvasFile);
+  const canvasFiles = app.vault.getFiles().filter((file) => isCanvasFile(app, file));
   for (const file of canvasFiles) {
     app.metadataCache.deletePath(file.path);
     plugin.triggerRemove(file.path);
