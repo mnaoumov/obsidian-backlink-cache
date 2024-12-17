@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.2.3
+
+- Update libs
+- Improve performance
+
 ## 2.2.2
 
 - Refactor abortSignal
