@@ -26,6 +26,7 @@ import {
   getCacheSafe
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
+import { PluginSettingsBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginSettingsBase';
 import { sortReferences } from 'obsidian-dev-utils/obsidian/Reference';
 import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
 import { CustomArrayDictImpl } from 'obsidian-typings/implementations';
@@ -44,12 +45,13 @@ enum Action {
 
 type GetBacklinksForFileFn = (file: TFile) => CustomArrayDict<Reference>;
 
-export class BacklinkCachePlugin extends PluginBase<object> {
+export class BacklinkCachePlugin extends PluginBase {
   private readonly backlinksMap = new Map<string, Map<string, Set<Reference>>>();
+
   private debouncedProcessPendingActions!: Debouncer<[], Promise<void>>;
+
   private readonly linksMap = new Map<string, Set<string>>();
   private readonly pendingActions = new Map<string, Action>();
-
   public triggerRefresh(path: string): void {
     this.setPendingAction(path, Action.Refresh);
   }
@@ -58,8 +60,8 @@ export class BacklinkCachePlugin extends PluginBase<object> {
     this.setPendingAction(path, Action.Remove);
   }
 
-  protected override createDefaultPluginSettings(): object {
-    return {};
+  protected override createPluginSettings(data: unknown): PluginSettingsBase {
+    return new PluginSettingsBase(data);
   }
 
   protected override createPluginSettingsTab(): null | PluginSettingTab {
