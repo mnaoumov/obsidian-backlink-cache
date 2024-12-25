@@ -25,6 +25,7 @@ import {
   getAllLinks,
   getCacheSafe
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
+import { EmptySettings } from 'obsidian-dev-utils/obsidian/Plugin/EmptySettings';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
 import { PluginSettingsBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginSettingsBase';
 import { sortReferences } from 'obsidian-dev-utils/obsidian/Reference';
@@ -60,8 +61,8 @@ export class BacklinkCachePlugin extends PluginBase {
     this.setPendingAction(path, Action.Remove);
   }
 
-  protected override createPluginSettings(data: unknown): PluginSettingsBase {
-    return new PluginSettingsBase(data);
+  protected override createPluginSettings(): PluginSettingsBase {
+    return new EmptySettings();
   }
 
   protected override createPluginSettingsTab(): null | PluginSettingTab {
