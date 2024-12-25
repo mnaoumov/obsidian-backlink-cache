@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.2.4
+
+- Update libs
+- Refactor
+
 ## 2.2.3
 
 - Update libs
