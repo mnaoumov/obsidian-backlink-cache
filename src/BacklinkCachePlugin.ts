@@ -61,7 +61,7 @@ export class BacklinkCachePlugin extends PluginBase {
     this.setPendingAction(path, Action.Remove);
   }
 
-  protected override createPluginSettings(): PluginSettingsBase {
+  protected override createPluginSettings(): EmptySettings {
     return new EmptySettings();
   }
 
