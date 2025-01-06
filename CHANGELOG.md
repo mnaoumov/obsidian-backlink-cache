@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.2.6
+
+- Remove non-standard setImmediate
+
 ## 2.2.5
 
 - Update libs
