@@ -95,9 +95,7 @@ export class BacklinkCachePlugin extends PluginBase {
       }
     }
 
-    window.setImmediate(() => {
-      invokeAsyncSafely(this.processPendingActions.bind(this));
-    });
+    invokeAsyncSafely(this.processPendingActions.bind(this));
     return dict;
   }
 
