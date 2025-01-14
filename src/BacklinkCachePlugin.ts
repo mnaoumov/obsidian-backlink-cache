@@ -74,7 +74,7 @@ export class BacklinkCachePlugin extends PluginBase {
         Object.assign(this.getBacklinksForFile.bind(this), {
           originalFn: next,
           safe: this.getBacklinksForFileSafe.bind(this)
-        })
+        }) as unknown as GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper
     }));
 
     this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
@@ -146,7 +146,7 @@ export class BacklinkCachePlugin extends PluginBase {
   }
 
   private async refreshBacklinks(notePath: string): Promise<void> {
-    console.debug(`Refreshing backlinks for ${notePath}`);
+    this.consoleDebug(`Refreshing backlinks for ${notePath}`);
     this.removeLinkedPathEntries(notePath);
 
     const noteFile = getFileOrNull(this.app, notePath);
@@ -195,7 +195,7 @@ export class BacklinkCachePlugin extends PluginBase {
   }
 
   private removeBacklinks(path: string): void {
-    console.debug(`Removing backlinks for ${path}`);
+    this.consoleDebug(`Removing backlinks for ${path}`);
     this.removePathEntries(path);
   }
 
@@ -210,7 +210,7 @@ export class BacklinkCachePlugin extends PluginBase {
   }
 
   private removePathEntries(path: string): void {
-    console.debug(`Removing ${path} entries`);
+    this.consoleDebug(`Removing ${path} entries`);
     this.backlinksMap.delete(path);
     this.removeLinkedPathEntries(path);
   }
