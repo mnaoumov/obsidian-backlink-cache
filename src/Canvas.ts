@@ -203,7 +203,7 @@ async function patchBacklinksPane(plugin: BacklinkCachePlugin): Promise<void> {
 
   plugin.register(around(getPrototypeOf(backlinkView.backlink), {
     recomputeBacklink: (next: (backlinkFile: TFile) => void) =>
-      function(this: BacklinkView['backlink'], backlinkFile: TFile): void {
+      function (this: BacklinkView['backlink'], backlinkFile: TFile): void {
         recomputeBacklink(app, backlinkFile, this, next);
       }
   }));
@@ -218,7 +218,7 @@ function patchBacklinksPlugin(plugin: BacklinkCachePlugin): void {
 
   plugin.register(around(getPrototypeOf(backlinkPlugin.instance), {
     onUserEnable: (next: () => void) =>
-      function(this: BacklinkPlugin): void {
+      function (this: BacklinkPlugin): void {
         next.call(this);
         onBacklinksPluginEnable(plugin);
       }
