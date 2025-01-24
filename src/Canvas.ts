@@ -85,9 +85,9 @@ export async function initCanvasMetadataCache(app: App, file: TFile): Promise<vo
   const canvasData = partialCanvasData.nodes
     ? partialCanvasData as CanvasData
     : {
-        edges: [],
-        nodes: []
-      };
+      edges: [],
+      nodes: []
+    };
 
   const cachedMetadata: CachedMetadata = {
     frontmatterLinks: []
@@ -202,9 +202,10 @@ async function patchBacklinksPane(plugin: BacklinkCachePlugin): Promise<void> {
   const backlinkView = backlinksLeaf.view as BacklinkView;
 
   plugin.register(around(getPrototypeOf(backlinkView.backlink), {
-    recomputeBacklink: (next: (backlinkFile: TFile) => void) => function (this: BacklinkView['backlink'], backlinkFile: TFile): void {
-      recomputeBacklink(app, backlinkFile, this, next);
-    }
+    recomputeBacklink: (next: (backlinkFile: TFile) => void) =>
+      function(this: BacklinkView['backlink'], backlinkFile: TFile): void {
+        recomputeBacklink(app, backlinkFile, this, next);
+      }
   }));
 }
 
@@ -216,10 +217,11 @@ function patchBacklinksPlugin(plugin: BacklinkCachePlugin): void {
   }
 
   plugin.register(around(getPrototypeOf(backlinkPlugin.instance), {
-    onUserEnable: (next: () => void) => function (this: BacklinkPlugin): void {
-      next.call(this);
-      onBacklinksPluginEnable(plugin);
-    }
+    onUserEnable: (next: () => void) =>
+      function(this: BacklinkPlugin): void {
+        next.call(this);
+        onBacklinksPluginEnable(plugin);
+      }
   }));
 
   if (backlinkPlugin.enabled) {

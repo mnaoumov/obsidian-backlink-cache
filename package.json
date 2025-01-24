@@ -6,20 +6,22 @@
     "build": "obsidian-dev-utils build",
     "build:validate": "obsidian-dev-utils build:validate",
     "dev": "obsidian-dev-utils dev",
+    "format": "obsidian-dev-utils format",
+    "format:check": "obsidian-dev-utils format:check",
     "lint": "obsidian-dev-utils lint",
     "lint:fix": "obsidian-dev-utils lint:fix",
-    "version": "obsidian-dev-utils version",
-    "spellcheck": "obsidian-dev-utils spellcheck"
+    "spellcheck": "obsidian-dev-utils spellcheck",
+    "version": "obsidian-dev-utils version"
   },
   "keywords": [],
   "author": "mnaoumov",
   "license": "MIT",
   "devDependencies": {
     "@tsconfig/strictest": "^2.0.5",
-    "@types/node": "^22.10.7",
+    "@types/node": "^22.10.10",
     "monkey-around": "^3.0.0",
     "obsidian": "^1.7.2",
-    "obsidian-dev-utils": "^16.1.0",
+    "obsidian-dev-utils": "^16.4.1",
     "obsidian-typings": "^2.14.6"
   },
   "type": "module"
