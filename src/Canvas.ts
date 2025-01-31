@@ -25,10 +25,13 @@ export function isCanvasPluginEnabled(app: App): boolean {
 
 const canvasMetadataCacheMap = new Map<string, CachedMetadata>();
 
+type GetCacheFn = (path: string) => CachedMetadata | null;
+type RecomputeBacklinkFn = (backlinkFile: TFile) => void;
+
 export function initCanvasHandlers(plugin: BacklinkCachePlugin): void {
   const app = plugin.app;
   plugin.register(around(app.metadataCache, {
-    getCache: (next: (path: string) => CachedMetadata | null) => (path): CachedMetadata | null => getCache(app, path, next)
+    getCache: (next: GetCacheFn) => (path): CachedMetadata | null => getCache(app, path, next)
   }));
   patchBacklinksPlugin(plugin);
 
@@ -107,7 +110,8 @@ export async function initCanvasMetadataCache(app: App, file: TFile): Promise<vo
     const resolvedFile = app.metadataCache.getFirstLinkpathDest(node.file, file.path);
 
     const linksCache = resolvedFile ? app.metadataCache.resolvedLinks : app.metadataCache.unresolvedLinks;
-    const canvasLinksCache = linksCache[file.path] ??= {};
+    linksCache[file.path] ??= {};
+    const canvasLinksCache = linksCache[file.path] ?? {};
     canvasLinksCache[node.file] = (canvasLinksCache[node.file] ?? 0) + 1;
   }
 
@@ -126,14 +130,16 @@ function arrayBufferToHexString(buffer: ArrayBuffer): string {
   const hexArray = [];
 
   for (const byte of uint8Array) {
+    // eslint-disable-next-line no-bitwise, no-magic-numbers
     hexArray.push((byte >>> 4).toString(16));
+    // eslint-disable-next-line no-bitwise, no-magic-numbers
     hexArray.push((byte & 0x0F).toString(16));
   }
 
   return hexArray.join('');
 }
 
-function getCache(app: App, path: string, next: (path: string) => CachedMetadata | null): CachedMetadata | null {
+function getCache(app: App, path: string, next: GetCacheFn): CachedMetadata | null {
   if (isCanvasFile(app, path)) {
     return canvasMetadataCacheMap.get(path) ?? null;
   }
@@ -202,8 +208,8 @@ async function patchBacklinksPane(plugin: BacklinkCachePlugin): Promise<void> {
   const backlinkView = backlinksLeaf.view as BacklinkView;
 
   plugin.register(around(getPrototypeOf(backlinkView.backlink), {
-    recomputeBacklink: (next: (backlinkFile: TFile) => void) =>
-      function (this: BacklinkView['backlink'], backlinkFile: TFile): void {
+    recomputeBacklink: (next: RecomputeBacklinkFn) =>
+      function recomputeBacklinkPatched(this: BacklinkView['backlink'], backlinkFile: TFile): void {
         recomputeBacklink(app, backlinkFile, this, next);
       }
   }));
@@ -218,7 +224,7 @@ function patchBacklinksPlugin(plugin: BacklinkCachePlugin): void {
 
   plugin.register(around(getPrototypeOf(backlinkPlugin.instance), {
     onUserEnable: (next: () => void) =>
-      function (this: BacklinkPlugin): void {
+      function onUserEnablePatched(this: BacklinkPlugin): void {
         next.call(this);
         onBacklinksPluginEnable(plugin);
       }
@@ -242,7 +248,7 @@ async function processAllCanvasFiles(plugin: BacklinkCachePlugin): Promise<void>
   });
 }
 
-function recomputeBacklink(app: App, backlinkFile: TFile, backlink: BacklinkView['backlink'], next: (backlinkFile: TFile) => void): void {
+function recomputeBacklink(app: App, backlinkFile: TFile, backlink: BacklinkView['backlink'], next: RecomputeBacklinkFn): void {
   if (!isCanvasPluginEnabled(app)) {
     next.call(backlink, backlinkFile);
     return;
