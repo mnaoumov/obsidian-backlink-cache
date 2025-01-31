@@ -141,6 +141,8 @@ export class BacklinkCachePlugin extends PluginBase {
         case Action.Remove:
           this.removeBacklinks(path);
           break;
+        default:
+          throw new Error('Unknown action');
       }
     }
   }
