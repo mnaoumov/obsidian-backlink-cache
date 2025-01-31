@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2.2.13
+
+- Lint
+- Update task name
+- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/17.2.2
+
 ## 2.2.12
 
 - format
