@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.2.14
+
+- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/18.3.0
+
 ## 2.2.13
 
 - Lint
