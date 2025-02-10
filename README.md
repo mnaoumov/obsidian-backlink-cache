@@ -46,8 +46,8 @@ If you want to use the updated functions from your plugin, you can copy [types.d
 
 ## Installation
 
-- `Backlink Cache` is available in [the official Community Plugins repository](https://obsidian.md/plugins?id=backlink-cache).
-- Beta releases can be installed through [BRAT](https://obsidian.md/plugins?id=obsidian42-brat).
+- The plugin is available in [the official Community Plugins repository](https://obsidian.md/plugins?id=backlink-cache).
+- [Beta releases](obsidian://brat?plugin=https://github.com/mnaoumov/obsidian-backlink-cache) can be installed via [BRAT](https://obsidian.md/plugins?id=obsidian42-brat).
 
 ## Debugging
 
