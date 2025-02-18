@@ -21,8 +21,8 @@
     "@types/node": "^22.13.4",
     "monkey-around": "^3.0.0",
     "obsidian": "^1.7.2",
-    "obsidian-dev-utils": "^19.2.1",
-    "obsidian-typings": "^2.23.5"
+    "obsidian-dev-utils": "^19.2.2",
+    "obsidian-typings": "^2.24.0"
   },
   "type": "module"
 }
