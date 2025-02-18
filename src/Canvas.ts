@@ -6,7 +6,8 @@ import type {
 } from 'obsidian';
 import type {
   BacklinkPlugin,
-  BacklinkView
+  BacklinkView,
+  CanvasView
 } from 'obsidian-typings';
 import type { CanvasData } from 'obsidian/canvas.js';
 
@@ -29,12 +30,12 @@ export function isCanvasPluginEnabled(app: App): boolean {
 
 const canvasMetadataCacheMap = new Map<string, CachedMetadata>();
 
-type GetCacheFn = (path: string) => CachedMetadata | null;
-type RecomputeBacklinkFn = (backlinkFile: TFile) => void;
-
 interface BacklinkViewBacklink {
   recomputeBacklink: RecomputeBacklinkFn;
 }
+type GetCacheFn = (path: string) => CachedMetadata | null;
+type RecomputeBacklinkFn = (backlinkFile: TFile) => void;
+type SetEphemeralStateFn = (state: unknown) => void;
 
 export function initCanvasHandlers(plugin: BacklinkCachePlugin): void {
   const app = plugin.app;
@@ -200,9 +201,26 @@ function onCanvasPluginDisable(plugin: BacklinkCachePlugin): void {
 
 function onCanvasPluginEnable(plugin: BacklinkCachePlugin): void {
   invokeAsyncSafely(async () => {
+    patchCanvasView(plugin);
     await processAllCanvasFiles(plugin);
     reloadBacklinksView(plugin.app);
   });
+}
+
+function patchCanvasView(plugin: BacklinkCachePlugin): void {
+  const app = plugin.app;
+  const canvasViewConstructor = getViewConstructorByViewType(app, ViewType.Canvas);
+  plugin.register(around(canvasViewConstructor.prototype, {
+    setEphemeralState: (next: SetEphemeralStateFn) =>
+      function setEphemeralStatePatched(this: CanvasView, state: unknown): void {
+        setCanvasViewEphemeralState(next, this, state);
+      }
+  }));
+}
+
+function setCanvasViewEphemeralState(next: SetEphemeralStateFn, canvasView: CanvasView, state: unknown): void {
+  console.warn(state);
+  next.call(canvasView, state);
 }
 
 function patchBacklinksPane(plugin: BacklinkCachePlugin): void {
