@@ -16,6 +16,10 @@ import { getPrototypeOf } from 'obsidian-dev-utils/Object';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
 import { loop } from 'obsidian-dev-utils/obsidian/Loop';
 import { getNoteFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
+import {
+  getViewConstructorByViewType,
+  ViewType
+} from 'obsidian-typings/implementations';
 
 import type { BacklinkCachePlugin } from './BacklinkCachePlugin.ts';
 
@@ -182,7 +186,7 @@ function handleFileRename(file: TAbstractFile, oldPath: string, plugin: Backlink
 }
 
 function onBacklinksPluginEnable(plugin: BacklinkCachePlugin): void {
-  invokeAsyncSafely(() => patchBacklinksPane(plugin));
+  patchBacklinksPane(plugin);
 }
 
 function onCanvasPluginDisable(plugin: BacklinkCachePlugin): void {
@@ -197,17 +201,11 @@ function onCanvasPluginEnable(plugin: BacklinkCachePlugin): void {
   });
 }
 
-async function patchBacklinksPane(plugin: BacklinkCachePlugin): Promise<void> {
+function patchBacklinksPane(plugin: BacklinkCachePlugin): void {
   const app = plugin.app;
-  const backlinksLeaf = app.workspace.getLeavesOfType('backlink')[0];
-  if (!backlinksLeaf) {
-    return;
-  }
+  const backlinkViewConstructor = getViewConstructorByViewType(app, ViewType.Backlink);
 
-  await backlinksLeaf.loadIfDeferred();
-  const backlinkView = backlinksLeaf.view as BacklinkView;
-
-  plugin.register(around(getPrototypeOf(backlinkView.backlink), {
+  plugin.register(around(getPrototypeOf(backlinkViewConstructor.prototype.backlink), {
     recomputeBacklink: (next: RecomputeBacklinkFn) =>
       function recomputeBacklinkPatched(this: BacklinkView['backlink'], backlinkFile: TFile): void {
         recomputeBacklink(app, backlinkFile, this, next);
