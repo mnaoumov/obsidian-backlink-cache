@@ -32,6 +32,10 @@ const canvasMetadataCacheMap = new Map<string, CachedMetadata>();
 type GetCacheFn = (path: string) => CachedMetadata | null;
 type RecomputeBacklinkFn = (backlinkFile: TFile) => void;
 
+interface BacklinkViewBacklink {
+  recomputeBacklink: RecomputeBacklinkFn;
+}
+
 export function initCanvasHandlers(plugin: BacklinkCachePlugin): void {
   const app = plugin.app;
   plugin.register(around(app.metadataCache, {
@@ -207,7 +211,7 @@ function patchBacklinksPane(plugin: BacklinkCachePlugin): void {
 
   plugin.register(around(getPrototypeOf(backlinkViewConstructor.prototype.backlink), {
     recomputeBacklink: (next: RecomputeBacklinkFn) =>
-      function recomputeBacklinkPatched(this: BacklinkView['backlink'], backlinkFile: TFile): void {
+      function recomputeBacklinkPatched(this: BacklinkViewBacklink, backlinkFile: TFile): void {
         recomputeBacklink(app, backlinkFile, this, next);
       }
   }));
@@ -246,7 +250,7 @@ async function processAllCanvasFiles(plugin: BacklinkCachePlugin): Promise<void>
   });
 }
 
-function recomputeBacklink(app: App, backlinkFile: TFile, backlink: BacklinkView['backlink'], next: RecomputeBacklinkFn): void {
+function recomputeBacklink(app: App, backlinkFile: TFile, backlink: BacklinkViewBacklink, next: RecomputeBacklinkFn): void {
   if (!isCanvasPluginEnabled(app)) {
     next.call(backlink, backlinkFile);
     return;
