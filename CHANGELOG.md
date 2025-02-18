@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.3.0
+
+- Pass proper CanvasEphemeralState to highlight the node
+- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/19.2.2
+
 ## 2.2.15
 
 - https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/19.2.1
