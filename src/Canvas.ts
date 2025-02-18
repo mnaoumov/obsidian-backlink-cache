@@ -30,11 +30,25 @@ export function isCanvasPluginEnabled(app: App): boolean {
 
 const canvasMetadataCacheMap = new Map<string, CachedMetadata>();
 
+interface BacklinkClickCanvasEphemeralState {
+  propertyMatches: PropertyMatch[];
+}
 interface BacklinkViewBacklink {
   recomputeBacklink: RecomputeBacklinkFn;
 }
+interface CanvasEphemeralState {
+  match: {
+    nodeId: string;
+  };
+}
 type GetCacheFn = (path: string) => CachedMetadata | null;
+
+interface PropertyMatch {
+  subkey: (number | string)[];
+}
+
 type RecomputeBacklinkFn = (backlinkFile: TFile) => void;
+
 type SetEphemeralStateFn = (state: unknown) => void;
 
 export function initCanvasHandlers(plugin: BacklinkCachePlugin): void {
@@ -191,7 +205,7 @@ function handleFileRename(file: TAbstractFile, oldPath: string, plugin: Backlink
 }
 
 function onBacklinksPluginEnable(plugin: BacklinkCachePlugin): void {
-  patchBacklinksPane(plugin);
+  invokeAsyncSafely(() => patchBacklinksPane(plugin));
 }
 
 function onCanvasPluginDisable(plugin: BacklinkCachePlugin): void {
@@ -207,27 +221,17 @@ function onCanvasPluginEnable(plugin: BacklinkCachePlugin): void {
   });
 }
 
-function patchCanvasView(plugin: BacklinkCachePlugin): void {
+async function patchBacklinksPane(plugin: BacklinkCachePlugin): Promise<void> {
   const app = plugin.app;
-  const canvasViewConstructor = getViewConstructorByViewType(app, ViewType.Canvas);
-  plugin.register(around(canvasViewConstructor.prototype, {
-    setEphemeralState: (next: SetEphemeralStateFn) =>
-      function setEphemeralStatePatched(this: CanvasView, state: unknown): void {
-        setCanvasViewEphemeralState(next, this, state);
-      }
-  }));
-}
+  const backlinksLeaf = app.workspace.getLeavesOfType('backlink')[0];
+  if (!backlinksLeaf) {
+    return;
+  }
 
-function setCanvasViewEphemeralState(next: SetEphemeralStateFn, canvasView: CanvasView, state: unknown): void {
-  console.warn(state);
-  next.call(canvasView, state);
-}
+  await backlinksLeaf.loadIfDeferred();
+  const backlinkView = backlinksLeaf.view as BacklinkView;
 
-function patchBacklinksPane(plugin: BacklinkCachePlugin): void {
-  const app = plugin.app;
-  const backlinkViewConstructor = getViewConstructorByViewType(app, ViewType.Backlink);
-
-  plugin.register(around(getPrototypeOf(backlinkViewConstructor.prototype.backlink), {
+  plugin.register(around(getPrototypeOf(backlinkView.backlink), {
     recomputeBacklink: (next: RecomputeBacklinkFn) =>
       function recomputeBacklinkPatched(this: BacklinkViewBacklink, backlinkFile: TFile): void {
         recomputeBacklink(app, backlinkFile, this, next);
@@ -253,6 +257,17 @@ function patchBacklinksPlugin(plugin: BacklinkCachePlugin): void {
   if (backlinkPlugin.enabled) {
     onBacklinksPluginEnable(plugin);
   }
+}
+
+function patchCanvasView(plugin: BacklinkCachePlugin): void {
+  const app = plugin.app;
+  const canvasViewConstructor = getViewConstructorByViewType(app, ViewType.Canvas);
+  plugin.register(around(canvasViewConstructor.prototype, {
+    setEphemeralState: (next: SetEphemeralStateFn) =>
+      function setEphemeralStatePatched(this: CanvasView, state: unknown): void {
+        setCanvasViewEphemeralState(next, this, state);
+      }
+  }));
 }
 
 async function processAllCanvasFiles(plugin: BacklinkCachePlugin): Promise<void> {
@@ -302,4 +317,27 @@ function removeCanvasMetadataCache(plugin: BacklinkCachePlugin): void {
     app.metadataCache.deletePath(file.path);
     plugin.triggerRemove(file.path);
   }
+}
+
+function setCanvasViewEphemeralState(next: SetEphemeralStateFn, canvasView: CanvasView, state: unknown): void {
+  const backlinkClickCanvasEphemeralState = state as Partial<BacklinkClickCanvasEphemeralState>;
+  const index = backlinkClickCanvasEphemeralState.propertyMatches?.[0]?.subkey[0] as number | undefined;
+  if (index === undefined) {
+    next.call(canvasView, state);
+    return;
+  }
+
+  const nodeId = canvasView.canvas.data.nodes[index]?.id;
+  if (!nodeId) {
+    next.call(canvasView, state);
+    return;
+  }
+
+  const canvasEphemeralState: CanvasEphemeralState = {
+    match: {
+      nodeId
+    }
+  };
+
+  next.call(canvasView, canvasEphemeralState);
 }
