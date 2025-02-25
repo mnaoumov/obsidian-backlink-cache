@@ -144,12 +144,13 @@ async function recomputeBacklinkAsync(backlinkComponent: BacklinkComponent, back
       canvasData = JSON.parse(content) as CanvasData;
       content = patchCanvasContent(canvasData);
     }
-    for (const link of links) {
-      const resultDomResult: CanvasDomResult = {
-        content: [],
-        properties: []
-      };
 
+    const resultDomResult: CanvasDomResult = {
+      content: [],
+      properties: []
+    };
+
+    for (const link of links) {
       let isValidLink = false;
 
       if (isReferenceCache(link)) {
@@ -167,7 +168,7 @@ async function recomputeBacklinkAsync(backlinkComponent: BacklinkComponent, back
 
       if (isValidLink) {
         if (isCanvasFile(app, backlinkNoteFile)) {
-          const nodeIndex = resultDomResult.properties[0]?.subkey[0] as number | undefined;
+          const nodeIndex = resultDomResult.properties.at(-1)?.subkey[0] as number | undefined;
           if (nodeIndex !== undefined) {
             const node = canvasData?.nodes[nodeIndex];
             if (node?.type === 'file') {
@@ -176,8 +177,9 @@ async function recomputeBacklinkAsync(backlinkComponent: BacklinkComponent, back
           }
         }
       }
-      backlinkComponent.backlinkDom.addResult(backlinkNoteFile, resultDomResult, content).renderContentMatches();
     }
+
+    backlinkComponent.backlinkDom.addResult(backlinkNoteFile, resultDomResult, content).renderContentMatches();
   }
 
   backlinkComponent.backlinkCountEl.setText(backlinkComponent.backlinkDom.getMatchCount().toString());
