@@ -8,10 +8,12 @@ import type {
   ResultDomResult
 } from 'obsidian-typings';
 import type { BacklinkComponent } from 'obsidian-typings/implementations';
+import type { CanvasData } from 'obsidian/canvas.js';
 
 import { around } from 'monkey-around';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import { getPrototypeOf } from 'obsidian-dev-utils/Object';
+import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
 import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import {
   InternalPluginName,
@@ -23,6 +25,11 @@ import {
 import type { BacklinkCachePlugin } from './BacklinkCachePlugin.ts';
 
 import { getFileComparer } from './FileComparer.ts';
+
+const FILE_PREFIX = 'file: ';
+
+interface CanvasDomResult extends Record<`canvas-${string}`, [[offset: number]]>, ResultDomResult {
+}
 
 export function patchBacklinksCorePlugin(plugin: BacklinkCachePlugin): void {
   const app = plugin.app;
@@ -85,6 +92,26 @@ async function patchBacklinksPane(plugin: BacklinkCachePlugin): Promise<void> {
   }));
 }
 
+function patchCanvasContent(canvasData: CanvasData): string {
+  const patched: CanvasData = {
+    edges: canvasData.edges,
+    nodes: []
+  };
+
+  patched.nodes = canvasData.nodes.map((node) => {
+    if (node.type === 'file') {
+      return {
+        ...node,
+        text: `${FILE_PREFIX}${node.file}`,
+        type: 'text'
+      };
+    }
+
+    return node;
+  });
+  return JSON.stringify(patched);
+}
+
 async function recomputeBacklinkAsync(backlinkComponent: BacklinkComponent, backlinkFile: null | TFile): Promise<void> {
   const app = backlinkComponent.app;
   backlinkComponent.stopBacklinkSearch();
@@ -111,9 +138,14 @@ async function recomputeBacklinkAsync(backlinkComponent: BacklinkComponent, back
 
   for (const backlinkNoteFile of backlinkNoteFiles) {
     const links = backlinks.get(backlinkNoteFile.path) ?? [];
-    const content = await app.vault.read(backlinkNoteFile);
+    let content = await app.vault.read(backlinkNoteFile);
+    let canvasData: CanvasData | null = null;
+    if (isCanvasFile(app, backlinkNoteFile)) {
+      canvasData = JSON.parse(content) as CanvasData;
+      content = patchCanvasContent(canvasData);
+    }
     for (const link of links) {
-      const resultDomResult: ResultDomResult = {
+      const resultDomResult: CanvasDomResult = {
         content: [],
         properties: []
       };
@@ -134,10 +166,19 @@ async function recomputeBacklinkAsync(backlinkComponent: BacklinkComponent, back
       }
 
       if (isValidLink) {
-        backlinkComponent.backlinkDom.addResult(backlinkNoteFile, resultDomResult, content).renderContentMatches();
+        if (isCanvasFile(app, backlinkNoteFile)) {
+          const nodeIndex = resultDomResult.properties[0]?.subkey[0] as number | undefined;
+          if (nodeIndex !== undefined) {
+            const node = canvasData?.nodes[nodeIndex];
+            if (node?.type === 'file') {
+              resultDomResult[`canvas-${node.id}`] = [[FILE_PREFIX.length]];
+            }
+          }
+        }
       }
+      backlinkComponent.backlinkDom.addResult(backlinkNoteFile, resultDomResult, content).renderContentMatches();
     }
-
-    backlinkComponent.backlinkCountEl.setText(backlinkComponent.backlinkDom.getMatchCount().toString());
   }
+
+  backlinkComponent.backlinkCountEl.setText(backlinkComponent.backlinkDom.getMatchCount().toString());
 }
