@@ -12,8 +12,11 @@ import { getPrototypeOf } from 'obsidian-dev-utils/Object';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
 import { splitSubpath } from 'obsidian-dev-utils/obsidian/Link';
 import { loop } from 'obsidian-dev-utils/obsidian/Loop';
-import { getAllLinks } from 'obsidian-dev-utils/obsidian/MetadataCache';
-import { InternalPluginName} from 'obsidian-typings/implementations';
+import {
+  getAllLinks,
+  parseMetadata
+} from 'obsidian-dev-utils/obsidian/MetadataCache';
+import { InternalPluginName } from 'obsidian-typings/implementations';
 
 import type { BacklinkCachePlugin } from './BacklinkCachePlugin.ts';
 
@@ -101,17 +104,12 @@ export async function initCanvasMetadataCache(app: App, file: TFile): Promise<vo
         addCanvasMetadata(app, cachedMetadata, `nodes.${index.toString()}.file`, node.file, node.file, file.path);
         break;
       case 'text': {
-        const text = node.text;
-        const encoder = new TextEncoder();
-        const buffer = encoder.encode(text).buffer as ArrayBuffer;
-        const metadata = await app.metadataCache.computeMetadataAsync(buffer);
-        if (metadata) {
-          const links = getAllLinks(metadata);
-          let linkIndex = 0;
-          for (const link of links) {
-            addCanvasMetadata(app, cachedMetadata, `nodes.${index.toString()}.text.${linkIndex.toString()}`, link.link, link.original, file.path);
-            linkIndex++;
-          }
+        const metadata = await parseMetadata(app, node.text);
+        const links = getAllLinks(metadata);
+        let linkIndex = 0;
+        for (const link of links) {
+          addCanvasMetadata(app, cachedMetadata, `nodes.${index.toString()}.text.${linkIndex.toString()}`, link.link, link.original, file.path);
+          linkIndex++;
         }
         break;
       }
