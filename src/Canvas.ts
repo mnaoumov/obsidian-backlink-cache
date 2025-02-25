@@ -4,7 +4,6 @@ import type {
   TAbstractFile,
   TFile
 } from 'obsidian';
-import type { CanvasView } from 'obsidian-typings';
 import type { CanvasData } from 'obsidian/canvas.js';
 
 import { around } from 'monkey-around';
@@ -14,11 +13,7 @@ import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
 import { splitSubpath } from 'obsidian-dev-utils/obsidian/Link';
 import { loop } from 'obsidian-dev-utils/obsidian/Loop';
 import { getAllLinks } from 'obsidian-dev-utils/obsidian/MetadataCache';
-import {
-  getViewConstructorByViewType,
-  InternalPluginName,
-  ViewType
-} from 'obsidian-typings/implementations';
+import { InternalPluginName} from 'obsidian-typings/implementations';
 
 import type { BacklinkCachePlugin } from './BacklinkCachePlugin.ts';
 
@@ -30,22 +25,7 @@ export function isCanvasPluginEnabled(app: App): boolean {
 
 const canvasMetadataCacheMap = new Map<string, CachedMetadata>();
 
-interface BacklinkClickCanvasEphemeralState {
-  propertyMatches: PropertyMatch[];
-}
-
-interface CanvasEphemeralState {
-  match: {
-    nodeId: string;
-  };
-}
 type GetCacheFn = (path: string) => CachedMetadata | null;
-
-interface PropertyMatch {
-  subkey: (number | string)[];
-}
-
-type SetEphemeralStateFn = (state: unknown) => void;
 
 export function initCanvasHandlers(plugin: BacklinkCachePlugin): void {
   const app = plugin.app;
@@ -233,21 +213,9 @@ function onCanvasCorePluginDisable(plugin: BacklinkCachePlugin): void {
 
 function onCanvasCorePluginEnable(plugin: BacklinkCachePlugin): void {
   invokeAsyncSafely(async () => {
-    patchCanvasView(plugin);
     await processAllCanvasFiles(plugin);
     await reloadBacklinksView(plugin.app);
   });
-}
-
-function patchCanvasView(plugin: BacklinkCachePlugin): void {
-  const app = plugin.app;
-  const canvasViewConstructor = getViewConstructorByViewType(app, ViewType.Canvas);
-  plugin.register(around(canvasViewConstructor.prototype, {
-    setEphemeralState: (next: SetEphemeralStateFn) =>
-      function setEphemeralStatePatched(this: CanvasView, state: unknown): void {
-        setCanvasViewEphemeralState(next, this, state);
-      }
-  }));
 }
 
 async function processAllCanvasFiles(plugin: BacklinkCachePlugin): Promise<void> {
@@ -270,27 +238,4 @@ function removeCanvasMetadataCache(plugin: BacklinkCachePlugin): void {
     app.metadataCache.deletePath(file.path);
     plugin.triggerRemove(file.path);
   }
-}
-
-function setCanvasViewEphemeralState(next: SetEphemeralStateFn, canvasView: CanvasView, state: unknown): void {
-  const backlinkClickCanvasEphemeralState = state as Partial<BacklinkClickCanvasEphemeralState>;
-  const index = backlinkClickCanvasEphemeralState.propertyMatches?.[0]?.subkey[0] as number | undefined;
-  if (index === undefined) {
-    next.call(canvasView, state);
-    return;
-  }
-
-  const nodeId = canvasView.canvas.data.nodes[index]?.id;
-  if (!nodeId) {
-    next.call(canvasView, state);
-    return;
-  }
-
-  const canvasEphemeralState: CanvasEphemeralState = {
-    match: {
-      nodeId
-    }
-  };
-
-  next.call(canvasView, canvasEphemeralState);
 }
