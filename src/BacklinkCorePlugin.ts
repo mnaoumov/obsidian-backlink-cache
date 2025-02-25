@@ -1,5 +1,6 @@
 import type {
   App,
+  Reference,
   TFile
 } from 'obsidian';
 import type {
@@ -14,7 +15,11 @@ import { around } from 'monkey-around';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import { getPrototypeOf } from 'obsidian-dev-utils/Object';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
-import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
+import {
+  getAllLinks,
+  getBacklinksForFileSafe,
+  parseMetadata
+} from 'obsidian-dev-utils/obsidian/MetadataCache';
 import {
   InternalPluginName,
   isFrontmatterLinkCache,
@@ -28,7 +33,7 @@ import { getFileComparer } from './FileComparer.ts';
 
 const FILE_PREFIX = 'file: ';
 
-interface CanvasDomResult extends Record<`canvas-${string}`, [[offset: number]]>, ResultDomResult {
+interface CanvasDomResult extends Record<`canvas-${string}`, [from: number, to: number][]>, ResultDomResult {
 }
 
 export function patchBacklinksCorePlugin(plugin: BacklinkCachePlugin): void {
@@ -137,49 +142,82 @@ async function recomputeBacklinkAsync(backlinkComponent: BacklinkComponent, back
   backlinkNoteFiles.sort(getFileComparer(backlinkComponent.backlinkDom.sortOrder));
 
   for (const backlinkNoteFile of backlinkNoteFiles) {
-    const links = backlinks.get(backlinkNoteFile.path) ?? [];
-    let content = await app.vault.read(backlinkNoteFile);
-    let canvasData: CanvasData | null = null;
-    if (isCanvasFile(app, backlinkNoteFile)) {
-      canvasData = JSON.parse(content) as CanvasData;
-      content = patchCanvasContent(canvasData);
-    }
+    await showBacklinks(backlinkComponent, backlinkNoteFile, backlinks.get(backlinkNoteFile.path) ?? []);
+  }
+}
 
-    const resultDomResult: CanvasDomResult = {
-      content: [],
-      properties: []
-    };
+async function showBacklinks(backlinkComponent: BacklinkComponent, backlinkNoteFile: TFile, links: Reference[]): Promise<void> {
+  const app = backlinkComponent.app;
+  let content = await app.vault.read(backlinkNoteFile);
+  let canvasData: CanvasData | null = null;
+  if (isCanvasFile(app, backlinkNoteFile)) {
+    canvasData = JSON.parse(content) as CanvasData;
+    content = patchCanvasContent(canvasData);
+  }
 
-    for (const link of links) {
-      let isValidLink = false;
+  const resultDomResult: CanvasDomResult = {
+    content: [],
+    properties: []
+  };
+  let isValidLink = false;
 
-      if (isReferenceCache(link)) {
-        resultDomResult.content.push([link.position.start.offset, link.position.end.offset]);
-        isValidLink = true;
-      } else if (isFrontmatterLinkCache(link)) {
-        const keys = link.key.split('.');
-        resultDomResult.properties.push({
-          key: keys[0] ?? '',
-          pos: [0, link.original.length],
-          subkey: keys.slice(1).map((key) => Number.isNaN(Number(key)) ? key : Number(key))
-        });
-        isValidLink = true;
-      }
+  for (const link of links) {
+    if (isReferenceCache(link)) {
+      resultDomResult.content.push([link.position.start.offset, link.position.end.offset]);
+      isValidLink = true;
+    } else if (isFrontmatterLinkCache(link)) {
+      const keys = link.key.split('.');
+      resultDomResult.properties.push({
+        key: keys[0] ?? '',
+        pos: [0, link.original.length],
+        subkey: keys.slice(1).map((key) => Number.isNaN(Number(key)) ? key : Number(key))
+      });
+      isValidLink = true;
 
-      if (isValidLink) {
-        if (isCanvasFile(app, backlinkNoteFile)) {
-          const nodeIndex = resultDomResult.properties.at(-1)?.subkey[0] as number | undefined;
-          if (nodeIndex !== undefined) {
-            const node = canvasData?.nodes[nodeIndex];
-            if (node?.type === 'file') {
-              resultDomResult[`canvas-${node.id}`] = [[FILE_PREFIX.length]];
+      if (isCanvasFile(app, backlinkNoteFile)) {
+        const nodeIndex = keys[1] as number | undefined;
+        if (nodeIndex !== undefined) {
+          const node = canvasData?.nodes[nodeIndex];
+          if (node) {
+            let canvasNodeMatches = resultDomResult[`canvas-${node.id}`];
+            if (!canvasNodeMatches) {
+              canvasNodeMatches = [];
+              resultDomResult[`canvas-${node.id}`] = canvasNodeMatches;
+            }
+
+            switch (node.type) {
+              case 'file':
+                canvasNodeMatches.push([FILE_PREFIX.length, FILE_PREFIX.length + node.file.length]);
+                break;
+              case 'text': {
+                const LINK_INDEX_KEY_INDEX = 3;
+                const metadata = await parseMetadata(app, node.text);
+                const parsedLinks = getAllLinks(metadata);
+                const linkIndex = keys[LINK_INDEX_KEY_INDEX] as number | undefined;
+                if (linkIndex !== undefined) {
+                  const parsedLink = parsedLinks[linkIndex];
+
+                  if (parsedLink) {
+                    if (isReferenceCache(parsedLink)) {
+                      canvasNodeMatches.push([parsedLink.position.start.offset, parsedLink.position.end.offset]);
+                    } else {
+                      canvasNodeMatches.push([node.text.indexOf(parsedLink.original), node.text.indexOf(parsedLink.original) + parsedLink.original.length]);
+                    }
+                  }
+                }
+                break;
+              }
+              default:
+                break;
             }
           }
         }
       }
     }
 
-    backlinkComponent.backlinkDom.addResult(backlinkNoteFile, resultDomResult, content).renderContentMatches();
+    if (isValidLink) {
+      backlinkComponent.backlinkDom.addResult(backlinkNoteFile, resultDomResult, content).renderContentMatches();
+    }
   }
 
   backlinkComponent.backlinkCountEl.setText(backlinkComponent.backlinkDom.getMatchCount().toString());
