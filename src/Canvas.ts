@@ -4,25 +4,25 @@ import type {
   TAbstractFile,
   TFile
 } from 'obsidian';
-import type {
-  BacklinkPlugin,
-  BacklinkView,
-  CanvasView
-} from 'obsidian-typings';
+import type { CanvasView } from 'obsidian-typings';
 import type { CanvasData } from 'obsidian/canvas.js';
 
 import { around } from 'monkey-around';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import { getPrototypeOf } from 'obsidian-dev-utils/Object';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
+import { splitSubpath } from 'obsidian-dev-utils/obsidian/Link';
 import { loop } from 'obsidian-dev-utils/obsidian/Loop';
-import { getNoteFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
+import { getAllLinks } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import {
   getViewConstructorByViewType,
+  InternalPluginName,
   ViewType
 } from 'obsidian-typings/implementations';
 
 import type { BacklinkCachePlugin } from './BacklinkCachePlugin.ts';
+
+import { reloadBacklinksView } from './BacklinkCorePlugin.ts';
 
 export function isCanvasPluginEnabled(app: App): boolean {
   return !!app.internalPlugins.getEnabledPluginById('canvas');
@@ -33,9 +33,7 @@ const canvasMetadataCacheMap = new Map<string, CachedMetadata>();
 interface BacklinkClickCanvasEphemeralState {
   propertyMatches: PropertyMatch[];
 }
-interface BacklinkViewBacklink {
-  recomputeBacklink: RecomputeBacklinkFn;
-}
+
 interface CanvasEphemeralState {
   match: {
     nodeId: string;
@@ -47,8 +45,6 @@ interface PropertyMatch {
   subkey: (number | string)[];
 }
 
-type RecomputeBacklinkFn = (backlinkFile: TFile) => void;
-
 type SetEphemeralStateFn = (state: unknown) => void;
 
 export function initCanvasHandlers(plugin: BacklinkCachePlugin): void {
@@ -56,7 +52,6 @@ export function initCanvasHandlers(plugin: BacklinkCachePlugin): void {
   plugin.register(around(app.metadataCache, {
     getCache: (next: GetCacheFn) => (path): CachedMetadata | null => getCache(app, path, next)
   }));
-  patchBacklinksPlugin(plugin);
 
   plugin.registerEvent(app.vault.on('create', (file) => {
     handleFileCreateOrModify(file, plugin);
@@ -71,26 +66,26 @@ export function initCanvasHandlers(plugin: BacklinkCachePlugin): void {
     handleFileRename(file, oldPath, plugin);
   }));
 
-  const canvasPlugin = app.internalPlugins.getPluginById('canvas');
-  if (!canvasPlugin) {
+  const canvasCorePlugin = app.internalPlugins.getPluginById(InternalPluginName.Canvas);
+  if (!canvasCorePlugin) {
     return;
   }
 
-  plugin.register(around(getPrototypeOf(canvasPlugin.instance), {
+  plugin.register(around(getPrototypeOf(canvasCorePlugin.instance), {
     onUserDisable: () => (): void => {
-      onCanvasPluginDisable(plugin);
+      onCanvasCorePluginDisable(plugin);
     },
     onUserEnable: () => (): void => {
-      onCanvasPluginEnable(plugin);
+      onCanvasCorePluginEnable(plugin);
     }
   }));
 
-  if (canvasPlugin.enabled) {
-    onCanvasPluginEnable(plugin);
+  if (canvasCorePlugin.enabled) {
+    onCanvasCorePluginEnable(plugin);
   }
 
   plugin.register(() => {
-    onCanvasPluginDisable(plugin);
+    onCanvasCorePluginDisable(plugin);
   });
 }
 
@@ -121,21 +116,28 @@ export async function initCanvasMetadataCache(app: App, file: TFile): Promise<vo
 
   for (let index = 0; index < canvasData.nodes.length; index++) {
     const node = canvasData.nodes[index];
-    if (node?.type !== 'file') {
-      continue;
+    switch (node?.type) {
+      case 'file':
+        addCanvasMetadata(app, cachedMetadata, `nodes.${index.toString()}.file`, node.file, node.file, file.path);
+        break;
+      case 'text': {
+        const text = node.text;
+        const encoder = new TextEncoder();
+        const buffer = encoder.encode(text).buffer as ArrayBuffer;
+        const metadata = await app.metadataCache.computeMetadataAsync(buffer);
+        if (metadata) {
+          const links = getAllLinks(metadata);
+          let linkIndex = 0;
+          for (const link of links) {
+            addCanvasMetadata(app, cachedMetadata, `nodes.${index.toString()}.text.${linkIndex.toString()}`, link.link, link.original, file.path);
+            linkIndex++;
+          }
+        }
+        break;
+      }
+      default:
+        break;
     }
-    cachedMetadata.frontmatterLinks?.push({
-      key: `nodes.${index.toString()}.file`,
-      link: node.file,
-      original: node.file
-    });
-
-    const resolvedFile = app.metadataCache.getFirstLinkpathDest(node.file, file.path);
-
-    const linksCache = resolvedFile ? app.metadataCache.resolvedLinks : app.metadataCache.unresolvedLinks;
-    linksCache[file.path] ??= {};
-    const canvasLinksCache = linksCache[file.path] ?? {};
-    canvasLinksCache[node.file] = (canvasLinksCache[node.file] ?? 0) + 1;
   }
 
   canvasMetadataCacheMap.set(file.path, cachedMetadata);
@@ -146,6 +148,24 @@ export async function initCanvasMetadataCache(app: App, file: TFile): Promise<vo
     size: file.stat.size
   });
   app.metadataCache.saveMetaCache(hash, cachedMetadata);
+}
+
+function addCanvasMetadata(app: App, cachedMetadata: CachedMetadata, key: string, link: string, original: string, canvasPath: string): void {
+  cachedMetadata.frontmatterLinks?.push({
+    key,
+    link,
+    original
+  });
+
+  const linkPath = splitSubpath(link).linkPath;
+
+  const resolvedFile = app.metadataCache.getFirstLinkpathDest(linkPath, canvasPath);
+
+  const linksCache = resolvedFile ? app.metadataCache.resolvedLinks : app.metadataCache.unresolvedLinks;
+  linksCache[canvasPath] ??= {};
+  const canvasLinksCache = linksCache[canvasPath] ?? {};
+  canvasLinksCache[linkPath] ??= 0;
+  canvasLinksCache[linkPath]++;
 }
 
 function arrayBufferToHexString(buffer: ArrayBuffer): string {
@@ -204,59 +224,19 @@ function handleFileRename(file: TAbstractFile, oldPath: string, plugin: Backlink
   canvasMetadataCacheMap.delete(oldPath);
 }
 
-function onBacklinksPluginEnable(plugin: BacklinkCachePlugin): void {
-  invokeAsyncSafely(() => patchBacklinksPane(plugin));
-}
-
-function onCanvasPluginDisable(plugin: BacklinkCachePlugin): void {
+function onCanvasCorePluginDisable(plugin: BacklinkCachePlugin): void {
   removeCanvasMetadataCache(plugin);
-  reloadBacklinksView(plugin.app);
-}
-
-function onCanvasPluginEnable(plugin: BacklinkCachePlugin): void {
   invokeAsyncSafely(async () => {
-    patchCanvasView(plugin);
-    await processAllCanvasFiles(plugin);
-    reloadBacklinksView(plugin.app);
+    await reloadBacklinksView(plugin.app);
   });
 }
 
-async function patchBacklinksPane(plugin: BacklinkCachePlugin): Promise<void> {
-  const app = plugin.app;
-  const backlinksLeaf = app.workspace.getLeavesOfType('backlink')[0];
-  if (!backlinksLeaf) {
-    return;
-  }
-
-  await backlinksLeaf.loadIfDeferred();
-  const backlinkView = backlinksLeaf.view as BacklinkView;
-
-  plugin.register(around(getPrototypeOf(backlinkView.backlink), {
-    recomputeBacklink: (next: RecomputeBacklinkFn) =>
-      function recomputeBacklinkPatched(this: BacklinkViewBacklink, backlinkFile: TFile): void {
-        recomputeBacklink(app, backlinkFile, this, next);
-      }
-  }));
-}
-
-function patchBacklinksPlugin(plugin: BacklinkCachePlugin): void {
-  const app = plugin.app;
-  const backlinkPlugin = app.internalPlugins.getPluginById('backlink');
-  if (!backlinkPlugin) {
-    return;
-  }
-
-  plugin.register(around(getPrototypeOf(backlinkPlugin.instance), {
-    onUserEnable: (next: () => void) =>
-      function onUserEnablePatched(this: BacklinkPlugin): void {
-        next.call(this);
-        onBacklinksPluginEnable(plugin);
-      }
-  }));
-
-  if (backlinkPlugin.enabled) {
-    onBacklinksPluginEnable(plugin);
-  }
+function onCanvasCorePluginEnable(plugin: BacklinkCachePlugin): void {
+  invokeAsyncSafely(async () => {
+    patchCanvasView(plugin);
+    await processAllCanvasFiles(plugin);
+    await reloadBacklinksView(plugin.app);
+  });
 }
 
 function patchCanvasView(plugin: BacklinkCachePlugin): void {
@@ -281,33 +261,6 @@ async function processAllCanvasFiles(plugin: BacklinkCachePlugin): Promise<void>
     },
     shouldContinueOnError: true
   });
-}
-
-function recomputeBacklink(app: App, backlinkFile: TFile, backlink: BacklinkViewBacklink, next: RecomputeBacklinkFn): void {
-  if (!isCanvasPluginEnabled(app)) {
-    next.call(backlink, backlinkFile);
-    return;
-  }
-
-  const uninstallGetMarkdownFilesPatch = around(app.vault, {
-    getMarkdownFiles: (): () => TFile[] => () => getNoteFilesSorted(app)
-  });
-  try {
-    next.call(backlink, backlinkFile);
-  } finally {
-    uninstallGetMarkdownFilesPatch();
-  }
-}
-
-function reloadBacklinksView(app: App): void {
-  const backlinksLeaf = app.workspace.getLeavesOfType('backlink')[0];
-  if (!backlinksLeaf) {
-    return;
-  }
-  const backlinkView = backlinksLeaf.view as Partial<BacklinkView>;
-  if (backlinkView.file && backlinkView.backlink) {
-    backlinkView.backlink.recomputeBacklink(backlinkView.file);
-  }
 }
 
 function removeCanvasMetadataCache(plugin: BacklinkCachePlugin): void {
