@@ -31,6 +31,7 @@ import { sortReferences } from 'obsidian-dev-utils/obsidian/Reference';
 import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
 import { CustomArrayDictImpl } from 'obsidian-typings/implementations';
 
+import { patchBacklinksCorePlugin } from './BacklinkCorePlugin.ts';
 import {
   initCanvasHandlers,
   isCanvasPluginEnabled
@@ -81,6 +82,7 @@ export class BacklinkCachePlugin extends PluginBase {
     this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
     this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
     this.debouncedProcessPendingActions = debounce(this.processPendingActions.bind(this), INTERVAL_IN_MILLISECONDS, true);
+    patchBacklinksCorePlugin(this);
     initCanvasHandlers(this);
     await this.processAllNotes();
   }
