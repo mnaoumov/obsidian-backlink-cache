@@ -23,7 +23,7 @@ import type { BacklinkCachePlugin } from './BacklinkCachePlugin.ts';
 import { reloadBacklinksView } from './BacklinkCorePlugin.ts';
 
 export function isCanvasPluginEnabled(app: App): boolean {
-  return !!app.internalPlugins.getEnabledPluginById('canvas');
+  return !!app.internalPlugins.getEnabledPluginById(InternalPluginName.Canvas);
 }
 
 const canvasMetadataCacheMap = new Map<string, CachedMetadata>();
