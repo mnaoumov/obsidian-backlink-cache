@@ -17,8 +17,7 @@ import { getPrototypeOf } from 'obsidian-dev-utils/Object';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
 import {
   getAllLinks,
-  getBacklinksForFileSafe,
-  parseMetadata
+  getBacklinksForFileSafe
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import {
   InternalPluginName,
@@ -30,6 +29,7 @@ import {
 import type { BacklinkCachePlugin } from './BacklinkCachePlugin.ts';
 
 import { getFileComparer } from './FileComparer.ts';
+import { parseMetadataEx } from './Metadata.ts';
 
 const FILE_PREFIX = 'file: ';
 
@@ -198,7 +198,7 @@ async function showBacklinks(backlinkComponent: BacklinkComponent, backlinkNoteF
                 break;
               case 'text': {
                 const LINK_INDEX_KEY_INDEX = 3;
-                const metadata = await parseMetadata(app, node.text);
+                const metadata = await parseMetadataEx(app, node.text);
                 const parsedLinks = getAllLinks(metadata);
                 const linkIndex = keys[LINK_INDEX_KEY_INDEX] as number | undefined;
                 if (linkIndex !== undefined) {
