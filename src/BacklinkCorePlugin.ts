@@ -144,6 +144,9 @@ async function recomputeBacklinkAsync(backlinkComponent: BacklinkComponent, back
   for (const backlinkNoteFile of backlinkNoteFiles) {
     await showBacklinks(backlinkComponent, backlinkNoteFile, backlinks.get(backlinkNoteFile.path) ?? []);
   }
+
+  backlinkComponent.backlinkCountEl.setText(backlinkComponent.backlinkDom.getMatchCount().toString());
+  backlinkComponent.backlinkDom.changed();
 }
 
 async function showBacklinks(backlinkComponent: BacklinkComponent, backlinkNoteFile: TFile, links: Reference[]): Promise<void> {
@@ -219,6 +222,4 @@ async function showBacklinks(backlinkComponent: BacklinkComponent, backlinkNoteF
       backlinkComponent.backlinkDom.addResult(backlinkNoteFile, resultDomResult, content).renderContentMatches();
     }
   }
-
-  backlinkComponent.backlinkCountEl.setText(backlinkComponent.backlinkDom.getMatchCount().toString());
 }
