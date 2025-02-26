@@ -2,6 +2,7 @@ import type {
   App,
   CachedMetadata
 } from 'obsidian';
+
 import { fixFrontmatterMarkdownLinks } from 'obsidian-dev-utils/obsidian/Link';
 import { parseMetadata } from 'obsidian-dev-utils/obsidian/MetadataCache';
 
