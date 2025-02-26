@@ -9,6 +9,7 @@ import type { CustomArrayDict } from 'obsidian-typings';
 import { around } from 'monkey-around';
 import {
   debounce,
+  MarkdownView,
   PluginSettingTab,
   TAbstractFile,
   TFile
@@ -25,13 +26,20 @@ import {
   getAllLinks,
   getCacheSafe
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
-import { EmptySettings } from 'obsidian-dev-utils/obsidian/Plugin/EmptySettings';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
 import { sortReferences } from 'obsidian-dev-utils/obsidian/Reference';
 import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
-import { CustomArrayDictImpl } from 'obsidian-typings/implementations';
+import {
+  CustomArrayDictImpl,
+  ViewType
+} from 'obsidian-typings/implementations';
 
-import { patchBacklinksCorePlugin } from './BacklinkCorePlugin.ts';
+import { BacklinkCachePluginSettings } from './BacklinkCachePluginSettings.ts';
+import { BacklinkCachePluginSettingsTab } from './BacklinkCachePluginSettingsTab.ts';
+import {
+  patchBacklinksCorePlugin,
+  reloadBacklinksView
+} from './BacklinkCorePlugin.ts';
 import {
   initCanvasHandlers,
   isCanvasPluginEnabled
@@ -46,7 +54,7 @@ enum Action {
 
 type GetBacklinksForFileFn = (file: TFile) => CustomArrayDict<Reference>;
 
-export class BacklinkCachePlugin extends PluginBase {
+export class BacklinkCachePlugin extends PluginBase<BacklinkCachePluginSettings> {
   private readonly backlinksMap = new Map<string, Map<string, Set<Reference>>>();
 
   private debouncedProcessPendingActions!: Debouncer<[], Promise<void>>;
@@ -61,12 +69,12 @@ export class BacklinkCachePlugin extends PluginBase {
     this.setPendingAction(path, Action.Remove);
   }
 
-  protected override createPluginSettings(): EmptySettings {
-    return new EmptySettings();
+  protected override createPluginSettings(data: unknown): BacklinkCachePluginSettings {
+    return new BacklinkCachePluginSettings(data);
   }
 
   protected override createPluginSettingsTab(): null | PluginSettingTab {
-    return null;
+    return new BacklinkCachePluginSettingsTab(this);
   }
 
   protected override async onLayoutReady(): Promise<void> {
@@ -146,6 +154,30 @@ export class BacklinkCachePlugin extends PluginBase {
         default:
           throw new Error('Unknown action');
       }
+    }
+
+    if (pathActions.length > 0) {
+      await this.refreshBacklinkPanels();
+    }
+  }
+
+  private async refreshBacklinkPanels(): Promise<void> {
+    if (!this.settings.shouldAutomaticallyRefreshBacklinkPanels) {
+      return;
+    }
+
+    await reloadBacklinksView(this.app);
+
+    for (const leaf of this.app.workspace.getLeavesOfType(ViewType.Markdown)) {
+      if (!(leaf.view instanceof MarkdownView)) {
+        continue;
+      }
+
+      if (!leaf.view.backlinks) {
+        continue;
+      }
+
+      leaf.view.backlinks.recomputeBacklink(leaf.view.backlinks.file);
     }
   }
 
