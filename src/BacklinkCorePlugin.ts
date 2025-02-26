@@ -152,6 +152,10 @@ async function recomputeBacklinkAsync(backlinkComponent: BacklinkComponent, back
 async function showBacklinks(backlinkComponent: BacklinkComponent, backlinkNoteFile: TFile, links: Reference[]): Promise<void> {
   const app = backlinkComponent.app;
   let content = await app.vault.read(backlinkNoteFile);
+  if (!backlinkComponent.passSearchFilter(backlinkNoteFile, content)) {
+    return;
+  }
+
   let canvasData: CanvasData | null = null;
   if (isCanvasFile(app, backlinkNoteFile)) {
     canvasData = JSON.parse(content) as CanvasData;
