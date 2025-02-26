@@ -44,6 +44,24 @@ const backlinks = app.metadataCache.getBacklinksForFile.originalFn(file);
 
 If you want to use the updated functions from your plugin, you can copy [types.d.ts](./types.d.ts) into your code.
 
+### Canvas backlinks
+
+The plugin handles links from the canvas file/text cards if [`Canvas`](https://help.obsidian.md/plugins/canvas) core plugin is enabled.
+
+### Backlinks panel
+
+The plugin speeds up the Backlinks panel if [`Backlinks`](https://help.obsidian.md/plugins/backlinks) core plugin is enabled.
+
+### Frontmatter markdown links
+
+The plugin includes backlinks from the frontmatter markdown links if [`Frontmatter Markdown Links`](https://obsidian.md/plugins?id=frontmatter-markdown-links) community plugin is enabled. Example of such link:
+
+```md
+---
+key: "[title](path/to/link.md)"
+---
+```
+
 ## Installation
 
 - The plugin is available in [the official Community Plugins repository](https://obsidian.md/plugins?id=backlink-cache).
