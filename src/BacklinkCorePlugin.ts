@@ -9,7 +9,7 @@ import type {
   ResultDomResult
 } from 'obsidian-typings';
 import type { BacklinkComponent } from 'obsidian-typings/implementations';
-import type { CanvasData } from 'obsidian/canvas.js';
+import type { CanvasData } from 'obsidian/canvas.d.ts';
 
 import { around } from 'monkey-around';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
