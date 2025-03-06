@@ -4,6 +4,11 @@ import type {
   TAbstractFile,
   TFile
 } from 'obsidian';
+import type {
+  CanvasFileNodeReference,
+  CanvasReference,
+  CanvasTextNodeReference
+} from 'obsidian-dev-utils/obsidian/Reference';
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
 import { around } from 'monkey-around';
@@ -98,15 +103,35 @@ export async function initCanvasMetadataCache(app: App, file: TFile): Promise<vo
   for (let index = 0; index < canvasData.nodes.length; index++) {
     const node = canvasData.nodes[index];
     switch (node?.type) {
-      case 'file':
-        addCanvasMetadata(app, cachedMetadata, `nodes.${index.toString()}.file`, node.file, node.file, file.path);
+      case 'file': {
+        const canvasFileNodeReference: CanvasFileNodeReference = {
+          isCanvas: true,
+          key: `nodes.${index.toString()}.file`,
+          link: node.file,
+          nodeIndex: index,
+          original: node.file,
+          type: 'file'
+        };
+
+        addCanvasMetadata(app, cachedMetadata, canvasFileNodeReference, file.path);
         break;
+      }
       case 'text': {
         const metadata = await parseMetadataEx(app, node.text);
         const links = getAllLinks(metadata);
         let linkIndex = 0;
         for (const link of links) {
-          addCanvasMetadata(app, cachedMetadata, `nodes.${index.toString()}.text.${linkIndex.toString()}`, link.link, link.original, file.path);
+          const canvasTextNodeReference: CanvasTextNodeReference = {
+            isCanvas: true,
+            key: `nodes.${index.toString()}.text.${linkIndex.toString()}`,
+            link: link.link,
+            linkIndex,
+            nodeIndex: index,
+            original: link.original,
+            type: 'text'
+          };
+
+          addCanvasMetadata(app, cachedMetadata, canvasTextNodeReference, file.path);
           linkIndex++;
         }
         break;
@@ -126,14 +151,10 @@ export async function initCanvasMetadataCache(app: App, file: TFile): Promise<vo
   app.metadataCache.saveMetaCache(hash, cachedMetadata);
 }
 
-function addCanvasMetadata(app: App, cachedMetadata: CachedMetadata, key: string, link: string, original: string, canvasPath: string): void {
-  cachedMetadata.frontmatterLinks?.push({
-    key,
-    link,
-    original
-  });
+function addCanvasMetadata(app: App, cachedMetadata: CachedMetadata, reference: CanvasReference, canvasPath: string): void {
+  cachedMetadata.frontmatterLinks?.push(reference);
 
-  const linkPath = splitSubpath(link).linkPath;
+  const linkPath = splitSubpath(reference.link).linkPath;
 
   const resolvedFile = app.metadataCache.getFirstLinkpathDest(linkPath, canvasPath);
 
