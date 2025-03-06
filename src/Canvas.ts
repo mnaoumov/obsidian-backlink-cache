@@ -4,7 +4,7 @@ import type {
   TAbstractFile,
   TFile
 } from 'obsidian';
-import type { CanvasData } from 'obsidian/canvas.js';
+import type { CanvasData } from 'obsidian/canvas.d.ts';
 
 import { around } from 'monkey-around';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
