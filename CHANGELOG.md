@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2.5.0
+
+- Use strongly typed canvas references
+- Use CanvasReference
+- Use canvas.d.ts
+- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/19.8.1
+
 ## 2.4.0
 
 - Parse metadata frontmatter links
