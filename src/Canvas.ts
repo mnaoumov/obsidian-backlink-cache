@@ -125,9 +125,9 @@ export async function initCanvasMetadataCache(app: App, file: TFile): Promise<vo
             isCanvas: true,
             key: `nodes.${index.toString()}.text.${linkIndex.toString()}`,
             link: link.link,
-            linkIndex,
             nodeIndex: index,
             original: link.original,
+            originalReference: link,
             type: 'text'
           };
 
