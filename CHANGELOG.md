@@ -2,23 +2,17 @@
 
 ## 2.4.0
 
-- Lint
-- Update README
 - Parse metadata frontmatter links
-- Use const
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/19.7.0
 - Add auto-refresh
-- Update libs
 - Check filters
 - Init count once
 - Show canvas backlink context
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/19.5.0
 - Remove EphemeralState
 - Show multiple results to the same file
 - Add canvas backlink context
 - Use getBacklinksFromFile for recomputeBacklink
 - Add links from canvas text
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/19.4.0
+- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/19.7.0
 
 ## 2.3.0
 
