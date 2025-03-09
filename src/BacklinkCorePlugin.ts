@@ -15,10 +15,12 @@ import { around } from 'monkey-around';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import { getPrototypeOf } from 'obsidian-dev-utils/Object';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
+import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import {
-  getAllLinks,
-  getBacklinksForFileSafe
-} from 'obsidian-dev-utils/obsidian/MetadataCache';
+  isCanvasFileNodeReference,
+  isCanvasReference,
+  isCanvasTextNodeReference
+} from 'obsidian-dev-utils/obsidian/Reference';
 import {
   InternalPluginName,
   isFrontmatterLinkCache,
@@ -29,7 +31,6 @@ import {
 import type { BacklinkCachePlugin } from './BacklinkCachePlugin.ts';
 
 import { getFileComparer } from './FileComparer.ts';
-import { parseMetadataEx } from './Metadata.ts';
 
 const FILE_PREFIX = 'file: ';
 
@@ -182,42 +183,57 @@ async function showBacklinks(backlinkComponent: BacklinkComponent, backlinkNoteF
       isValidLink = true;
 
       if (isCanvasFile(app, backlinkNoteFile)) {
-        const nodeIndex = keys[1] as number | undefined;
-        if (nodeIndex !== undefined) {
-          const node = canvasData?.nodes[nodeIndex];
-          if (node) {
-            let canvasNodeMatches = resultDomResult[`canvas-${node.id}`];
-            if (!canvasNodeMatches) {
-              canvasNodeMatches = [];
-              resultDomResult[`canvas-${node.id}`] = canvasNodeMatches;
-            }
+        if (!isCanvasReference(link)) {
+          console.warn('Unknown link type', {
+            link
+          });
+          continue;
+        }
 
-            switch (node.type) {
-              case 'file':
-                canvasNodeMatches.push([FILE_PREFIX.length, FILE_PREFIX.length + node.file.length]);
-                break;
-              case 'text': {
-                const LINK_INDEX_KEY_INDEX = 3;
-                const metadata = await parseMetadataEx(app, node.text);
-                const parsedLinks = getAllLinks(metadata);
-                const linkIndex = keys[LINK_INDEX_KEY_INDEX] as number | undefined;
-                if (linkIndex !== undefined) {
-                  const parsedLink = parsedLinks[linkIndex];
+        const node = canvasData?.nodes[link.nodeIndex];
+        if (!node) {
+          console.warn('Node not found', {
+            link
+          });
+          continue;
+        }
 
-                  if (parsedLink) {
-                    if (isReferenceCache(parsedLink)) {
-                      canvasNodeMatches.push([parsedLink.position.start.offset, parsedLink.position.end.offset]);
-                    } else {
-                      canvasNodeMatches.push([node.text.indexOf(parsedLink.original), node.text.indexOf(parsedLink.original) + parsedLink.original.length]);
-                    }
-                  }
-                }
-                break;
-              }
-              default:
-                break;
-            }
+        let canvasNodeMatches = resultDomResult[`canvas-${node.id}`];
+        if (!canvasNodeMatches) {
+          canvasNodeMatches = [];
+          resultDomResult[`canvas-${node.id}`] = canvasNodeMatches;
+        }
+
+        if (isCanvasFileNodeReference(link)) {
+          if (typeof node.file !== 'string') {
+            console.warn('Node file is not a string', {
+              link,
+              node
+            });
+            continue;
           }
+
+          canvasNodeMatches.push([FILE_PREFIX.length, FILE_PREFIX.length + node.file.length]);
+        } else if (isCanvasTextNodeReference(link)) {
+          if (typeof node.text !== 'string') {
+            console.warn('Node text is not a string', {
+              link,
+              node
+            });
+            continue;
+          }
+
+          if (isReferenceCache(link.originalReference)) {
+            canvasNodeMatches.push([link.originalReference.position.start.offset, link.originalReference.position.end.offset]);
+          } else {
+            const index = node.text.indexOf(link.originalReference.original);
+            canvasNodeMatches.push([index, index + link.originalReference.original.length]);
+          }
+        } else {
+          console.warn('Unknown link type', {
+            link
+          });
+          continue;
         }
       }
     }
