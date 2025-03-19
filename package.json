@@ -24,7 +24,8 @@
     "monkey-around": "^3.0.0",
     "obsidian": "^1.8.7",
     "obsidian-dev-utils": "^19.17.5",
-    "obsidian-typings": "^2.36.1"
+    "obsidian-typings": "^2.36.1",
+    "typescript": "^5.8.2"
   },
   "overrides": {
     "esbuild": "$esbuild"
