@@ -100,7 +100,9 @@ export class BacklinkCachePlugin extends PluginBase<BacklinkCachePluginSettings>
     const dict = new CustomArrayDictImpl<Reference>();
 
     for (const [notePath, links] of notePathLinksMap.entries()) {
+      this.abortSignal.throwIfAborted();
       for (const link of sortReferences(Array.from(links))) {
+        this.abortSignal.throwIfAborted();
         dict.add(notePath, link);
       }
     }
@@ -144,6 +146,10 @@ export class BacklinkCachePlugin extends PluginBase<BacklinkCachePluginSettings>
     this.pendingActions.clear();
 
     for (const [path, action] of pathActions) {
+      if (this.abortSignal.aborted) {
+        return;
+      }
+
       switch (action) {
         case Action.Refresh:
           await this.refreshBacklinks(path);
@@ -169,6 +175,10 @@ export class BacklinkCachePlugin extends PluginBase<BacklinkCachePluginSettings>
     await reloadBacklinksView(this.app);
 
     for (const leaf of this.app.workspace.getLeavesOfType(ViewType.Markdown)) {
+      if (this.abortSignal.aborted) {
+        return;
+      }
+
       if (!(leaf.view instanceof MarkdownView)) {
         continue;
       }
@@ -206,6 +216,9 @@ export class BacklinkCachePlugin extends PluginBase<BacklinkCachePluginSettings>
     }
 
     for (const link of getAllLinks(cache)) {
+      if (this.abortSignal.aborted) {
+        return;
+      }
       const linkFile = extractLinkFile(this.app, link, notePath);
       if (!linkFile) {
         continue;
@@ -239,6 +252,9 @@ export class BacklinkCachePlugin extends PluginBase<BacklinkCachePluginSettings>
     const linkedNotePaths = this.linksMap.get(path) ?? [];
 
     for (const linkedNotePath of linkedNotePaths) {
+      if (this.abortSignal.aborted) {
+        return;
+      }
       this.backlinksMap.get(linkedNotePath)?.delete(path);
     }
 

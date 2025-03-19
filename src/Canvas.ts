@@ -252,6 +252,9 @@ function removeCanvasMetadataCache(plugin: BacklinkCachePlugin): void {
   const app = plugin.app;
   const canvasFiles = app.vault.getFiles().filter((file) => isCanvasFile(app, file));
   for (const file of canvasFiles) {
+    if (plugin.abortSignal.aborted) {
+      return;
+    }
     app.metadataCache.deletePath(file.path);
     plugin.triggerRemove(file.path);
   }
