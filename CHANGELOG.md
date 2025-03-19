@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2.6.0
+
+- Install typescript
+- Ensure all pending operations terminated
+- Update libs
+
 ## 2.5.0
 
 - Use strongly typed canvas references
