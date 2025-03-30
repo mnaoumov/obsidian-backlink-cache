@@ -64,8 +64,15 @@ key: "[title](path/to/link.md)"
 
 ## Installation
 
-- The plugin is available in [the official Community Plugins repository](https://obsidian.md/plugins?id=backlink-cache).
-- [Beta releases](obsidian://brat?plugin=https://github.com/mnaoumov/obsidian-backlink-cache) can be installed via [BRAT](https://obsidian.md/plugins?id=obsidian42-brat).
+The plugin is available in [the official Community Plugins repository](https://obsidian.md/plugins?id=backlink-cache).
+
+### Beta versions
+
+To install the latest beta release of this plugin (regardless if it is available in [the official Community Plugins repository](https://obsidian.md/plugins) or not), follow these steps:
+
+1. Ensure you have the [BRAT plugin](https://obsidian.md/plugins?id=obsidian42-brat) installed and enabled.
+2. Click [Install via BRAT](https://intradeus.github.io/http-protocol-redirector?r=obsidian://brat?plugin=https://github.com/mnaoumov/obsidian-backlink-cache).
+3. An Obsidian pop-up window should appear. In the window, click the `Add plugin` button once and wait a few seconds for the plugin to install.
 
 ## Debugging
 
