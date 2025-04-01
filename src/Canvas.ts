@@ -244,7 +244,9 @@ async function processAllCanvasFiles(plugin: BacklinkCachePlugin): Promise<void>
       await initCanvasMetadataCache(plugin.app, canvasFile);
       plugin.triggerRefresh(canvasFile.path);
     },
-    shouldContinueOnError: true
+    progressBarTitle: 'Backlink Cache: Processing canvas files...',
+    shouldContinueOnError: true,
+    shouldShowProgressBar: true
   });
 }
 
