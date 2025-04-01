@@ -137,7 +137,9 @@ export class BacklinkCachePlugin extends PluginBase<BacklinkCachePluginSettings>
       processItem: async (note) => {
         await this.refreshBacklinks(note.path);
       },
-      shouldContinueOnError: true
+      progressBarTitle: 'Backlink Cache: Initializing...',
+      shouldContinueOnError: true,
+      shouldShowProgressBar: true
     });
   }
 
