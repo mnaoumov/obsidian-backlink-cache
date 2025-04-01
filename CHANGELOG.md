@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.7.0
+
+- Switch to progress bar
+- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/21.1.0
+
 ## 2.6.0
 
 - Install typescript
