@@ -11,11 +11,11 @@ import type {
 import type { BacklinkComponent } from 'obsidian-typings/implementations';
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
-import { around } from 'monkey-around';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import { getPrototypeOf } from 'obsidian-dev-utils/Object';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
 import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
+import { registerPatch } from 'obsidian-dev-utils/obsidian/MonkeyAround';
 import {
   isCanvasFileNodeReference,
   isCanvasReference,
@@ -28,7 +28,7 @@ import {
   ViewType
 } from 'obsidian-typings/implementations';
 
-import type { BacklinkCachePlugin } from './BacklinkCachePlugin.ts';
+import type { Plugin } from './Plugin.ts';
 
 import { getFileComparer } from './FileComparer.ts';
 
@@ -37,20 +37,20 @@ const FILE_PREFIX = 'file: ';
 interface CanvasDomResult extends Record<`canvas-${string}`, [from: number, to: number][]>, ResultDomResult {
 }
 
-export function patchBacklinksCorePlugin(plugin: BacklinkCachePlugin): void {
+export function patchBacklinksCorePlugin(plugin: Plugin): void {
   const app = plugin.app;
   const backlinksCorePlugin = app.internalPlugins.getPluginById(InternalPluginName.Backlink);
   if (!backlinksCorePlugin) {
     return;
   }
 
-  plugin.register(around(getPrototypeOf(backlinksCorePlugin.instance), {
+  registerPatch(plugin, getPrototypeOf(backlinksCorePlugin.instance), {
     onUserEnable: (next: () => void) =>
       function onUserEnablePatched(this: BacklinkPlugin): void {
         next.call(this);
         onBacklinksCorePluginEnable(plugin);
       }
-  }));
+  });
 
   if (backlinksCorePlugin.enabled) {
     onBacklinksCorePluginEnable(plugin);
@@ -77,25 +77,25 @@ async function getBacklinkView(app: App): Promise<BacklinkView | null> {
   return backlinksLeaf.view as BacklinkView;
 }
 
-function onBacklinksCorePluginEnable(plugin: BacklinkCachePlugin): void {
+function onBacklinksCorePluginEnable(plugin: Plugin): void {
   invokeAsyncSafely(() => patchBacklinksPane(plugin));
 }
 
-async function patchBacklinksPane(plugin: BacklinkCachePlugin): Promise<void> {
+async function patchBacklinksPane(plugin: Plugin): Promise<void> {
   const app = plugin.app;
   const backlinkView = await getBacklinkView(app);
   if (!backlinkView) {
     return;
   }
 
-  plugin.register(around(getPrototypeOf(backlinkView.backlink), {
+  registerPatch(plugin, getPrototypeOf(backlinkView.backlink), {
     recomputeBacklink: () =>
       function recomputeBacklinkPatched(this: BacklinkComponent, backlinkFile: null | TFile): void {
         invokeAsyncSafely(async () => {
           await recomputeBacklinkAsync(this, backlinkFile);
         });
       }
-  }));
+  });
 }
 
 function patchCanvasContent(canvasData: CanvasData): string {

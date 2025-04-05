@@ -1,6 +1,7 @@
 import type {
   App,
   CachedMetadata,
+  MetadataCache,
   TAbstractFile,
   TFile
 } from 'obsidian';
@@ -11,16 +12,16 @@ import type {
 } from 'obsidian-dev-utils/obsidian/Reference';
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
-import { around } from 'monkey-around';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import { getPrototypeOf } from 'obsidian-dev-utils/Object';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
 import { splitSubpath } from 'obsidian-dev-utils/obsidian/Link';
 import { loop } from 'obsidian-dev-utils/obsidian/Loop';
 import { getAllLinks } from 'obsidian-dev-utils/obsidian/MetadataCache';
+import { registerPatch } from 'obsidian-dev-utils/obsidian/MonkeyAround';
 import { InternalPluginName } from 'obsidian-typings/implementations';
 
-import type { BacklinkCachePlugin } from './BacklinkCachePlugin.ts';
+import type { Plugin } from './Plugin.ts';
 
 import { reloadBacklinksView } from './BacklinkCorePlugin.ts';
 import { parseMetadataEx } from './Metadata.ts';
@@ -31,13 +32,13 @@ export function isCanvasPluginEnabled(app: App): boolean {
 
 const canvasMetadataCacheMap = new Map<string, CachedMetadata>();
 
-type GetCacheFn = (path: string) => CachedMetadata | null;
+type GetCacheFn = MetadataCache['getCache'];
 
-export function initCanvasHandlers(plugin: BacklinkCachePlugin): void {
+export function initCanvasHandlers(plugin: Plugin): void {
   const app = plugin.app;
-  plugin.register(around(app.metadataCache, {
+  registerPatch(plugin, app.metadataCache, {
     getCache: (next: GetCacheFn) => (path): CachedMetadata | null => getCache(app, path, next)
-  }));
+  });
 
   plugin.registerEvent(app.vault.on('create', (file) => {
     handleFileCreateOrModify(file, plugin);
@@ -57,14 +58,14 @@ export function initCanvasHandlers(plugin: BacklinkCachePlugin): void {
     return;
   }
 
-  plugin.register(around(getPrototypeOf(canvasCorePlugin.instance), {
+  registerPatch(plugin, getPrototypeOf(canvasCorePlugin.instance), {
     onUserDisable: () => (): void => {
       onCanvasCorePluginDisable(plugin);
     },
     onUserEnable: () => (): void => {
       onCanvasCorePluginEnable(plugin);
     }
-  }));
+  });
 
   if (canvasCorePlugin.enabled) {
     onCanvasCorePluginEnable(plugin);
@@ -193,7 +194,7 @@ async function getFileHash(app: App, file: TFile): Promise<string> {
   return arrayBufferToHexString(cryptoBytes);
 }
 
-function handleFileCreateOrModify(file: TAbstractFile, plugin: BacklinkCachePlugin): void {
+function handleFileCreateOrModify(file: TAbstractFile, plugin: Plugin): void {
   if (!isCanvasFile(plugin.app, file)) {
     return;
   }
@@ -203,14 +204,14 @@ function handleFileCreateOrModify(file: TAbstractFile, plugin: BacklinkCachePlug
   });
 }
 
-function handleFileDelete(file: TAbstractFile, plugin: BacklinkCachePlugin): void {
+function handleFileDelete(file: TAbstractFile, plugin: Plugin): void {
   if (!isCanvasFile(plugin.app, file)) {
     return;
   }
   canvasMetadataCacheMap.delete(file.path);
 }
 
-function handleFileRename(file: TAbstractFile, oldPath: string, plugin: BacklinkCachePlugin): void {
+function handleFileRename(file: TAbstractFile, oldPath: string, plugin: Plugin): void {
   if (!isCanvasFile(plugin.app, file)) {
     return;
   }
@@ -221,21 +222,21 @@ function handleFileRename(file: TAbstractFile, oldPath: string, plugin: Backlink
   canvasMetadataCacheMap.delete(oldPath);
 }
 
-function onCanvasCorePluginDisable(plugin: BacklinkCachePlugin): void {
+function onCanvasCorePluginDisable(plugin: Plugin): void {
   removeCanvasMetadataCache(plugin);
   invokeAsyncSafely(async () => {
     await reloadBacklinksView(plugin.app);
   });
 }
 
-function onCanvasCorePluginEnable(plugin: BacklinkCachePlugin): void {
+function onCanvasCorePluginEnable(plugin: Plugin): void {
   invokeAsyncSafely(async () => {
     await processAllCanvasFiles(plugin);
     await reloadBacklinksView(plugin.app);
   });
 }
 
-async function processAllCanvasFiles(plugin: BacklinkCachePlugin): Promise<void> {
+async function processAllCanvasFiles(plugin: Plugin): Promise<void> {
   await loop({
     abortSignal: plugin.abortSignal,
     buildNoticeMessage: (canvasFile, iterationStr) => `Processing backlinks ${iterationStr} - ${canvasFile.path}`,
@@ -250,7 +251,7 @@ async function processAllCanvasFiles(plugin: BacklinkCachePlugin): Promise<void>
   });
 }
 
-function removeCanvasMetadataCache(plugin: BacklinkCachePlugin): void {
+function removeCanvasMetadataCache(plugin: Plugin): void {
   const app = plugin.app;
   const canvasFiles = app.vault.getFiles().filter((file) => isCanvasFile(app, file));
   for (const file of canvasFiles) {

@@ -1,9 +1,9 @@
 import { Setting } from 'obsidian';
 import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginSettingsTabBase';
 
-import type { BacklinkCachePlugin } from './BacklinkCachePlugin.ts';
+import type { Plugin } from './Plugin.ts';
 
-export class BacklinkCachePluginSettingsTab extends PluginSettingsTabBase<BacklinkCachePlugin> {
+export class PluginSettingsTab extends PluginSettingsTabBase<Plugin> {
   public override display(): void {
     this.containerEl.empty();
 

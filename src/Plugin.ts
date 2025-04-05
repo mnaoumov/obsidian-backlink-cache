@@ -1,12 +1,13 @@
 import type {
   Debouncer,
+  MetadataCache,
   Reference
 } from 'obsidian';
 import type { PathOrFile } from 'obsidian-dev-utils/obsidian/FileSystem';
 import type { GetBacklinksForFileSafeWrapper } from 'obsidian-dev-utils/obsidian/MetadataCache';
+import type { PluginSettingsManagerBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginSettingsManagerBase';
 import type { CustomArrayDict } from 'obsidian-typings';
 
-import { around } from 'monkey-around';
 import {
   debounce,
   MarkdownView,
@@ -26,6 +27,7 @@ import {
   getAllLinks,
   getCacheSafe
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
+import { registerPatch } from 'obsidian-dev-utils/obsidian/MonkeyAround';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
 import { sortReferences } from 'obsidian-dev-utils/obsidian/Reference';
 import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
@@ -34,8 +36,6 @@ import {
   ViewType
 } from 'obsidian-typings/implementations';
 
-import { BacklinkCachePluginSettings } from './BacklinkCachePluginSettings.ts';
-import { BacklinkCachePluginSettingsTab } from './BacklinkCachePluginSettingsTab.ts';
 import {
   patchBacklinksCorePlugin,
   reloadBacklinksView
@@ -44,6 +44,9 @@ import {
   initCanvasHandlers,
   isCanvasPluginEnabled
 } from './Canvas.ts';
+import { PluginSettings } from './PluginSettings.ts';
+import { PluginSettingsManager } from './PluginSettingsManager.ts';
+import { PluginSettingsTab } from './PluginSettingsTab.ts';
 
 const INTERVAL_IN_MILLISECONDS = 500;
 
@@ -52,14 +55,14 @@ enum Action {
   Remove
 }
 
-type GetBacklinksForFileFn = (file: TFile) => CustomArrayDict<Reference>;
+type GetBacklinksForFileFn = MetadataCache['getBacklinksForFile'];
 
-export class BacklinkCachePlugin extends PluginBase<BacklinkCachePluginSettings> {
+export class Plugin extends PluginBase<PluginSettings> {
   private readonly backlinksMap = new Map<string, Map<string, Set<Reference>>>();
-
   private debouncedProcessPendingActions!: Debouncer<[], Promise<void>>;
 
   private readonly linksMap = new Map<string, Set<string>>();
+
   private readonly pendingActions = new Map<string, Action>();
   public triggerRefresh(path: string): void {
     this.setPendingAction(path, Action.Refresh);
@@ -69,22 +72,22 @@ export class BacklinkCachePlugin extends PluginBase<BacklinkCachePluginSettings>
     this.setPendingAction(path, Action.Remove);
   }
 
-  protected override createPluginSettings(data: unknown): BacklinkCachePluginSettings {
-    return new BacklinkCachePluginSettings(data);
+  protected override createPluginSettingsTab(): null | PluginSettingTab {
+    return new PluginSettingsTab(this);
   }
 
-  protected override createPluginSettingsTab(): null | PluginSettingTab {
-    return new BacklinkCachePluginSettingsTab(this);
+  protected override createSettingsManager(): PluginSettingsManagerBase<PluginSettings> {
+    return new PluginSettingsManager(this);
   }
 
   protected override async onLayoutReady(): Promise<void> {
-    this.register(around(this.app.metadataCache, {
+    registerPatch(this, this.app.metadataCache, {
       getBacklinksForFile: (next: GetBacklinksForFileFn): GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper =>
         Object.assign(this.getBacklinksForFile.bind(this), {
           originalFn: next,
           safe: this.getBacklinksForFileSafe.bind(this)
         }) as unknown as GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper
-    }));
+    });
 
     this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
     this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
