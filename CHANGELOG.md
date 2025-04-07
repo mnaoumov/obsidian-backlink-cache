@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.7.1
+
+- New template
+
 ## 2.7.0
 
 - Switch to progress bar
