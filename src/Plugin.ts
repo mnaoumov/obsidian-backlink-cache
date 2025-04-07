@@ -5,13 +5,11 @@ import type {
 } from 'obsidian';
 import type { PathOrFile } from 'obsidian-dev-utils/obsidian/FileSystem';
 import type { GetBacklinksForFileSafeWrapper } from 'obsidian-dev-utils/obsidian/MetadataCache';
-import type { PluginSettingsManagerBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginSettingsManagerBase';
 import type { CustomArrayDict } from 'obsidian-typings';
 
 import {
   debounce,
   MarkdownView,
-  PluginSettingTab,
   TAbstractFile,
   TFile
 } from 'obsidian';
@@ -36,6 +34,8 @@ import {
   ViewType
 } from 'obsidian-typings/implementations';
 
+import type { PluginTypes } from './PluginTypes.ts';
+
 import {
   patchBacklinksCorePlugin,
   reloadBacklinksView
@@ -44,7 +44,6 @@ import {
   initCanvasHandlers,
   isCanvasPluginEnabled
 } from './Canvas.ts';
-import { PluginSettings } from './PluginSettings.ts';
 import { PluginSettingsManager } from './PluginSettingsManager.ts';
 import { PluginSettingsTab } from './PluginSettingsTab.ts';
 
@@ -57,7 +56,7 @@ enum Action {
 
 type GetBacklinksForFileFn = MetadataCache['getBacklinksForFile'];
 
-export class Plugin extends PluginBase<PluginSettings> {
+export class Plugin extends PluginBase<PluginTypes> {
   private readonly backlinksMap = new Map<string, Map<string, Set<Reference>>>();
   private debouncedProcessPendingActions!: Debouncer<[], Promise<void>>;
 
@@ -72,11 +71,11 @@ export class Plugin extends PluginBase<PluginSettings> {
     this.setPendingAction(path, Action.Remove);
   }
 
-  protected override createPluginSettingsTab(): null | PluginSettingTab {
+  protected override createPluginSettingsTab(): null | PluginSettingsTab {
     return new PluginSettingsTab(this);
   }
 
-  protected override createSettingsManager(): PluginSettingsManagerBase<PluginSettings> {
+  protected override createSettingsManager(): PluginSettingsManager {
     return new PluginSettingsManager(this);
   }
 
