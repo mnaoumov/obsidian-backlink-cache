@@ -1,6 +1,6 @@
 {
   "name": "backlink-cache",
-  "version": "2.7.1",
+  "version": "2.7.2",
   "description": "Stores backlink cache to speed up `app.metadataCache.getBacklinksForFile`",
   "scripts": {
     "build": "obsidian-dev-utils build",
