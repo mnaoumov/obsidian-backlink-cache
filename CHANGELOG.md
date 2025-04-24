@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2.7.5
+
+- Improve performance
+- Prevent double init
+- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/26.15.2
+
 ## 2.7.4
 
 - https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/24.1.1
