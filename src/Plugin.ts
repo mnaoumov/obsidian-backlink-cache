@@ -88,13 +88,13 @@ export class Plugin extends PluginBase<PluginTypes> {
         }) as unknown as GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper
     });
 
-    this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
     this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
     this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
     this.debouncedProcessPendingActions = debounce(this.processPendingActions.bind(this), INTERVAL_IN_MILLISECONDS, true);
     patchBacklinksCorePlugin(this);
     initCanvasHandlers(this);
     await this.processAllNotes();
+    this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
   }
 
   private getBacklinksForFile(pathOrFile: PathOrFile): CustomArrayDict<Reference> {
