@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.7.6
+
+- Fix counts()
+- Update libs
+
 ## 2.7.5
 
 - Improve performance
