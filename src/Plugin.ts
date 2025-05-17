@@ -88,12 +88,14 @@ export class Plugin extends PluginBase<PluginTypes> {
         }) as unknown as GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper
     });
 
-    this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
-    this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
     this.debouncedProcessPendingActions = debounce(this.processPendingActions.bind(this), INTERVAL_IN_MILLISECONDS, true);
     patchBacklinksCorePlugin(this);
     initCanvasHandlers(this);
     await this.processAllNotes();
+    this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
+    this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
+    this.registerEvent(this.app.vault.on('create', this.handleFileCreate.bind(this)));
+    this.registerEvent(this.app.vault.on('modify', this.handleFileModify.bind(this)));
     this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
   }
 
@@ -118,8 +120,20 @@ export class Plugin extends PluginBase<PluginTypes> {
     return this.getBacklinksForFile(pathOrFile);
   }
 
+  private handleFileCreate(file: TAbstractFile): void {
+    if (file instanceof TFile) {
+      this.setPendingAction(file.path, Action.Refresh);
+    }
+  }
+
   private handleFileDelete(file: TAbstractFile): void {
     this.setPendingAction(file.path, Action.Remove);
+  }
+
+  private handleFileModify(file: TAbstractFile): void {
+    if (file instanceof TFile) {
+      this.setPendingAction(file.path, Action.Refresh);
+    }
   }
 
   private handleFileRename(file: TAbstractFile, oldPath: string): void {
