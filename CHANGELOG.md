@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.8.0
+
+- handleFileCreate/handleFileModify
+
 ## 2.7.6
 
 - Fix counts()
