@@ -237,7 +237,7 @@ export class Plugin extends PluginBase<PluginTypes> {
       if (this.abortSignal.aborted) {
         return;
       }
-      const linkFile = extractLinkFile(this.app, link, notePath);
+      const linkFile = extractLinkFile(this.app, link, notePath, true);
       if (!linkFile) {
         continue;
       }
