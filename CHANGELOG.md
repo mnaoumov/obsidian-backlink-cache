@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2.9.0
+
+- Support links to non-existing files (https://github.com/mnaoumov/obsidian-better-markdown-links/issues/18)
+- Fix build
+- Update libs
+
 ## 2.8.3
 
 - Update libs
