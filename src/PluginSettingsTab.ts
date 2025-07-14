@@ -9,10 +9,17 @@ export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
     this.containerEl.empty();
 
     new Setting(this.containerEl)
-      .setName('Automatically refresh backlink panels')
-      .setDesc('If enabled, the backlink panels will be refreshed automatically when a note is saved.')
+      .setName('Should automatically refresh backlink panels')
+      .setDesc('Whether to refresh the backlink panels automatically when a note is saved.')
       .addToggle((toggle) => {
         this.bind(toggle, 'shouldAutomaticallyRefreshBacklinkPanels');
+      });
+
+    new Setting(this.containerEl)
+      .setName('Should show progress bar on load')
+      .setDesc('Whether to show progress bar on load.')
+      .addToggle((toggle) => {
+        this.bind(toggle, 'shouldShowProgressBarOnLoad');
       });
   }
 }
