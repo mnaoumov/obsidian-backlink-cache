@@ -247,7 +247,7 @@ async function processAllCanvasFiles(plugin: Plugin): Promise<void> {
     },
     progressBarTitle: 'Backlink Cache: Processing canvas files...',
     shouldContinueOnError: true,
-    shouldShowProgressBar: true
+    shouldShowProgressBar: plugin.settings.shouldShowProgressBarOnLoad
   });
 }
 

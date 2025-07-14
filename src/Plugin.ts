@@ -155,7 +155,7 @@ export class Plugin extends PluginBase<PluginTypes> {
       },
       progressBarTitle: 'Backlink Cache: Initializing...',
       shouldContinueOnError: true,
-      shouldShowProgressBar: true
+      shouldShowProgressBar: this.settings.shouldShowProgressBarOnLoad
     });
   }
 
