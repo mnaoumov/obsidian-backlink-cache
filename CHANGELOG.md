@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.10.0
+
+- Add setting shouldShowProgressBarOnLoad (#8)
+- Update libs
+
 ## 2.9.0
 
 - Support links to non-existing files (https://github.com/mnaoumov/obsidian-better-markdown-links/issues/18)
