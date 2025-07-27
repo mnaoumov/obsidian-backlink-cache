@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.11.0
+
+- Improve precision for multi links in frontmatter
+- Update libs
+
 ## 2.10.0
 
 - Add setting shouldShowProgressBarOnLoad (#8)
