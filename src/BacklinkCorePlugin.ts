@@ -14,6 +14,7 @@ import type { CanvasData } from 'obsidian/canvas.d.ts';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import { getPrototypeOf } from 'obsidian-dev-utils/Object';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
+import { isFrontmatterLinkCacheWithOffsets } from 'obsidian-dev-utils/obsidian/FrontmatterLinkCacheWithOffsets';
 import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
 import { registerPatch } from 'obsidian-dev-utils/obsidian/MonkeyAround';
 import {
@@ -172,6 +173,14 @@ async function showBacklinks(backlinkComponent: BacklinkComponent, backlinkNoteF
   for (const link of links) {
     if (isReferenceCache(link)) {
       resultDomResult.content.push([link.position.start.offset, link.position.end.offset]);
+      isValidLink = true;
+    } else if (isFrontmatterLinkCacheWithOffsets(link)) {
+      const keys = link.key.split('.');
+      resultDomResult.properties.push({
+        key: keys[0] ?? '',
+        pos: [link.startOffset, link.endOffset],
+        subkey: keys.slice(1).map((key) => Number.isNaN(Number(key)) ? key : Number(key))
+      });
       isValidLink = true;
     } else if (isFrontmatterLinkCache(link)) {
       const keys = link.key.split('.');
