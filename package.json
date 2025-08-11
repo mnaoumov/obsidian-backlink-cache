@@ -21,13 +21,13 @@
   "license": "MIT",
   "devDependencies": {
     "@tsconfig/strictest": "^2.0.5",
-    "@types/node": "^24.1.0",
+    "@types/node": "^24.2.1",
     "esbuild": "^0.25.8",
     "jiti": "^2.5.1",
     "obsidian": "^1.8.7",
-    "obsidian-dev-utils": "^29.0.2",
-    "obsidian-typings": "^3.13.1",
-    "typescript": "^5.8.3"
+    "obsidian-dev-utils": "^30.5.1",
+    "obsidian-typings": "^3.16.0",
+    "typescript": "^5.9.2"
   },
   "overrides": {
     "@antfu/utils": "9.2.0",

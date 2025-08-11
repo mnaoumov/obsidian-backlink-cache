@@ -13,7 +13,7 @@ import type {
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
-import { getPrototypeOf } from 'obsidian-dev-utils/Object';
+import { getPrototypeOf } from 'obsidian-dev-utils/ObjectUtils';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
 import { splitSubpath } from 'obsidian-dev-utils/obsidian/Link';
 import { loop } from 'obsidian-dev-utils/obsidian/Loop';
