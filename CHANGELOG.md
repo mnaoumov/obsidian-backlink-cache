@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.11.1
+
+- Update libs
+
 ## 2.11.0
 
 - Improve precision for multi links in frontmatter
