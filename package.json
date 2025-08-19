@@ -20,18 +20,19 @@
   "author": "mnaoumov",
   "license": "MIT",
   "devDependencies": {
-    "@tsconfig/strictest": "^2.0.5",
-    "@types/node": "^24.3.0",
-    "esbuild": "^0.25.9",
-    "jiti": "^2.5.1",
-    "obsidian": "^1.8.7",
-    "obsidian-dev-utils": "^33.0.0",
-    "obsidian-typings": "^3.16.5",
-    "typescript": "^5.9.2"
+    "@tsconfig/strictest": "latest",
+    "@types/node": "latest",
+    "esbuild": "latest",
+    "jiti": "latest",
+    "obsidian": "latest",
+    "obsidian-dev-utils": "latest",
+    "obsidian-typings": "obsidian-public-latest",
+    "typescript": "latest"
   },
   "overrides": {
     "@antfu/utils": "9.2.0",
-    "esbuild": "$esbuild"
+    "boolean": "npm:dry-uninstall",
+    "dompurify": "3.0.1"
   },
   "type": "module"
 }
