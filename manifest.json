@@ -1,8 +1,8 @@
 {
   "id": "backlink-cache",
   "name": "Backlink Cache",
-  "version": "2.11.4",
-  "minAppVersion": "1.9.10",
+  "version": "2.11.5",
+  "minAppVersion": "1.9.12",
   "description": "Stores backlink cache to speed up `app.metadataCache.getBacklinksForFile`",
   "author": "mnaoumov",
   "authorUrl": "https://github.com/mnaoumov/",
