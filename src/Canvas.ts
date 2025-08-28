@@ -107,7 +107,7 @@ export async function initCanvasMetadataCache(app: App, file: TFile): Promise<vo
       case 'file': {
         const canvasFileNodeReference: CanvasFileNodeReference = {
           isCanvas: true,
-          key: `nodes.${index.toString()}.file`,
+          key: `nodes.${String(index)}.file`,
           link: node.file,
           nodeIndex: index,
           original: node.file,
@@ -124,7 +124,7 @@ export async function initCanvasMetadataCache(app: App, file: TFile): Promise<vo
         for (const link of links) {
           const canvasTextNodeReference: CanvasTextNodeReference = {
             isCanvas: true,
-            key: `nodes.${index.toString()}.text.${linkIndex.toString()}`,
+            key: `nodes.${String(index)}.text.${String(linkIndex)}`,
             link: link.link,
             nodeIndex: index,
             original: link.original,
