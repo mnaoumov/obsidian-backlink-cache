@@ -1,52 +1,52 @@
 # CHANGELOG
 
+## 2.11.6
+
+- Fix performance (#10)
+
 ## 2.11.5
 
-- Update libs
+- Minor changes
 
 ## 2.11.4
 
-- Update libs
+- Minor changes
 
 ## 2.11.3
 
-- Update libs
+- Minor changes
 
 ## 2.11.2
 
-- Update libs
+- Minor changes
 
 ## 2.11.1
 
-- Update libs
+- Minor changes
 
 ## 2.11.0
 
 - Improve precision for multi links in frontmatter
-- Update libs
 
 ## 2.10.0
 
 - Add setting shouldShowProgressBarOnLoad (#8)
-- Update libs
 
 ## 2.9.0
 
 - Support links to non-existing files (https://github.com/mnaoumov/obsidian-better-markdown-links/issues/18)
-- Fix build
-- Update libs
 
 ## 2.8.3
 
-- Update libs
+- Minor changes
 
 ## 2.8.2
 
-- Update libs
+- Minor changes
 
 ## 2.8.1
 
-- Update libs
+- Minor changes
 
 ## 2.8.0
 
@@ -55,25 +55,23 @@
 ## 2.7.6
 
 - Fix counts()
-- Update libs
 
 ## 2.7.5
 
 - Improve performance
 - Prevent double init
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/26.15.2
 
 ## 2.7.4
 
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/24.1.1
+- Minor changes
 
 ## 2.7.3
 
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/24.1.0
+- Minor changes
 
 ## 2.7.2
 
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/24.0.1
+- Minor changes
 
 ## 2.7.1
 
@@ -82,20 +80,17 @@
 ## 2.7.0
 
 - Switch to progress bar
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/21.1.0
 
 ## 2.6.0
 
 - Install typescript
 - Ensure all pending operations terminated
-- Update libs
 
 ## 2.5.0
 
 - Use strongly typed canvas references
 - Use CanvasReference
 - Use canvas.d.ts
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/19.8.1
 
 ## 2.4.0
 
@@ -109,26 +104,23 @@
 - Add canvas backlink context
 - Use getBacklinksFromFile for recomputeBacklink
 - Add links from canvas text
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/19.7.0
 
 ## 2.3.0
 
 - Pass proper CanvasEphemeralState to highlight the node
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/19.2.2
 
 ## 2.2.15
 
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/19.2.1
+- Minor changes
 
 ## 2.2.14
 
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/18.3.0
+- Minor changes
 
 ## 2.2.13
 
 - Lint
 - Update task name
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/17.2.2
 
 ## 2.2.12
 
@@ -136,23 +128,23 @@
 
 ## 2.2.11
 
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/16.1.0
+- Minor changes
 
 ## 2.2.10
 
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/15.0.0
+- Minor changes
 
 ## 2.2.9
 
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/13.5.0
+- Minor changes
 
 ## 2.2.8
 
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/13.4.1
+- Minor changes
 
 ## 2.2.7
 
-- https://github.com/mnaoumov/obsidian-dev-utils/releases/tag/13.8.0
+- Minor changes
 
 ## 2.2.6
 
@@ -160,16 +152,14 @@
 
 ## 2.2.5
 
-- Update libs
+- Minor changes
 
 ## 2.2.4
 
-- Update libs
 - Refactor
 
 ## 2.2.3
 
-- Update libs
 - Improve performance
 
 ## 2.2.2
@@ -178,7 +168,7 @@
 
 ## 2.2.1
 
-- Update libs
+- Minor changes
 
 ## 2.2.0
 
@@ -203,17 +193,15 @@
 
 ## 1.11.5
 
-- Update libs
 - Rename next
 
 ## 1.11.4
 
-- Update libs
-- Update libs
+- Minor changes
 
 ## 1.11.3
 
-- Update libs
+- Minor changes
 
 ## 1.11.2
 
@@ -221,11 +209,11 @@
 
 ## 1.11.1
 
-- Update lib
+- Minor changes
 
 ## 1.11.0
 
-- update lib
+- Minor changes
 
 ## 1.10.0
 
