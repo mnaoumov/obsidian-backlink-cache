@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.11.7
+
+- Minor changes
+
 ## 2.11.6
 
 - Fix performance (#10)
