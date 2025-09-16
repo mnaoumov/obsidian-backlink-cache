@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.11.13
+
+- Minor changes
+
 ## 2.11.12
 
 - Minor changes
