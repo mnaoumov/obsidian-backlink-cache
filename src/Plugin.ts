@@ -58,7 +58,7 @@ type GetBacklinksForFileFn = MetadataCache['getBacklinksForFile'];
 
 export class Plugin extends PluginBase<PluginTypes> {
   private readonly backlinksMap = new Map<string, Map<string, Set<Reference>>>();
-  private debouncedProcessPendingActions!: Debouncer<[], Promise<void>>;
+  private debouncedProcessPendingActions?: Debouncer<[], Promise<void>>;
 
   private readonly linksMap = new Map<string, Set<string>>();
 
@@ -287,6 +287,6 @@ export class Plugin extends PluginBase<PluginTypes> {
 
   private setPendingAction(path: string, action: Action): void {
     this.pendingActions.set(path, action);
-    this.debouncedProcessPendingActions();
+    this.debouncedProcessPendingActions?.();
   }
 }

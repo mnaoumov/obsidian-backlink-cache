@@ -37,7 +37,7 @@ type GetCacheFn = MetadataCache['getCache'];
 export function initCanvasHandlers(plugin: Plugin): void {
   const app = plugin.app;
   registerPatch(plugin, app.metadataCache, {
-    getCache: (next: GetCacheFn) => (path): CachedMetadata | null => getCache(app, path, next)
+    getCache: (next: GetCacheFn) => (path: string): CachedMetadata | null => getCache(app, path, next)
   });
 
   plugin.registerEvent(app.vault.on('create', (file) => {
@@ -171,9 +171,9 @@ function arrayBufferToHexString(buffer: ArrayBuffer): string {
   const hexArray = [];
 
   for (const byte of uint8Array) {
-    // eslint-disable-next-line no-bitwise, no-magic-numbers
+    // eslint-disable-next-line no-bitwise, no-magic-numbers -- Magic numbers are OK in this case.
     hexArray.push((byte >>> 4).toString(16));
-    // eslint-disable-next-line no-bitwise, no-magic-numbers
+    // eslint-disable-next-line no-bitwise, no-magic-numbers -- Magic numbers are OK in this case.
     hexArray.push((byte & 0x0F).toString(16));
   }
 
