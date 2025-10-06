@@ -75,7 +75,8 @@
 
 ## 2.9.0
 
-- Support links to non-existing files (https://github.com/mnaoumov/obsidian-better-markdown-links/issues/18)
+- Support links to non-existing files
+  - fix: <https://github.com/mnaoumov/obsidian-better-markdown-links/issues/18>
 
 ## 2.8.3
 
