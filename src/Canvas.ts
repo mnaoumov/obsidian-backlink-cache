@@ -2,8 +2,7 @@ import type {
   App,
   CachedMetadata,
   MetadataCache,
-  TAbstractFile,
-  TFile
+  TAbstractFile
 } from 'obsidian';
 import type {
   CanvasFileNodeReference,
@@ -12,6 +11,7 @@ import type {
 } from 'obsidian-dev-utils/obsidian/Reference';
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
+import { TFile } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
 import { getPrototypeOf } from 'obsidian-dev-utils/ObjectUtils';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
@@ -195,11 +195,11 @@ async function getFileHash(app: App, file: TFile): Promise<string> {
 }
 
 function handleFileCreateOrModify(file: TAbstractFile, plugin: Plugin): void {
-  if (!isCanvasFile(plugin.app, file)) {
+  if (!isCanvasFile(plugin.app, file) || !(file instanceof TFile)) {
     return;
   }
   invokeAsyncSafely(async () => {
-    await initCanvasMetadataCache(plugin.app, file as TFile);
+    await initCanvasMetadataCache(plugin.app, file);
     plugin.triggerRefresh(file.path);
   });
 }

@@ -28,6 +28,7 @@
     "./commitlint.config.ts",
     "./eslint.config.mts",
     "./src/**/*.ts",
-    "./scripts/**/*.ts"
+    "./scripts/**/*.ts",
+    "types.d.ts"
   ]
 }
