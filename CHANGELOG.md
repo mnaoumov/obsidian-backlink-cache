@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.11.20
+
+- fix: properly disable extra notices re #11
+- chore: update libs
+
 ## 2.11.19
 
 - chore: update libs
