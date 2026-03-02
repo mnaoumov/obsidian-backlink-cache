@@ -44,6 +44,7 @@ import {
   initCanvasHandlers,
   isCanvasPluginEnabled
 } from './Canvas.ts';
+import { RefreshBacklinkPanelsCommand } from './Commands/RefreshBacklinkPanelsCommand.ts';
 import { PluginSettingsManager } from './PluginSettingsManager.ts';
 import { PluginSettingsTab } from './PluginSettingsTab.ts';
 
@@ -63,6 +64,26 @@ export class Plugin extends PluginBase<PluginTypes> {
   private readonly linksMap = new Map<string, Set<string>>();
 
   private readonly pendingActions = new Map<string, Action>();
+  public async refreshBacklinkPanels(): Promise<void> {
+    await reloadBacklinksView(this.app);
+
+    for (const leaf of this.app.workspace.getLeavesOfType(ViewType.Markdown)) {
+      if (this.abortSignal.aborted) {
+        return;
+      }
+
+      if (!(leaf.view instanceof MarkdownView)) {
+        continue;
+      }
+
+      if (!leaf.view.backlinks) {
+        continue;
+      }
+
+      leaf.view.backlinks.recomputeBacklink(leaf.view.backlinks.file);
+    }
+  }
+
   public triggerRefresh(path: string): void {
     this.setPendingAction(path, Action.Refresh);
   }
@@ -97,6 +118,8 @@ export class Plugin extends PluginBase<PluginTypes> {
     this.registerEvent(this.app.vault.on('create', this.handleFileCreate.bind(this)));
     this.registerEvent(this.app.vault.on('modify', this.handleFileModify.bind(this)));
     this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
+
+    this.addCommand(new RefreshBacklinkPanelsCommand(this));
   }
 
   private getBacklinksForFile(pathOrFile: PathOrFile): CustomArrayDict<Reference> {
@@ -180,32 +203,8 @@ export class Plugin extends PluginBase<PluginTypes> {
       }
     }
 
-    if (pathActions.length > 0) {
+    if (pathActions.length > 0 && this.settings.shouldAutomaticallyRefreshBacklinkPanels) {
       await this.refreshBacklinkPanels();
-    }
-  }
-
-  private async refreshBacklinkPanels(): Promise<void> {
-    if (!this.settings.shouldAutomaticallyRefreshBacklinkPanels) {
-      return;
-    }
-
-    await reloadBacklinksView(this.app);
-
-    for (const leaf of this.app.workspace.getLeavesOfType(ViewType.Markdown)) {
-      if (this.abortSignal.aborted) {
-        return;
-      }
-
-      if (!(leaf.view instanceof MarkdownView)) {
-        continue;
-      }
-
-      if (!leaf.view.backlinks) {
-        continue;
-      }
-
-      leaf.view.backlinks.recomputeBacklink(leaf.view.backlinks.file);
     }
   }
 
