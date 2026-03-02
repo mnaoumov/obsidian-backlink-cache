@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.12.0
+
+- feat: add Refresh backlink panels comand re #14
+- chore: update libs
+
 ## 2.11.21
 
 - chore: update libs
