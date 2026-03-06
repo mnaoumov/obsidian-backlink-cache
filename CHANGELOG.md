@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.12.1
+
+- chore: fix typo
+- chore: update template
+
 ## 2.12.0
 
 - feat: add Refresh backlink panels command re #14
