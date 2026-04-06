@@ -12,12 +12,14 @@
       "DOM",
       "ESNext"
     ],
+    "libReplacement": true,
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "noEmit": true,
     "target": "ESNext",
     "skipLibCheck": false,
     "types": [
+      "@total-typescript/ts-reset",
       "node",
       "obsidian-typings"
     ],
