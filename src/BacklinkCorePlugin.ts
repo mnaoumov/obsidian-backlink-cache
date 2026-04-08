@@ -11,12 +11,12 @@ import type {
 import type { BacklinkComponent } from 'obsidian-typings/implementations';
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
-import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
-import { getPrototypeOf } from 'obsidian-dev-utils/ObjectUtils';
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
+import { getPrototypeOf } from 'obsidian-dev-utils/object-utils';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
 import { isFrontmatterLinkCacheWithOffsets } from 'obsidian-dev-utils/obsidian/FrontmatterLinkCacheWithOffsets';
 import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
-import { registerPatch } from 'obsidian-dev-utils/obsidian/MonkeyAround';
+import { registerPatch } from 'obsidian-dev-utils/obsidian/monkey-around';
 import {
   isCanvasFileNodeReference,
   isCanvasReference,

@@ -13,7 +13,7 @@ import {
   TAbstractFile,
   TFile
 } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import {
   getFileOrNull,
   getPath,
@@ -25,8 +25,8 @@ import {
   getAllLinks,
   getCacheSafe
 } from 'obsidian-dev-utils/obsidian/MetadataCache';
-import { registerPatch } from 'obsidian-dev-utils/obsidian/MonkeyAround';
-import { PluginBase } from 'obsidian-dev-utils/obsidian/Plugin/PluginBase';
+import { registerPatch } from 'obsidian-dev-utils/obsidian/monkey-around';
+import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-base';
 import { sortReferences } from 'obsidian-dev-utils/obsidian/Reference';
 import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
 import {

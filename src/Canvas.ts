@@ -12,13 +12,13 @@ import type {
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
 import { TFile } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/Async';
-import { getPrototypeOf } from 'obsidian-dev-utils/ObjectUtils';
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
+import { getPrototypeOf } from 'obsidian-dev-utils/object-utils';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
 import { splitSubpath } from 'obsidian-dev-utils/obsidian/Link';
 import { loop } from 'obsidian-dev-utils/obsidian/Loop';
 import { getAllLinks } from 'obsidian-dev-utils/obsidian/MetadataCache';
-import { registerPatch } from 'obsidian-dev-utils/obsidian/MonkeyAround';
+import { registerPatch } from 'obsidian-dev-utils/obsidian/monkey-around';
 import { InternalPluginName } from 'obsidian-typings/implementations';
 
 import type { Plugin } from './Plugin.ts';
