@@ -3,8 +3,8 @@ import type {
   MetadataCache,
   Reference
 } from 'obsidian';
-import type { PathOrFile } from 'obsidian-dev-utils/obsidian/FileSystem';
-import type { GetBacklinksForFileSafeWrapper } from 'obsidian-dev-utils/obsidian/MetadataCache';
+import type { PathOrFile } from 'obsidian-dev-utils/obsidian/file-system';
+import type { GetBacklinksForFileSafeWrapper } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import type { CustomArrayDict } from 'obsidian-typings';
 
 import {
@@ -18,17 +18,17 @@ import {
   getFileOrNull,
   getPath,
   isCanvasFile
-} from 'obsidian-dev-utils/obsidian/FileSystem';
-import { extractLinkFile } from 'obsidian-dev-utils/obsidian/Link';
-import { loop } from 'obsidian-dev-utils/obsidian/Loop';
+} from 'obsidian-dev-utils/obsidian/file-system';
+import { extractLinkFile } from 'obsidian-dev-utils/obsidian/link';
+import { loop } from 'obsidian-dev-utils/obsidian/loop';
 import {
   getAllLinks,
   getCacheSafe
-} from 'obsidian-dev-utils/obsidian/MetadataCache';
+} from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { registerPatch } from 'obsidian-dev-utils/obsidian/monkey-around';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-base';
-import { sortReferences } from 'obsidian-dev-utils/obsidian/Reference';
-import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/Vault';
+import { sortReferences } from 'obsidian-dev-utils/obsidian/reference';
+import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/vault';
 import {
   CustomArrayDictImpl,
   ViewType
