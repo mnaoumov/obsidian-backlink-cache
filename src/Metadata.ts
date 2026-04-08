@@ -3,8 +3,8 @@ import type {
   CachedMetadata
 } from 'obsidian';
 
-import { fixFrontmatterMarkdownLinks } from 'obsidian-dev-utils/obsidian/Link';
-import { parseMetadata } from 'obsidian-dev-utils/obsidian/MetadataCache';
+import { fixFrontmatterMarkdownLinks } from 'obsidian-dev-utils/obsidian/link';
+import { parseMetadata } from 'obsidian-dev-utils/obsidian/metadata-cache';
 
 export async function parseMetadataEx(app: App, str: string): Promise<CachedMetadata> {
   const metadata = await parseMetadata(app, str);

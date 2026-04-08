@@ -8,16 +8,16 @@ import type {
   CanvasFileNodeReference,
   CanvasReference,
   CanvasTextNodeReference
-} from 'obsidian-dev-utils/obsidian/Reference';
+} from 'obsidian-dev-utils/obsidian/reference';
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
 import { TFile } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { getPrototypeOf } from 'obsidian-dev-utils/object-utils';
-import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
-import { splitSubpath } from 'obsidian-dev-utils/obsidian/Link';
-import { loop } from 'obsidian-dev-utils/obsidian/Loop';
-import { getAllLinks } from 'obsidian-dev-utils/obsidian/MetadataCache';
+import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
+import { splitSubpath } from 'obsidian-dev-utils/obsidian/link';
+import { loop } from 'obsidian-dev-utils/obsidian/loop';
+import { getAllLinks } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { registerPatch } from 'obsidian-dev-utils/obsidian/monkey-around';
 import { InternalPluginName } from 'obsidian-typings/implementations';
 

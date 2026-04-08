@@ -13,15 +13,15 @@ import type { CanvasData } from 'obsidian/canvas.d.ts';
 
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { getPrototypeOf } from 'obsidian-dev-utils/object-utils';
-import { isCanvasFile } from 'obsidian-dev-utils/obsidian/FileSystem';
-import { isFrontmatterLinkCacheWithOffsets } from 'obsidian-dev-utils/obsidian/FrontmatterLinkCacheWithOffsets';
-import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/MetadataCache';
+import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
+import { isFrontmatterLinkCacheWithOffsets } from 'obsidian-dev-utils/obsidian/frontmatter-link-cache-with-offsets';
+import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { registerPatch } from 'obsidian-dev-utils/obsidian/monkey-around';
 import {
   isCanvasFileNodeReference,
   isCanvasReference,
   isCanvasTextNodeReference
-} from 'obsidian-dev-utils/obsidian/Reference';
+} from 'obsidian-dev-utils/obsidian/reference';
 import {
   InternalPluginName,
   isFrontmatterLinkCache,
