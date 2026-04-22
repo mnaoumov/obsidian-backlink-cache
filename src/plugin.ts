@@ -7,7 +7,6 @@ import type {
 } from 'obsidian';
 import type { PathOrFile } from 'obsidian-dev-utils/obsidian/file-system';
 import type { GetBacklinksForFileSafeWrapper } from 'obsidian-dev-utils/obsidian/metadata-cache';
-import type { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 import type { CustomArrayDict } from 'obsidian-typings';
 
 import {
@@ -87,7 +86,7 @@ export class Plugin extends PluginBase {
     const pluginSettingsTab = new PluginSettingsTab({
       plugin: this,
       pluginSettingsComponent: this.pluginSettingsComponent
-    }) as PluginSettingsTabBase<object>;
+    });
     this.registerComponent({
       component: new PluginSettingsTabComponent(this, pluginSettingsTab)
     });
