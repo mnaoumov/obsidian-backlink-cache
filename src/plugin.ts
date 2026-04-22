@@ -53,7 +53,6 @@ import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 
 const INTERVAL_IN_MILLISECONDS = 500;
-const PLUGIN_NAME = 'backlink-cache';
 
 enum Action {
   Refresh,
@@ -94,7 +93,7 @@ export class Plugin extends PluginBase {
       component: new CommandHandlerComponent(
         this,
         new RefreshBacklinkPanelsCommandHandler({
-          pluginName: PLUGIN_NAME,
+          pluginName: manifest.name,
           refreshBacklinkPanels: this.refreshBacklinkPanels.bind(this)
         })
       )
