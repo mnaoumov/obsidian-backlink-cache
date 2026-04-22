@@ -1,21 +1,20 @@
-import { Setting } from 'obsidian';
-import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab-base';
+import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
+import { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
 
-import type { PluginTypes } from './PluginTypes.ts';
+import type { PluginSettings } from './plugin-settings.ts';
 
-export class PluginSettingsTab extends PluginSettingsTabBase<PluginTypes> {
+export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
   public override display(): void {
     super.display();
-    this.containerEl.empty();
 
-    new Setting(this.containerEl)
+    new SettingEx(this.containerEl)
       .setName('Should automatically refresh backlink panels')
       .setDesc('Whether to refresh the backlink panels automatically when a note is saved.')
       .addToggle((toggle) => {
         this.bind(toggle, 'shouldAutomaticallyRefreshBacklinkPanels');
       });
 
-    new Setting(this.containerEl)
+    new SettingEx(this.containerEl)
       .setName('Should show progress bar on load')
       .setDesc('Whether to show progress bar on load.')
       .addToggle((toggle) => {

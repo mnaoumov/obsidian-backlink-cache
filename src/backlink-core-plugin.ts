@@ -29,9 +29,9 @@ import {
   ViewType
 } from 'obsidian-typings/implementations';
 
-import type { Plugin } from './Plugin.ts';
+import type { Plugin } from './plugin.ts';
 
-import { getFileComparer } from './FileComparer.ts';
+import { getFileComparer } from './file-comparer.ts';
 
 const FILE_PREFIX = 'file: ';
 

@@ -1,3 +1,3 @@
-import { Plugin } from './Plugin.ts';
+import { Plugin } from './plugin.ts';
 
 export default Plugin;

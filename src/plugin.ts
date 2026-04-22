@@ -1,10 +1,13 @@
 import type {
+  App,
   Debouncer,
   MetadataCache,
+  PluginManifest,
   Reference
 } from 'obsidian';
 import type { PathOrFile } from 'obsidian-dev-utils/obsidian/file-system';
 import type { GetBacklinksForFileSafeWrapper } from 'obsidian-dev-utils/obsidian/metadata-cache';
+import type { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 import type { CustomArrayDict } from 'obsidian-typings';
 
 import {
@@ -14,6 +17,7 @@ import {
   TFile
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
+import { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
 import {
   getFileOrNull,
   getPath,
@@ -26,7 +30,8 @@ import {
   getCacheSafe
 } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { registerPatch } from 'obsidian-dev-utils/obsidian/monkey-around';
-import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-base';
+import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/plugin/components/plugin-settings-tab-component';
+import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 import { sortReferences } from 'obsidian-dev-utils/obsidian/reference';
 import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/vault';
 import {
@@ -34,21 +39,22 @@ import {
   ViewType
 } from 'obsidian-typings/implementations';
 
-import type { PluginTypes } from './PluginTypes.ts';
+import type { PluginSettings } from './plugin-settings.ts';
 
 import {
   patchBacklinksCorePlugin,
   reloadBacklinksView
-} from './BacklinkCorePlugin.ts';
+} from './backlink-core-plugin.ts';
 import {
   initCanvasHandlers,
   isCanvasPluginEnabled
-} from './Canvas.ts';
-import { RefreshBacklinkPanelsCommand } from './Commands/RefreshBacklinkPanelsCommand.ts';
-import { PluginSettingsManager } from './PluginSettingsManager.ts';
-import { PluginSettingsTab } from './PluginSettingsTab.ts';
+} from './canvas.ts';
+import { RefreshBacklinkPanelsCommandHandler } from './command-handlers/refresh-backlink-panels-command-handler.ts';
+import { PluginSettingsComponent } from './plugin-settings-component.ts';
+import { PluginSettingsTab } from './plugin-settings-tab.ts';
 
 const INTERVAL_IN_MILLISECONDS = 500;
+const PLUGIN_NAME = 'backlink-cache';
 
 enum Action {
   Refresh,
@@ -57,18 +63,58 @@ enum Action {
 
 type GetBacklinksForFileFn = MetadataCache['getBacklinksForFile'];
 
-export class Plugin extends PluginBase<PluginTypes> {
+export class Plugin extends PluginBase {
   private readonly backlinksMap = new Map<string, Map<string, Set<Reference>>>();
   private debouncedProcessPendingActions?: Debouncer<[], Promise<void>>;
-
   private readonly linksMap = new Map<string, Set<string>>();
-
   private readonly pendingActions = new Map<string, Action>();
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
+
+  private get pluginSettings(): PluginSettings {
+    return this.pluginSettingsComponent.settings;
+  }
+
+  public constructor(app: App, manifest: PluginManifest) {
+    super(app, manifest);
+    this.pluginSettingsComponent = this.registerComponent({
+      component: new PluginSettingsComponent({
+        loadData: this.loadData.bind(this),
+        saveData: this.saveData.bind(this)
+      }),
+      shouldPreload: true
+    });
+
+    const pluginSettingsTab = new PluginSettingsTab({
+      plugin: this,
+      pluginSettingsComponent: this.pluginSettingsComponent
+    }) as PluginSettingsTabBase<object>;
+    this.registerComponent({
+      component: new PluginSettingsTabComponent(this, pluginSettingsTab)
+    });
+    this.registerComponent({
+      component: new CommandHandlerComponent(
+        this,
+        new RefreshBacklinkPanelsCommandHandler({
+          pluginName: PLUGIN_NAME,
+          refreshBacklinkPanels: this.refreshBacklinkPanels.bind(this)
+        })
+      )
+    });
+  }
+
+  public getAbortSignal(): AbortSignal {
+    return this.abortSignalComponent.abortSignal;
+  }
+
+  public getPluginSettings(): PluginSettings {
+    return this.pluginSettingsComponent.settings;
+  }
+
   public async refreshBacklinkPanels(): Promise<void> {
     await reloadBacklinksView(this.app);
 
     for (const leaf of this.app.workspace.getLeavesOfType(ViewType.Markdown)) {
-      if (this.abortSignal.aborted) {
+      if (this.abortSignalComponent.abortSignal.aborted) {
         return;
       }
 
@@ -92,21 +138,15 @@ export class Plugin extends PluginBase<PluginTypes> {
     this.setPendingAction(path, Action.Remove);
   }
 
-  protected override createSettingsManager(): PluginSettingsManager {
-    return new PluginSettingsManager(this);
-  }
-
-  protected override createSettingsTab(): null | PluginSettingsTab {
-    return new PluginSettingsTab(this);
-  }
-
   protected override async onLayoutReady(): Promise<void> {
     registerPatch(this, this.app.metadataCache, {
-      getBacklinksForFile: (next: GetBacklinksForFileFn): GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper =>
-        Object.assign(this.getBacklinksForFile.bind(this), {
+      getBacklinksForFile: (next: GetBacklinksForFileFn): GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper => {
+        const patched: GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper = Object.assign(this.getBacklinksForFile.bind(this), {
           originalFn: next,
           safe: this.getBacklinksForFileSafe.bind(this)
-        }) as unknown as GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper
+        });
+        return patched;
+      }
     });
 
     this.debouncedProcessPendingActions = debounce(this.processPendingActions.bind(this), INTERVAL_IN_MILLISECONDS, true);
@@ -118,8 +158,6 @@ export class Plugin extends PluginBase<PluginTypes> {
     this.registerEvent(this.app.vault.on('create', this.handleFileCreate.bind(this)));
     this.registerEvent(this.app.vault.on('modify', this.handleFileModify.bind(this)));
     this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
-
-    this.addCommand(new RefreshBacklinkPanelsCommand(this));
   }
 
   private getBacklinksForFile(pathOrFile: PathOrFile): CustomArrayDict<Reference> {
@@ -127,9 +165,9 @@ export class Plugin extends PluginBase<PluginTypes> {
     const dict = new CustomArrayDictImpl<Reference>();
 
     for (const [notePath, links] of notePathLinksMap.entries()) {
-      this.abortSignal.throwIfAborted();
+      this.abortSignalComponent.abortSignal.throwIfAborted();
       for (const link of sortReferences(Array.from(links))) {
-        this.abortSignal.throwIfAborted();
+        this.abortSignalComponent.abortSignal.throwIfAborted();
         dict.add(notePath, link);
       }
     }
@@ -170,7 +208,7 @@ export class Plugin extends PluginBase<PluginTypes> {
 
   private async processAllNotes(): Promise<void> {
     await loop({
-      abortSignal: this.abortSignal,
+      abortSignal: this.abortSignalComponent.abortSignal,
       buildNoticeMessage: (note, iterationStr) => `Processing backlinks ${iterationStr} - ${note.path}`,
       items: getMarkdownFilesSorted(this.app),
       processItem: async (note) => {
@@ -178,7 +216,7 @@ export class Plugin extends PluginBase<PluginTypes> {
       },
       progressBarTitle: 'Backlink Cache: Initializing...',
       shouldContinueOnError: true,
-      shouldShowNotice: this.settings.shouldShowProgressBarOnLoad
+      shouldShowNotice: this.pluginSettings.shouldShowProgressBarOnLoad
     });
   }
 
@@ -187,7 +225,7 @@ export class Plugin extends PluginBase<PluginTypes> {
     this.pendingActions.clear();
 
     for (const [path, action] of pathActions) {
-      if (this.abortSignal.aborted) {
+      if (this.abortSignalComponent.abortSignal.aborted) {
         return;
       }
 
@@ -203,13 +241,13 @@ export class Plugin extends PluginBase<PluginTypes> {
       }
     }
 
-    if (pathActions.length > 0 && this.settings.shouldAutomaticallyRefreshBacklinkPanels) {
+    if (pathActions.length > 0 && this.pluginSettings.shouldAutomaticallyRefreshBacklinkPanels) {
       await this.refreshBacklinkPanels();
     }
   }
 
   private async refreshBacklinks(notePath: string): Promise<void> {
-    this.consoleDebug(`Refreshing backlinks for ${notePath}`);
+    this.consoleDebugComponent.debug(`Refreshing backlinks for ${notePath}`);
     this.removeLinkedPathEntries(notePath);
 
     const noteFile = getFileOrNull(this.app, notePath);
@@ -233,7 +271,7 @@ export class Plugin extends PluginBase<PluginTypes> {
     }
 
     for (const link of getAllLinks(cache)) {
-      if (this.abortSignal.aborted) {
+      if (this.abortSignalComponent.abortSignal.aborted) {
         return;
       }
       const linkFile = extractLinkFile(this.app, link, notePath, true);
@@ -261,7 +299,7 @@ export class Plugin extends PluginBase<PluginTypes> {
   }
 
   private removeBacklinks(path: string): void {
-    this.consoleDebug(`Removing backlinks for ${path}`);
+    this.consoleDebugComponent.debug(`Removing backlinks for ${path}`);
     this.removePathEntries(path);
   }
 
@@ -269,7 +307,7 @@ export class Plugin extends PluginBase<PluginTypes> {
     const linkedNotePaths = this.linksMap.get(path) ?? [];
 
     for (const linkedNotePath of linkedNotePaths) {
-      if (this.abortSignal.aborted) {
+      if (this.abortSignalComponent.abortSignal.aborted) {
         return;
       }
       this.backlinksMap.get(linkedNotePath)?.delete(path);
@@ -279,7 +317,7 @@ export class Plugin extends PluginBase<PluginTypes> {
   }
 
   private removePathEntries(path: string): void {
-    this.consoleDebug(`Removing ${path} entries`);
+    this.consoleDebugComponent.debug(`Removing ${path} entries`);
     this.backlinksMap.delete(path);
     this.removeLinkedPathEntries(path);
   }

@@ -21,10 +21,10 @@ import { getAllLinks } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { registerPatch } from 'obsidian-dev-utils/obsidian/monkey-around';
 import { InternalPluginName } from 'obsidian-typings/implementations';
 
-import type { Plugin } from './Plugin.ts';
+import type { Plugin } from './plugin.ts';
 
-import { reloadBacklinksView } from './BacklinkCorePlugin.ts';
-import { parseMetadataEx } from './Metadata.ts';
+import { reloadBacklinksView } from './backlink-core-plugin.ts';
+import { parseMetadataEx } from './metadata.ts';
 
 export function isCanvasPluginEnabled(app: App): boolean {
   return !!app.internalPlugins.getEnabledPluginById(InternalPluginName.Canvas);
@@ -238,7 +238,7 @@ function onCanvasCorePluginEnable(plugin: Plugin): void {
 
 async function processAllCanvasFiles(plugin: Plugin): Promise<void> {
   await loop({
-    abortSignal: plugin.abortSignal,
+    abortSignal: plugin.getAbortSignal(),
     buildNoticeMessage: (canvasFile, iterationStr) => `Processing backlinks ${iterationStr} - ${canvasFile.path}`,
     items: plugin.app.vault.getFiles().filter((file) => isCanvasFile(plugin.app, file)),
     processItem: async (canvasFile) => {
@@ -247,7 +247,7 @@ async function processAllCanvasFiles(plugin: Plugin): Promise<void> {
     },
     progressBarTitle: 'Backlink Cache: Processing canvas files...',
     shouldContinueOnError: true,
-    shouldShowNotice: plugin.settings.shouldShowProgressBarOnLoad
+    shouldShowNotice: plugin.getPluginSettings().shouldShowProgressBarOnLoad
   });
 }
 
@@ -255,7 +255,7 @@ function removeCanvasMetadataCache(plugin: Plugin): void {
   const app = plugin.app;
   const canvasFiles = app.vault.getFiles().filter((file) => isCanvasFile(app, file));
   for (const file of canvasFiles) {
-    if (plugin.abortSignal.aborted) {
+    if (plugin.getAbortSignal().aborted) {
       return;
     }
     app.metadataCache.deletePath(file.path);
