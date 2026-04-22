@@ -68,9 +68,6 @@ export class Plugin extends PluginBase {
   private readonly pendingActions = new Map<string, Action>();
   private readonly pluginSettingsComponent: PluginSettingsComponent;
 
-  private get pluginSettings(): PluginSettings {
-    return this.pluginSettingsComponent.settings;
-  }
 
   public constructor(app: App, manifest: PluginManifest) {
     super(app, manifest);
@@ -214,7 +211,7 @@ export class Plugin extends PluginBase {
       },
       progressBarTitle: 'Backlink Cache: Initializing...',
       shouldContinueOnError: true,
-      shouldShowNotice: this.pluginSettings.shouldShowProgressBarOnLoad
+      shouldShowNotice: this.pluginSettingsComponent.settings.shouldShowProgressBarOnLoad
     });
   }
 
@@ -239,7 +236,7 @@ export class Plugin extends PluginBase {
       }
     }
 
-    if (pathActions.length > 0 && this.pluginSettings.shouldAutomaticallyRefreshBacklinkPanels) {
+    if (pathActions.length > 0 && this.pluginSettingsComponent.settings.shouldAutomaticallyRefreshBacklinkPanels) {
       await this.refreshBacklinkPanels();
     }
   }
