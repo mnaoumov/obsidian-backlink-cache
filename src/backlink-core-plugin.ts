@@ -7,8 +7,8 @@ import type {
   BacklinkPlugin,
   BacklinkView,
   ResultDomResult
-} from 'obsidian-typings';
-import type { BacklinkComponent } from 'obsidian-typings/implementations';
+} from '@obsidian-typings/obsidian-public-latest';
+import type { BacklinkComponent } from '@obsidian-typings/obsidian-public-latest/implementations';
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
@@ -27,7 +27,7 @@ import {
   isFrontmatterLinkCache,
   isReferenceCache,
   ViewType
-} from 'obsidian-typings/implementations';
+} from '@obsidian-typings/obsidian-public-latest/implementations';
 
 import type { Plugin } from './plugin.ts';
 

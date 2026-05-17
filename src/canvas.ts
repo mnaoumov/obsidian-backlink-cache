@@ -19,7 +19,7 @@ import { splitSubpath } from 'obsidian-dev-utils/obsidian/link';
 import { loop } from 'obsidian-dev-utils/obsidian/loop';
 import { getAllLinks } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { registerPatch } from 'obsidian-dev-utils/obsidian/monkey-around';
-import { InternalPluginName } from 'obsidian-typings/implementations';
+import { InternalPluginName } from '@obsidian-typings/obsidian-public-latest/implementations';
 
 import type { Plugin } from './plugin.ts';
 
