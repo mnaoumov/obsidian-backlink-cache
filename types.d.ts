@@ -2,7 +2,7 @@ import type {
   Reference,
   TFile
 } from 'obsidian';
-import type { CustomArrayDict } from 'obsidian-typings';
+import type { CustomArrayDict } from '@obsidian-typings/obsidian-public-latest';
 
 /**
  * Extended implementation of the `app.metadataCache.getBacklinksForFile` method from Obsidian.

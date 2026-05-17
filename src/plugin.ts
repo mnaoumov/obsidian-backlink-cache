@@ -7,7 +7,7 @@ import type {
 } from 'obsidian';
 import type { PathOrFile } from 'obsidian-dev-utils/obsidian/file-system';
 import type { GetBacklinksForFileSafeWrapper } from 'obsidian-dev-utils/obsidian/metadata-cache';
-import type { CustomArrayDict } from 'obsidian-typings';
+import type { CustomArrayDict } from '@obsidian-typings/obsidian-public-latest';
 
 import {
   debounce,
@@ -33,10 +33,11 @@ import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/plugin/c
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
 import { sortReferences } from 'obsidian-dev-utils/obsidian/reference';
 import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/vault';
+import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 import {
   CustomArrayDictImpl,
   ViewType
-} from 'obsidian-typings/implementations';
+} from '@obsidian-typings/obsidian-public-latest/implementations';
 
 import type { PluginSettings } from './plugin-settings.ts';
 
@@ -71,27 +72,25 @@ export class Plugin extends PluginBase {
 
   public constructor(app: App, manifest: PluginManifest) {
     super(app, manifest);
-    this.pluginSettingsComponent = this.registerComponent({
-      component: new PluginSettingsComponent(this),
-      shouldPreload: true
-    });
+    this.pluginSettingsComponent = this.addChild(new PluginSettingsComponent(new PluginDataHandler(this)));
 
     const pluginSettingsTab = new PluginSettingsTab({
       plugin: this,
       pluginSettingsComponent: this.pluginSettingsComponent
     });
-    this.registerComponent({
-      component: new PluginSettingsTabComponent(this, pluginSettingsTab)
-    });
-    this.registerComponent({
-      component: new CommandHandlerComponent(
-        this,
+    this.addChild(new PluginSettingsTabComponent({ plugin: this, pluginSettingsTab }));
+    this.addChild(new CommandHandlerComponent({
+      activeFileProvider: new AppActiveFileProvider(app),
+      commandHandlers: [
         new RefreshBacklinkPanelsCommandHandler({
           pluginName: manifest.name,
           refreshBacklinkPanels: this.refreshBacklinkPanels.bind(this)
         })
-      )
-    });
+      ],
+      commandRegistrar: new PluginCommandRegistrar(this),
+      menuEventRegistrar: new AppMenuEventRegistrar(app, this),
+      pluginName: manifest.name
+    }));
   }
 
   public getAbortSignal(): AbortSignal {
