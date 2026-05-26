@@ -1,33 +1,33 @@
 import type {
-  App,
-  Reference,
-  TFile
-} from 'obsidian';
-import type {
   BacklinkPlugin,
   BacklinkView,
   ResultDomResult
 } from '@obsidian-typings/obsidian-public-latest';
 import type { BacklinkComponent } from '@obsidian-typings/obsidian-public-latest/implementations';
+import type {
+  App,
+  Reference,
+  TFile
+} from 'obsidian';
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { getPrototypeOf } from 'obsidian-dev-utils/object-utils';
-import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
-import { isFrontmatterLinkCacheWithOffsets } from 'obsidian-dev-utils/obsidian/frontmatter-link-cache-with-offsets';
-import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
-import { registerPatch } from 'obsidian-dev-utils/obsidian/monkey-around';
-import {
-  isCanvasFileNodeReference,
-  isCanvasReference,
-  isCanvasTextNodeReference
-} from 'obsidian-dev-utils/obsidian/reference';
 import {
   InternalPluginName,
   isFrontmatterLinkCache,
   isReferenceCache,
   ViewType
 } from '@obsidian-typings/obsidian-public-latest/implementations';
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
+import { getPrototypeOf } from 'obsidian-dev-utils/object-utils';
+import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/monkey-around-component';
+import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
+import { isFrontmatterLinkCacheWithOffsets } from 'obsidian-dev-utils/obsidian/frontmatter-link-cache-with-offsets';
+import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
+import {
+  isCanvasFileNodeReference,
+  isCanvasReference,
+  isCanvasTextNodeReference
+} from 'obsidian-dev-utils/obsidian/reference';
 
 import type { Plugin } from './plugin.ts';
 
@@ -45,7 +45,8 @@ export function patchBacklinksCorePlugin(plugin: Plugin): void {
     return;
   }
 
-  registerPatch(plugin, getPrototypeOf(backlinksCorePlugin.instance), {
+  const patch = plugin.addChild(new MonkeyAroundComponent());
+  patch.registerPatch(getPrototypeOf(backlinksCorePlugin.instance), {
     onUserEnable: (next: () => void) =>
       function onUserEnablePatched(this: BacklinkPlugin): void {
         next.call(this);
@@ -89,7 +90,8 @@ async function patchBacklinksPane(plugin: Plugin): Promise<void> {
     return;
   }
 
-  registerPatch(plugin, getPrototypeOf(backlinkView.backlink), {
+  const patch = plugin.addChild(new MonkeyAroundComponent());
+  patch.registerPatch(getPrototypeOf(backlinkView.backlink), {
     recomputeBacklink: () =>
       function recomputeBacklinkPatched(this: BacklinkComponent, backlinkFile: null | TFile): void {
         invokeAsyncSafely(async () => {
@@ -177,7 +179,9 @@ async function showBacklinks(backlinkComponent: BacklinkComponent, backlinkNoteF
     } else if (isFrontmatterLinkCacheWithOffsets(link)) {
       const keys = link.key.split('.');
       resultDomResult.properties.push({
+        /* v8 ignore start -- split('.') always returns at least one element. */
         key: keys[0] ?? '',
+        /* v8 ignore stop */
         pos: [link.startOffset, link.endOffset],
         subkey: keys.slice(1).map((key) => Number.isNaN(Number(key)) ? key : Number(key))
       });
@@ -185,7 +189,9 @@ async function showBacklinks(backlinkComponent: BacklinkComponent, backlinkNoteF
     } else if (isFrontmatterLinkCache(link)) {
       const keys = link.key.split('.');
       resultDomResult.properties.push({
+        /* v8 ignore start -- split('.') always returns at least one element. */
         key: keys[0] ?? '',
+        /* v8 ignore stop */
         pos: [0, link.original.length],
         subkey: keys.slice(1).map((key) => Number.isNaN(Number(key)) ? key : Number(key))
       });

@@ -11,15 +11,15 @@ import type {
 } from 'obsidian-dev-utils/obsidian/reference';
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
+import { InternalPluginName } from '@obsidian-typings/obsidian-public-latest/implementations';
 import { TFile } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { getPrototypeOf } from 'obsidian-dev-utils/object-utils';
+import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/monkey-around-component';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
 import { splitSubpath } from 'obsidian-dev-utils/obsidian/link';
 import { loop } from 'obsidian-dev-utils/obsidian/loop';
 import { getAllLinks } from 'obsidian-dev-utils/obsidian/metadata-cache';
-import { registerPatch } from 'obsidian-dev-utils/obsidian/monkey-around';
-import { InternalPluginName } from '@obsidian-typings/obsidian-public-latest/implementations';
 
 import type { Plugin } from './plugin.ts';
 
@@ -36,7 +36,8 @@ type GetCacheFn = MetadataCache['getCache'];
 
 export function initCanvasHandlers(plugin: Plugin): void {
   const app = plugin.app;
-  registerPatch(plugin, app.metadataCache, {
+  const patch = plugin.addChild(new MonkeyAroundComponent());
+  patch.registerPatch(app.metadataCache, {
     getCache: (next: GetCacheFn) => (path: string): CachedMetadata | null => getCache(app, path, next)
   });
 
@@ -58,7 +59,7 @@ export function initCanvasHandlers(plugin: Plugin): void {
     return;
   }
 
-  registerPatch(plugin, getPrototypeOf(canvasCorePlugin.instance), {
+  patch.registerPatch(getPrototypeOf(canvasCorePlugin.instance), {
     onUserDisable: () => (): void => {
       onCanvasCorePluginDisable(plugin);
     },
@@ -161,7 +162,9 @@ function addCanvasMetadata(app: App, cachedMetadata: CachedMetadata, reference: 
 
   const linksCache = resolvedFile ? app.metadataCache.resolvedLinks : app.metadataCache.unresolvedLinks;
   linksCache[canvasPath] ??= {};
+  /* v8 ignore start -- canvasPath is always set by the preceding ??= assignment. */
   const canvasLinksCache = linksCache[canvasPath] ?? {};
+  /* v8 ignore stop */
   canvasLinksCache[linkPath] ??= 0;
   canvasLinksCache[linkPath]++;
 }
