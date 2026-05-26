@@ -1,3 +1,4 @@
+import type { CustomArrayDict } from '@obsidian-typings/obsidian-public-latest';
 import type {
   App,
   Debouncer,
@@ -7,8 +8,11 @@ import type {
 } from 'obsidian';
 import type { PathOrFile } from 'obsidian-dev-utils/obsidian/file-system';
 import type { GetBacklinksForFileSafeWrapper } from 'obsidian-dev-utils/obsidian/metadata-cache';
-import type { CustomArrayDict } from '@obsidian-typings/obsidian-public-latest';
 
+import {
+  CustomArrayDictImpl,
+  ViewType
+} from '@obsidian-typings/obsidian-public-latest/implementations';
 import {
   debounce,
   MarkdownView,
@@ -16,7 +20,14 @@ import {
   TFile
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
+import { AppActiveFileProvider } from 'obsidian-dev-utils/obsidian/active-file-provider';
 import { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
+import { PluginCommandRegistrar } from 'obsidian-dev-utils/obsidian/command-registrar';
+import { CallbackLayoutReadyComponent } from 'obsidian-dev-utils/obsidian/components/layout-ready-component';
+import { MenuEventRegistrarComponent } from 'obsidian-dev-utils/obsidian/components/menu-event-registrar-component';
+import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/monkey-around-component';
+import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
+import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 import {
   getFileOrNull,
   getPath,
@@ -28,16 +39,10 @@ import {
   getAllLinks,
   getCacheSafe
 } from 'obsidian-dev-utils/obsidian/metadata-cache';
-import { registerPatch } from 'obsidian-dev-utils/obsidian/monkey-around';
-import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
+import { PluginEventSourceImpl } from 'obsidian-dev-utils/obsidian/plugin/plugin-event-source';
 import { sortReferences } from 'obsidian-dev-utils/obsidian/reference';
 import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/vault';
-import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
-import {
-  CustomArrayDictImpl,
-  ViewType
-} from '@obsidian-typings/obsidian-public-latest/implementations';
 
 import type { PluginSettings } from './plugin-settings.ts';
 
@@ -69,28 +74,41 @@ export class Plugin extends PluginBase {
   private readonly pendingActions = new Map<string, Action>();
   private readonly pluginSettingsComponent: PluginSettingsComponent;
 
-
   public constructor(app: App, manifest: PluginManifest) {
     super(app, manifest);
-    this.pluginSettingsComponent = this.addChild(new PluginSettingsComponent(new PluginDataHandler(this)));
+    this.pluginSettingsComponent = this.addChild(
+      new PluginSettingsComponent({
+        dataHandler: new PluginDataHandler(this),
+        pluginEventSource: new PluginEventSourceImpl(this)
+      })
+    );
 
     const pluginSettingsTab = new PluginSettingsTab({
       plugin: this,
       pluginSettingsComponent: this.pluginSettingsComponent
     });
-    this.addChild(new PluginSettingsTabComponent({ plugin: this, pluginSettingsTab }));
-    this.addChild(new CommandHandlerComponent({
-      activeFileProvider: new AppActiveFileProvider(app),
-      commandHandlers: [
-        new RefreshBacklinkPanelsCommandHandler({
-          pluginName: manifest.name,
-          refreshBacklinkPanels: this.refreshBacklinkPanels.bind(this)
-        })
-      ],
-      commandRegistrar: new PluginCommandRegistrar(this),
-      menuEventRegistrar: new AppMenuEventRegistrar(app, this),
-      pluginName: manifest.name
-    }));
+    this.addChild(
+      new PluginSettingsTabComponent({
+        plugin: this,
+        pluginSettingsTab
+      })
+    );
+    const menuEventRegistrar = this.addChild(new MenuEventRegistrarComponent(app));
+    this.addChild(
+      new CommandHandlerComponent({
+        activeFileProvider: new AppActiveFileProvider(app),
+        commandHandlers: [
+          new RefreshBacklinkPanelsCommandHandler({
+            refreshBacklinkPanels: this.refreshBacklinkPanels.bind(this)
+          })
+        ],
+        commandRegistrar: new PluginCommandRegistrar(this),
+        menuEventRegistrar,
+        pluginName: manifest.name
+      })
+    );
+
+    this.addChild(new CallbackLayoutReadyComponent(this.app, this.onLayoutReady.bind(this)));
   }
 
   public getAbortSignal(): AbortSignal {
@@ -129,8 +147,9 @@ export class Plugin extends PluginBase {
     this.setPendingAction(path, Action.Remove);
   }
 
-  protected override async onLayoutReady(): Promise<void> {
-    registerPatch(this, this.app.metadataCache, {
+  protected async onLayoutReady(): Promise<void> {
+    const patch = this.addChild(new MonkeyAroundComponent());
+    patch.registerPatch(this.app.metadataCache, {
       getBacklinksForFile: (next: GetBacklinksForFileFn): GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper => {
         const patched: GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper = Object.assign(this.getBacklinksForFile.bind(this), {
           originalFn: next,
@@ -251,7 +270,9 @@ export class Plugin extends PluginBase {
       return;
     }
 
+    /* v8 ignore start -- removeLinkedPathEntries always deletes notePath from linksMap before this point. */
     if (!this.linksMap.has(notePath)) {
+      /* v8 ignore stop */
       this.linksMap.set(notePath, new Set<string>());
     }
 

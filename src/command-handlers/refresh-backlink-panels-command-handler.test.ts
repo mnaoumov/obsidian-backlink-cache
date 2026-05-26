@@ -1,0 +1,39 @@
+import {
+  describe,
+  expect,
+  it,
+  vi
+} from 'vitest';
+
+import { RefreshBacklinkPanelsCommandHandler } from './refresh-backlink-panels-command-handler.ts';
+
+describe('RefreshBacklinkPanelsCommandHandler', () => {
+  it('should create handler with correct id, name, and icon', () => {
+    const handler = new RefreshBacklinkPanelsCommandHandler({
+      refreshBacklinkPanels: vi.fn()
+    });
+
+    expect(handler.id).toBe('refresh-backlink-panels');
+    expect(handler.name).toBe('Refresh backlink panels');
+    expect(handler.icon).toBe('refresh');
+  });
+
+  it('should call refreshBacklinkPanels when command callback is invoked', async () => {
+    const refreshBacklinkPanels = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
+    const handler = new RefreshBacklinkPanelsCommandHandler({
+      refreshBacklinkPanels
+    });
+
+    const command = handler.buildCommand();
+    expect(command.checkCallback).toBeDefined();
+
+    const isAvailable = command.checkCallback?.(true);
+    expect(isAvailable).toBe(true);
+
+    command.checkCallback?.(false);
+
+    await vi.waitFor(() => {
+      expect(refreshBacklinkPanels).toHaveBeenCalledOnce();
+    });
+  });
+});
