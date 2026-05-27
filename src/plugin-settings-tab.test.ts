@@ -11,9 +11,11 @@ import {
 
 import type { PluginSettings } from './plugin-settings.ts';
 
+import { PluginSettingsTab } from './plugin-settings-tab.ts';
+
 vi.mock('obsidian-dev-utils/obsidian/setting-ex', () => {
   class MockSettingEx {
-    private readonly callbacks: Array<(toggle: unknown) => void> = [];
+    private readonly callbacks: ((toggle: unknown) => void)[] = [];
     private desc = '';
     private name = '';
 
@@ -22,7 +24,7 @@ vi.mock('obsidian-dev-utils/obsidian/setting-ex', () => {
 
     public addToggle(cb: (toggle: unknown) => void): this {
       this.callbacks.push(cb);
-      cb({ getValue: vi.fn(), setValue: vi.fn(), onChange: vi.fn() });
+      cb({ getValue: vi.fn(), onChange: vi.fn(), setValue: vi.fn() });
       return this;
     }
 
@@ -47,8 +49,6 @@ vi.mock('obsidian-dev-utils/obsidian/setting-ex', () => {
 
   return { SettingEx: MockSettingEx };
 });
-
-const { PluginSettingsTab } = await import('./plugin-settings-tab.ts');
 
 describe('PluginSettingsTab', () => {
   it('should display two toggle settings bound to the correct properties', () => {
@@ -87,9 +87,9 @@ describe('PluginSettingsTab', () => {
       pluginSettingsComponent
     });
 
-    tab.containerEl = document.createElement('div');
+    tab.containerEl = activeDocument.createElement('div');
 
-    const bindSpy = vi.spyOn(tab, 'bind').mockReturnValue(undefined as never);
+    const bindSpy = vi.spyOn(tab, 'bind').mockReturnValue(undefined);
 
     tab.display();
 

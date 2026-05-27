@@ -4,11 +4,11 @@ import {
   it
 } from 'vitest';
 
+import mainDefault from './main.ts';
 import { Plugin } from './plugin.ts';
 
 describe('main', () => {
-  it('should re-export Plugin as default', async () => {
-    const mainModule = await import('./main.ts');
-    expect(mainModule.default).toBe(Plugin);
+  it('should re-export Plugin as default', () => {
+    expect(mainDefault).toBe(Plugin);
   });
 });

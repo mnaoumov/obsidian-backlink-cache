@@ -7,6 +7,18 @@ import type {
 } from 'obsidian';
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
+import {
+  isFrontmatterLinkCache,
+  isReferenceCache
+} from '@obsidian-typings/obsidian-public-latest/implementations';
+import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
+import { isFrontmatterLinkCacheWithOffsets } from 'obsidian-dev-utils/obsidian/frontmatter-link-cache-with-offsets';
+import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
+import {
+  isCanvasFileNodeReference,
+  isCanvasReference,
+  isCanvasTextNodeReference
+} from 'obsidian-dev-utils/obsidian/reference';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   afterEach,
@@ -19,10 +31,20 @@ import {
 
 import type { Plugin } from './plugin.ts';
 
+import {
+  patchBacklinksCorePlugin,
+  reloadBacklinksView
+} from './backlink-core-plugin.ts';
+
 type PatchFactory = (next: (...args: unknown[]) => unknown) => (...args: unknown[]) => unknown;
 type PatchMap = Record<string, PatchFactory>;
 
-const registeredPatches: Array<{ patches: PatchMap; target: object }> = [];
+interface RegisteredPatch {
+  patches: PatchMap;
+  target: object;
+}
+
+const registeredPatches: RegisteredPatch[] = [];
 
 vi.mock('obsidian-dev-utils/async', () => ({
   invokeAsyncSafely: vi.fn((fn: () => Promise<void>) => fn())
@@ -69,16 +91,8 @@ vi.mock('@obsidian-typings/obsidian-public-latest/implementations', async (impor
 });
 
 vi.mock('./file-comparer.ts', () => ({
-  getFileComparer: vi.fn(() => () => 0)
+  getFileComparer: vi.fn((): () => number => () => 0)
 }));
-
-const { isCanvasFile } = await import('obsidian-dev-utils/obsidian/file-system');
-const { isFrontmatterLinkCacheWithOffsets } = await import('obsidian-dev-utils/obsidian/frontmatter-link-cache-with-offsets');
-const { getBacklinksForFileSafe } = await import('obsidian-dev-utils/obsidian/metadata-cache');
-const { isCanvasFileNodeReference, isCanvasReference, isCanvasTextNodeReference } = await import('obsidian-dev-utils/obsidian/reference');
-const { isFrontmatterLinkCache, isReferenceCache } = await import('@obsidian-typings/obsidian-public-latest/implementations');
-
-const { patchBacklinksCorePlugin, reloadBacklinksView } = await import('./backlink-core-plugin.ts');
 
 beforeEach(() => {
   registeredPatches.length = 0;
@@ -101,13 +115,13 @@ describe('reloadBacklinksView', () => {
 
   it('should reload backlinks view when backlink view has a file', async () => {
     const recomputeBacklink = vi.fn();
-    const backlinksLeaf = {
+    const backlinksLeaf = strictProxy<WorkspaceLeaf>({
       loadIfDeferred: vi.fn().mockResolvedValue(undefined),
       view: {
         backlink: { recomputeBacklink },
         file: strictProxy<TFile>({ path: 'test.md' })
       }
-    } as unknown as WorkspaceLeaf;
+    });
 
     const app = strictProxy<App>({
       workspace: {
@@ -121,13 +135,13 @@ describe('reloadBacklinksView', () => {
 
   it('should not recompute when backlink view has no file', async () => {
     const recomputeBacklink = vi.fn();
-    const backlinksLeaf = {
+    const backlinksLeaf = strictProxy<WorkspaceLeaf>({
       loadIfDeferred: vi.fn().mockResolvedValue(undefined),
       view: {
         backlink: { recomputeBacklink },
         file: null
       }
-    } as unknown as WorkspaceLeaf;
+    });
 
     const app = strictProxy<App>({
       workspace: {
@@ -184,13 +198,13 @@ describe('patchBacklinksCorePlugin', () => {
       instance: Object.create({ onUserEnable: vi.fn() }) as object
     };
 
-    const backlinksLeaf = {
+    const backlinksLeaf = strictProxy<WorkspaceLeaf>({
       loadIfDeferred: vi.fn().mockResolvedValue(undefined),
       view: {
-        backlink: Object.assign(Object.create({ recomputeBacklink: vi.fn() }) as object, {}) as object,
+        backlink: Object.assign(Object.create({ recomputeBacklink: vi.fn() }), {}),
         file: null
       }
-    } as unknown as WorkspaceLeaf;
+    });
 
     const plugin = strictProxy<Plugin>({
       addChild: vi.fn().mockImplementation((child: unknown) => child),
@@ -245,7 +259,7 @@ describe('patchBacklinksCorePlugin', () => {
 
 describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
   function createBacklinkComponent(overrides: Partial<BacklinkComponent> = {}): BacklinkComponent {
-    return {
+    return strictProxy<BacklinkComponent>({
       app: {
         vault: {
           getFileByPath: vi.fn().mockReturnValue(null),
@@ -269,7 +283,7 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
       passSearchFilter: vi.fn().mockReturnValue(true),
       stopBacklinkSearch: vi.fn(),
       ...overrides
-    } as unknown as BacklinkComponent;
+    });
   }
 
   async function setupPatchedRecomputeBacklink(): Promise<(component: BacklinkComponent, file: null | TFile) => Promise<void>> {
@@ -279,13 +293,13 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
     };
 
     const backlinkPrototype = { recomputeBacklink: vi.fn() };
-    const backlinksLeaf = {
+    const backlinksLeaf = strictProxy<WorkspaceLeaf>({
       loadIfDeferred: vi.fn().mockResolvedValue(undefined),
       view: {
-        backlink: Object.assign(Object.create(backlinkPrototype) as object, {}) as object,
+        backlink: Object.assign(Object.create(backlinkPrototype), {}),
         file: null
       }
-    } as unknown as WorkspaceLeaf;
+    });
 
     const plugin = strictProxy<Plugin>({
       addChild: vi.fn().mockImplementation((child: unknown) => child),
@@ -341,12 +355,12 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
 
     vi.mocked(component.app.vault.getFileByPath).mockReturnValue(backlinkNoteFile);
 
-    const link: Reference = {
+    const link = strictProxy<Reference>({
       position: {
         end: { col: 10, line: 0, offset: 20 },
         start: { col: 0, line: 0, offset: 0 }
       }
-    } as unknown as Reference;
+    });
 
     vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
       count: () => 1,
@@ -752,7 +766,7 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
     const recompute = await setupPatchedRecomputeBacklink();
     await recompute(component, backlinkFile);
 
-    // isValidLink never becomes true, so addResult should not be called
+    // IsValidLink never becomes true, so addResult should not be called
     expect(component.backlinkDom.addResult).not.toHaveBeenCalled();
   });
 
