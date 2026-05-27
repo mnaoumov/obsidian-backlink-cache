@@ -2,8 +2,10 @@ import type { CustomArrayDict } from '@obsidian-typings/obsidian-public-latest';
 import type {
   App,
   CachedMetadata,
+  LinkCache,
   PluginManifest,
-  Reference
+  Reference,
+  ReferenceCache
 } from 'obsidian';
 
 import {
@@ -11,6 +13,7 @@ import {
   TAbstractFile,
   TFile
 } from 'obsidian';
+import { noop } from 'obsidian-dev-utils/function';
 import {
   getFileOrNull,
   isCanvasFile
@@ -63,7 +66,7 @@ vi.mock('obsidian-dev-utils/obsidian/components/monkey-around-component', () => 
   MonkeyAroundComponent: class {
     public registerPatch(target: object, patches: Record<string, (next: (...args: unknown[]) => unknown) => (...args: unknown[]) => unknown>): void {
       for (const [key, factory] of Object.entries(patches)) {
-        const original = (target as Record<string, (...args: unknown[]) => unknown>)[key] ?? ((): void => {/* Noop */});
+        const original = (target as Record<string, (...args: unknown[]) => unknown>)[key] ?? noop;
         (target as Record<string, unknown>)[key] = factory(original);
       }
     }
@@ -118,8 +121,13 @@ vi.mock('obsidian-dev-utils/obsidian/plugin/plugin', () => {
       return child;
     }
 
-    public register(): void {/* Noop */}
-    public registerEvent(): void {/* Noop */}
+    public register(): void {
+      noop();
+    }
+
+    public registerEvent(): void {
+      noop();
+    }
   }
   return { PluginBase: MockPluginBase };
 });
@@ -378,7 +386,7 @@ describe('Plugin', () => {
       const linkFile = Object.create(TFile.prototype);
       Object.assign(linkFile, { path: 'target.md' });
 
-      const link = strictProxy<Reference>({
+      const link = strictProxy<ReferenceCache>({
         link: 'target',
         original: '[[target]]',
         position: { end: { col: 10, line: 0, offset: 10 }, start: { col: 0, line: 0, offset: 0 } }
@@ -458,7 +466,11 @@ describe('Plugin', () => {
       const mockFile = Object.create(TFile.prototype);
       Object.assign(mockFile, { path: 'note.md' });
 
-      const mockLink = { link: 'missing', original: '[[missing]]' };
+      const mockLink: LinkCache = {
+        link: 'missing',
+        original: '[[missing]]',
+        position: { end: { col: 10, line: 0, offset: 10 }, start: { col: 0, line: 0, offset: 0 } }
+      };
 
       vi.mocked(getFileOrNull).mockReturnValue(mockFile);
       vi.mocked(isCanvasFile).mockReturnValue(false);
@@ -478,12 +490,12 @@ describe('Plugin', () => {
       const linkFile = Object.create(TFile.prototype);
       Object.assign(linkFile, { path: 'target.md' });
 
-      const link1 = strictProxy<Reference>({
+      const link1 = strictProxy<ReferenceCache>({
         link: 'target',
         original: '[[target]]',
         position: { end: { col: 10, line: 0, offset: 10 }, start: { col: 0, line: 0, offset: 0 } }
       });
-      const link2 = strictProxy<Reference>({
+      const link2 = strictProxy<ReferenceCache>({
         link: 'target',
         original: '[[target|alias]]',
         position: { end: { col: 20, line: 1, offset: 30 }, start: { col: 0, line: 1, offset: 20 } }
@@ -517,7 +529,7 @@ describe('Plugin', () => {
       const mockFile = Object.create(TFile.prototype);
       Object.assign(mockFile, { path: 'note.md' });
 
-      const link = strictProxy<Reference>({
+      const link = strictProxy<ReferenceCache>({
         link: 'target',
         original: '[[target]]',
         position: { end: { col: 10, line: 0, offset: 10 }, start: { col: 0, line: 0, offset: 0 } }
@@ -555,7 +567,7 @@ describe('Plugin', () => {
       const noteMap = new Map<string, Set<Reference>>();
       noteMap.set(
         'note.md',
-        new Set([strictProxy<Reference>({
+        new Set([strictProxy<ReferenceCache>({
           link: 'target',
           original: '[[target]]',
           position: { end: { col: 10, line: 0, offset: 10 }, start: { col: 0, line: 0, offset: 0 } }
@@ -583,7 +595,7 @@ describe('Plugin', () => {
       const noteMap = new Map<string, Set<Reference>>();
       noteMap.set(
         'note.md',
-        new Set([strictProxy<Reference>({
+        new Set([strictProxy<ReferenceCache>({
           link: 'target',
           original: '[[target]]',
           position: { end: { col: 10, line: 0, offset: 10 }, start: { col: 0, line: 0, offset: 0 } }
