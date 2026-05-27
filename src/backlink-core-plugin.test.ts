@@ -1,7 +1,8 @@
+import type { BacklinkView } from '@obsidian-typings/obsidian-public-latest';
 import type { BacklinkComponent } from '@obsidian-typings/obsidian-public-latest/implementations';
 import type {
   App,
-  Reference,
+  ReferenceCache,
   TFile,
   WorkspaceLeaf
 } from 'obsidian';
@@ -11,6 +12,7 @@ import {
   isFrontmatterLinkCache,
   isReferenceCache
 } from '@obsidian-typings/obsidian-public-latest/implementations';
+import { debounce } from 'obsidian';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
 import { isFrontmatterLinkCacheWithOffsets } from 'obsidian-dev-utils/obsidian/frontmatter-link-cache-with-offsets';
 import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
@@ -117,10 +119,10 @@ describe('reloadBacklinksView', () => {
     const recomputeBacklink = vi.fn();
     const backlinksLeaf = strictProxy<WorkspaceLeaf>({
       loadIfDeferred: vi.fn().mockResolvedValue(undefined),
-      view: {
+      view: strictProxy<BacklinkView>({
         backlink: { recomputeBacklink },
         file: strictProxy<TFile>({ path: 'test.md' })
-      }
+      })
     });
 
     const app = strictProxy<App>({
@@ -137,10 +139,10 @@ describe('reloadBacklinksView', () => {
     const recomputeBacklink = vi.fn();
     const backlinksLeaf = strictProxy<WorkspaceLeaf>({
       loadIfDeferred: vi.fn().mockResolvedValue(undefined),
-      view: {
+      view: strictProxy<BacklinkView>({
         backlink: { recomputeBacklink },
         file: null
-      }
+      })
     });
 
     const app = strictProxy<App>({
@@ -200,10 +202,10 @@ describe('patchBacklinksCorePlugin', () => {
 
     const backlinksLeaf = strictProxy<WorkspaceLeaf>({
       loadIfDeferred: vi.fn().mockResolvedValue(undefined),
-      view: {
+      view: strictProxy<BacklinkView>({
         backlink: Object.assign(Object.create({ recomputeBacklink: vi.fn() }), {}),
         file: null
-      }
+      })
     });
 
     const plugin = strictProxy<Plugin>({
@@ -274,7 +276,7 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
       },
       backlinkDom: {
         addResult: vi.fn().mockReturnValue({ renderContentMatches: vi.fn() }),
-        changed: vi.fn(),
+        changed: debounce(vi.fn()),
         emptyResults: vi.fn(),
         getMatchCount: vi.fn().mockReturnValue(0),
         sortOrder: 'alphabetical'
@@ -295,10 +297,10 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
     const backlinkPrototype = { recomputeBacklink: vi.fn() };
     const backlinksLeaf = strictProxy<WorkspaceLeaf>({
       loadIfDeferred: vi.fn().mockResolvedValue(undefined),
-      view: {
+      view: strictProxy<BacklinkView>({
         backlink: Object.assign(Object.create(backlinkPrototype), {}),
         file: null
-      }
+      })
     });
 
     const plugin = strictProxy<Plugin>({
@@ -355,7 +357,7 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
 
     vi.mocked(component.app.vault.getFileByPath).mockReturnValue(backlinkNoteFile);
 
-    const link = strictProxy<Reference>({
+    const link = strictProxy<ReferenceCache>({
       position: {
         end: { col: 10, line: 0, offset: 20 },
         start: { col: 0, line: 0, offset: 0 }
