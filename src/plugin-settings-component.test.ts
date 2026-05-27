@@ -8,8 +8,8 @@ import {
   it
 } from 'vitest';
 
-import { PluginSettings } from './plugin-settings.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
+import { PluginSettings } from './plugin-settings.ts';
 
 describe('PluginSettingsComponent', () => {
   it('should create with PluginSettings class', () => {

@@ -3,6 +3,8 @@ import type {
   CachedMetadata
 } from 'obsidian';
 
+import { fixFrontmatterMarkdownLinks } from 'obsidian-dev-utils/obsidian/link';
+import { parseMetadata } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   describe,
@@ -20,9 +22,6 @@ vi.mock('obsidian-dev-utils/obsidian/link', () => ({
 vi.mock('obsidian-dev-utils/obsidian/metadata-cache', () => ({
   parseMetadata: vi.fn()
 }));
-
-const { fixFrontmatterMarkdownLinks } = await import('obsidian-dev-utils/obsidian/link');
-const { parseMetadata } = await import('obsidian-dev-utils/obsidian/metadata-cache');
 
 describe('parseMetadataEx', () => {
   it('should return parsed metadata without fixing frontmatter links when plugin is not enabled', async () => {

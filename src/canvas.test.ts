@@ -1,12 +1,13 @@
 import type {
   App,
-  CachedMetadata,
   TAbstractFile
 } from 'obsidian';
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
 import { TFile } from 'obsidian';
-
+import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
+import { loop } from 'obsidian-dev-utils/obsidian/loop';
+import { getAllLinks } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import {
   bypassStrictProxy,
   strictProxy
@@ -22,12 +23,30 @@ import {
 
 import type { Plugin } from './plugin.ts';
 
+import { reloadBacklinksView } from './backlink-core-plugin.ts';
+import {
+  initCanvasHandlers,
+  initCanvasMetadataCache,
+  isCanvasPluginEnabled
+} from './canvas.ts';
+import { parseMetadataEx } from './metadata.ts';
+
 type PatchFactory = (next: (...args: unknown[]) => unknown) => (...args: unknown[]) => unknown;
 type PatchMap = Record<string, PatchFactory>;
 
-const registeredPatches: Array<{ patches: PatchMap; target: object }> = [];
-const registeredEventHandlers: Array<{ callback: (...args: unknown[]) => void; event: string }> = [];
-const registeredCleanups: Array<() => void> = [];
+interface RegisteredEventHandler {
+  callback(...args: unknown[]): void;
+  event: string;
+}
+
+interface RegisteredPatch {
+  patches: PatchMap;
+  target: object;
+}
+
+const registeredPatches: RegisteredPatch[] = [];
+const registeredEventHandlers: RegisteredEventHandler[] = [];
+const registeredCleanups: (() => void)[] = [];
 
 vi.mock('obsidian-dev-utils/async', () => ({
   invokeAsyncSafely: vi.fn((fn: () => Promise<void>) => fn())
@@ -68,14 +87,6 @@ vi.mock('./backlink-core-plugin.ts', () => ({
 vi.mock('./metadata.ts', () => ({
   parseMetadataEx: vi.fn().mockResolvedValue({})
 }));
-
-const { isCanvasFile } = await import('obsidian-dev-utils/obsidian/file-system');
-const { loop } = await import('obsidian-dev-utils/obsidian/loop');
-const { getAllLinks } = await import('obsidian-dev-utils/obsidian/metadata-cache');
-const { reloadBacklinksView } = await import('./backlink-core-plugin.ts');
-const { parseMetadataEx } = await import('./metadata.ts');
-
-const { initCanvasHandlers, initCanvasMetadataCache, isCanvasPluginEnabled } = await import('./canvas.ts');
 
 function createMockPlugin(): Plugin {
   const plugin = strictProxy<Plugin>({
@@ -202,7 +213,7 @@ describe('initCanvasHandlers', () => {
     initCanvasHandlers(plugin);
 
     const createHandler = registeredEventHandlers.find((h) => h.event === 'create');
-    const mockFile = Object.create(TFile.prototype) as TFile;
+    const mockFile = Object.create(TFile.prototype);
     Object.assign(mockFile, { path: 'test.canvas', stat: { ctime: 0, mtime: 0, size: 0 } });
 
     createHandler?.callback(mockFile);
@@ -281,7 +292,7 @@ describe('initCanvasHandlers', () => {
     initCanvasHandlers(plugin);
 
     const modifyHandler = registeredEventHandlers.find((h) => h.event === 'modify');
-    const mockFile = Object.create(TFile.prototype) as TFile;
+    const mockFile = Object.create(TFile.prototype);
     Object.assign(mockFile, { path: 'test.canvas', stat: { ctime: 0, mtime: 0, size: 0 } });
 
     modifyHandler?.callback(mockFile);
@@ -327,7 +338,7 @@ describe('initCanvasHandlers', () => {
       }) as object
     };
 
-    const mockCanvasFile = Object.create(TFile.prototype) as TFile;
+    const mockCanvasFile = Object.create(TFile.prototype);
     Object.assign(mockCanvasFile, { path: 'test.canvas' });
 
     const plugin = createMockPlugin();
@@ -358,7 +369,7 @@ describe('initCanvasHandlers', () => {
     vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin as never);
     vi.mocked(isCanvasFile).mockReturnValue(true);
 
-    const mockCanvasFile = Object.create(TFile.prototype) as TFile;
+    const mockCanvasFile = Object.create(TFile.prototype);
     Object.assign(mockCanvasFile, { path: 'test.canvas', stat: { ctime: 0, mtime: 0, size: 0 } });
 
     // Provide canvas files so the items filter callback runs
@@ -366,7 +377,7 @@ describe('initCanvasHandlers', () => {
 
     // Make loop invoke processItem and buildNoticeMessage callbacks
     vi.mocked(loop).mockImplementation(async (opts) => {
-      (opts.buildNoticeMessage as (item: TFile, str: string) => string)(mockCanvasFile, '1/1');
+      (opts.buildNoticeMessage)(mockCanvasFile, '1/1');
       await (opts.processItem as (item: TFile) => Promise<void>)(mockCanvasFile);
     });
 
@@ -391,9 +402,9 @@ describe('initCanvasHandlers', () => {
       }) as object
     };
 
-    const mockCanvasFile1 = Object.create(TFile.prototype) as TFile;
+    const mockCanvasFile1 = Object.create(TFile.prototype);
     Object.assign(mockCanvasFile1, { path: 'a.canvas' });
-    const mockCanvasFile2 = Object.create(TFile.prototype) as TFile;
+    const mockCanvasFile2 = Object.create(TFile.prototype);
     Object.assign(mockCanvasFile2, { path: 'b.canvas' });
 
     const plugin = createMockPlugin();
@@ -502,9 +513,18 @@ describe('initCanvasHandlers', () => {
 });
 
 describe('initCanvasMetadataCache', () => {
-  function createCanvasApp(overrides: { content?: string; getFirstLinkpathDest?: ReturnType<typeof vi.fn> } = {}): App {
-    // metadataCache uses plain objects (not strictProxy) because addCanvasMetadata
-    // uses dynamic property access on resolvedLinks/unresolvedLinks
+  interface CreateCanvasAppOptions {
+    readonly content?: string;
+    readonly getFirstLinkpathDest?: ReturnType<typeof vi.fn>;
+  }
+
+  function asApp(obj: unknown): App {
+    return obj as App;
+  }
+
+  function createCanvasApp(overrides: CreateCanvasAppOptions = {}): App {
+    // MetadataCache uses plain objects (not strictProxy) because addCanvasMetadata
+    // Uses dynamic property access on resolvedLinks/unresolvedLinks
     const metadataCache = {
       getFirstLinkpathDest: overrides.getFirstLinkpathDest ?? vi.fn().mockReturnValue(null),
       resolvedLinks: {} as Record<string, Record<string, number>>,
@@ -512,13 +532,13 @@ describe('initCanvasMetadataCache', () => {
       saveMetaCache: vi.fn(),
       unresolvedLinks: {} as Record<string, Record<string, number>>
     };
-    return {
+    return asApp({
       metadataCache,
       vault: {
         read: vi.fn().mockResolvedValue(overrides.content ?? '{}'),
         readBinary: vi.fn().mockResolvedValue(new ArrayBuffer(0))
       }
-    } as unknown as App;
+    });
   }
 
   it('should skip non-canvas files', async () => {
@@ -561,7 +581,7 @@ describe('initCanvasMetadataCache', () => {
 
     const link = { link: 'target', original: '[[target]]', position: { end: { col: 10, line: 0, offset: 10 }, start: { col: 0, line: 0, offset: 0 } } };
     vi.mocked(getAllLinks).mockReturnValue([link] as never);
-    vi.mocked(parseMetadataEx).mockResolvedValue({ links: [link] } as CachedMetadata);
+    vi.mocked(parseMetadataEx).mockResolvedValue({ links: [link] });
 
     const app = createCanvasApp({
       content: JSON.stringify(canvasData),
@@ -653,7 +673,7 @@ describe('initCanvasMetadataCache', () => {
     await initCanvasMetadataCache(app, file);
 
     // Both links should be in unresolvedLinks for the same canvas path
-    const unresolvedLinks = (app.metadataCache as unknown as { unresolvedLinks: Record<string, Record<string, number>> }).unresolvedLinks;
+    const unresolvedLinks = app.metadataCache.unresolvedLinks;
     expect(unresolvedLinks['test.canvas']).toBeDefined();
     expect(unresolvedLinks['test.canvas']?.['target1.md']).toBe(1);
     expect(unresolvedLinks['test.canvas']?.['target2.md']).toBe(1);
@@ -679,7 +699,7 @@ describe('initCanvasMetadataCache', () => {
 
     await initCanvasMetadataCache(app, file);
 
-    const resolvedLinks = (app.metadataCache as unknown as { resolvedLinks: Record<string, Record<string, number>> }).resolvedLinks;
+    const resolvedLinks = app.metadataCache.resolvedLinks;
     expect(resolvedLinks['test.canvas']).toBeDefined();
     expect(resolvedLinks['test.canvas']?.['target.md']).toBe(1);
   });
