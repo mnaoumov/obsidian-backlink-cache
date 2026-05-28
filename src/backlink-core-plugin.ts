@@ -35,6 +35,7 @@ import { getFileComparer } from './file-comparer.ts';
 
 const FILE_PREFIX = 'file: ';
 
+// Intentional `Record<>` use: the canvas-${string} key shape is open-ended (one entry per canvas node) and cannot be expressed by a closed object type or `Partial<T>`.
 interface CanvasDomResult extends Record<`canvas-${string}`, [from: number, to: number][]>, ResultDomResult {
 }
 
