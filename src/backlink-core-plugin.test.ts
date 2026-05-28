@@ -1,7 +1,13 @@
-import type { BacklinkView } from '@obsidian-typings/obsidian-public-latest';
+import type {
+  BacklinkView,
+  CustomArrayDict
+} from '@obsidian-typings/obsidian-public-latest';
+// eslint-disable-next-line import-x/no-namespace -- Type-only namespace alias used for vitest's importOriginal<T>() without dynamic import() in type position.
+import type * as ObsidianImplementationsModule from '@obsidian-typings/obsidian-public-latest/implementations';
 import type { BacklinkComponent } from '@obsidian-typings/obsidian-public-latest/implementations';
 import type {
   App,
+  Reference,
   ReferenceCache,
   TFile,
   WorkspaceLeaf
@@ -84,7 +90,7 @@ vi.mock('obsidian-dev-utils/obsidian/reference', () => ({
 }));
 
 vi.mock('@obsidian-typings/obsidian-public-latest/implementations', async (importOriginal) => {
-  const original = await importOriginal<Record<string, unknown>>();
+  const original = await importOriginal<typeof ObsidianImplementationsModule>();
   return {
     ...original,
     isFrontmatterLinkCache: vi.fn(),
@@ -364,11 +370,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
       }
     });
 
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(strictProxy<CustomArrayDict<Reference>>({
       count: () => 1,
       get: (key: string) => (key === 'note.md' ? [link] : []),
       keys: () => ['note.md']
-    } as never);
+    }));
     vi.mocked(isReferenceCache).mockReturnValue(true);
     vi.mocked(isFrontmatterLinkCacheWithOffsets).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCache).mockReturnValue(false);
@@ -389,11 +395,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
 
     const link = { endOffset: 30, key: 'aliases.0.name', link: 'target', original: 'target', startOffset: 10 };
 
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(strictProxy<CustomArrayDict<Reference>>({
       count: () => 1,
       get: () => [link],
       keys: () => ['note.md']
-    } as never);
+    }));
     vi.mocked(isReferenceCache).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCacheWithOffsets).mockReturnValue(true);
     vi.mocked(isFrontmatterLinkCache).mockReturnValue(false);
@@ -414,11 +420,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
 
     const link = { key: 'related.0.notes', link: 'target', original: 'target' };
 
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(strictProxy<CustomArrayDict<Reference>>({
       count: () => 1,
       get: () => [link],
       keys: () => ['note.md']
-    } as never);
+    }));
     vi.mocked(isReferenceCache).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCacheWithOffsets).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCache).mockReturnValue(true);
@@ -438,11 +444,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
     vi.mocked(component.app.vault.getFileByPath).mockReturnValue(backlinkNoteFile);
     vi.mocked(component.passSearchFilter).mockReturnValue(false);
 
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(strictProxy<CustomArrayDict<Reference>>({
       count: () => 1,
       get: () => [{ link: 'target', original: 'target' }],
       keys: () => ['note.md']
-    } as never);
+    }));
 
     const recompute = await setupPatchedRecomputeBacklink();
     await recompute(component, backlinkFile);
@@ -465,11 +471,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
 
     const link = { isCanvas: true, key: 'nodes.0.file', link: 'target.md', nodeIndex: 0, original: 'target.md', type: 'file' };
 
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(strictProxy<CustomArrayDict<Reference>>({
       count: () => 1,
       get: () => [link],
       keys: () => ['canvas.canvas']
-    } as never);
+    }));
     vi.mocked(isReferenceCache).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCacheWithOffsets).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCache).mockReturnValue(true);
@@ -504,11 +510,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
     };
     const link = { isCanvas: true, key: 'nodes.0.text.0', link: 'target', nodeIndex: 0, original: '[[target]]', originalReference, type: 'text' };
 
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(strictProxy<CustomArrayDict<Reference>>({
       count: () => 1,
       get: () => [link],
       keys: () => ['canvas.canvas']
-    } as never);
+    }));
     vi.mocked(isReferenceCache).mockImplementation((ref: unknown) => ref === originalReference);
     vi.mocked(isFrontmatterLinkCacheWithOffsets).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCache).mockImplementation((ref: unknown) => ref === link);
@@ -539,11 +545,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
     const originalReference = { key: 'test', link: 'target', original: '[[target]]' };
     const link = { isCanvas: true, key: 'nodes.0.text.0', link: 'target', nodeIndex: 0, original: '[[target]]', originalReference, type: 'text' };
 
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(strictProxy<CustomArrayDict<Reference>>({
       count: () => 1,
       get: () => [link],
       keys: () => ['canvas.canvas']
-    } as never);
+    }));
     vi.mocked(isReferenceCache).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCacheWithOffsets).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCache).mockReturnValue(true);
@@ -568,11 +574,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
 
     const link = { key: 'test', link: 'target', original: 'target' };
 
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(strictProxy<CustomArrayDict<Reference>>({
       count: () => 1,
       get: () => [link],
       keys: () => ['canvas.canvas']
-    } as never);
+    }));
     vi.mocked(isReferenceCache).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCacheWithOffsets).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCache).mockReturnValue(true);
@@ -597,11 +603,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
 
     const link = { isCanvas: true, key: 'nodes.99.file', link: 'target', nodeIndex: 99, original: 'target', type: 'file' };
 
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(strictProxy<CustomArrayDict<Reference>>({
       count: () => 1,
       get: () => [link],
       keys: () => ['canvas.canvas']
-    } as never);
+    }));
     vi.mocked(isReferenceCache).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCacheWithOffsets).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCache).mockReturnValue(true);
@@ -629,11 +635,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
 
     const link = { isCanvas: true, key: 'nodes.0.file', link: 'target', nodeIndex: 0, original: 'target', type: 'file' };
 
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(strictProxy<CustomArrayDict<Reference>>({
       count: () => 1,
       get: () => [link],
       keys: () => ['canvas.canvas']
-    } as never);
+    }));
     vi.mocked(isReferenceCache).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCacheWithOffsets).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCache).mockReturnValue(true);
@@ -670,11 +676,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
       type: 'text'
     };
 
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(strictProxy<CustomArrayDict<Reference>>({
       count: () => 1,
       get: () => [link],
       keys: () => ['canvas.canvas']
-    } as never);
+    }));
     vi.mocked(isReferenceCache).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCacheWithOffsets).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCache).mockReturnValue(true);
@@ -704,11 +710,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
 
     const link = { isCanvas: true, key: 'nodes.0.something', link: 'target', nodeIndex: 0, original: 'target', type: 'unknown' };
 
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(strictProxy<CustomArrayDict<Reference>>({
       count: () => 1,
       get: () => [link],
       keys: () => ['canvas.canvas']
-    } as never);
+    }));
     vi.mocked(isReferenceCache).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCacheWithOffsets).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCache).mockReturnValue(true);
@@ -732,11 +738,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
 
     vi.mocked(component.app.vault.getFileByPath).mockReturnValue(backlinkNoteFile);
 
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(strictProxy<CustomArrayDict<Reference>>({
       count: () => 1,
       get: () => null,
       keys: () => ['note.md']
-    } as never);
+    }));
     vi.mocked(isCanvasFile).mockReturnValue(false);
 
     const recompute = await setupPatchedRecomputeBacklink();
@@ -755,11 +761,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
 
     const link = { key: 'test', link: 'target', original: 'target' };
 
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(strictProxy<CustomArrayDict<Reference>>({
       count: () => 1,
       get: () => [link],
       keys: () => ['note.md']
-    } as never);
+    }));
     vi.mocked(isReferenceCache).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCacheWithOffsets).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCache).mockReturnValue(false);
@@ -788,11 +794,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
     const link1 = { isCanvas: true, key: 'nodes.0.file', link: 'target.md', nodeIndex: 0, original: 'target.md', type: 'file' };
     const link2 = { isCanvas: true, key: 'nodes.0.file', link: 'target.md', nodeIndex: 0, original: 'target.md', type: 'file' };
 
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(strictProxy<CustomArrayDict<Reference>>({
       count: () => 2,
       get: () => [link1, link2],
       keys: () => ['canvas.canvas']
-    } as never);
+    }));
     vi.mocked(isReferenceCache).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCacheWithOffsets).mockReturnValue(false);
     vi.mocked(isFrontmatterLinkCache).mockReturnValue(true);
@@ -813,11 +819,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
 
     vi.mocked(component.app.vault.getFileByPath).mockReturnValue(null);
 
-    vi.mocked(getBacklinksForFileSafe).mockResolvedValue({
+    vi.mocked(getBacklinksForFileSafe).mockResolvedValue(strictProxy<CustomArrayDict<Reference>>({
       count: () => 1,
       get: () => [],
       keys: () => ['nonexistent.md']
-    } as never);
+    }));
 
     const recompute = await setupPatchedRecomputeBacklink();
     await recompute(component, backlinkFile);

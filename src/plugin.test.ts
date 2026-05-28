@@ -5,7 +5,8 @@ import type {
   LinkCache,
   PluginManifest,
   Reference,
-  ReferenceCache
+  ReferenceCache,
+  WorkspaceLeaf
 } from 'obsidian';
 
 import {
@@ -14,6 +15,7 @@ import {
   TFile
 } from 'obsidian';
 import { noop } from 'obsidian-dev-utils/function';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import {
   getFileOrNull,
   isCanvasFile
@@ -215,7 +217,7 @@ interface PluginInternals {
 }
 
 function asInternals(plugin: InstanceType<typeof Plugin>): PluginInternals {
-  return plugin as never;
+  return castTo<PluginInternals>(plugin);
 }
 
 function createMockApp(): App {
@@ -241,7 +243,7 @@ function createMockManifest(): PluginManifest {
 }
 
 function getBacklinksForFileFn(app: App): GetBacklinksForFileFn {
-  return app.metadataCache.getBacklinksForFile as never;
+  return castTo<GetBacklinksForFileFn>(app.metadataCache.getBacklinksForFile);
 }
 
 describe('Plugin', () => {
@@ -291,7 +293,7 @@ describe('Plugin', () => {
           }
         })
       };
-      vi.mocked(app.workspace.getLeavesOfType).mockReturnValue([mockLeaf] as never);
+      vi.mocked(app.workspace.getLeavesOfType).mockReturnValue(castTo<WorkspaceLeaf[]>([mockLeaf]));
 
       await plugin.refreshBacklinkPanels();
 
@@ -304,7 +306,7 @@ describe('Plugin', () => {
         { view: {} },
         { view: Object.assign(Object.create(MarkdownView.prototype), { backlinks: null }) }
       ];
-      vi.mocked(app.workspace.getLeavesOfType).mockReturnValue(mockLeaves as never);
+      vi.mocked(app.workspace.getLeavesOfType).mockReturnValue(castTo<WorkspaceLeaf[]>(mockLeaves));
 
       await plugin.refreshBacklinkPanels();
       expect(reloadBacklinksView).toHaveBeenCalled();
@@ -317,7 +319,7 @@ describe('Plugin', () => {
           backlinks: { file: strictProxy<TFile>({ path: 'test.md' }), recomputeBacklink }
         })
       };
-      vi.mocked(app.workspace.getLeavesOfType).mockReturnValue([mockLeaf] as never);
+      vi.mocked(app.workspace.getLeavesOfType).mockReturnValue(castTo<WorkspaceLeaf[]>([mockLeaf]));
 
       asInternals(plugin).abortSignalComponent.abortSignal.aborted = true;
 
@@ -475,7 +477,7 @@ describe('Plugin', () => {
       vi.mocked(getFileOrNull).mockReturnValue(mockFile);
       vi.mocked(isCanvasFile).mockReturnValue(false);
       vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadata>({ links: [mockLink] }));
-      vi.mocked(getAllLinks).mockReturnValue([mockLink] as never);
+      vi.mocked(getAllLinks).mockReturnValue([mockLink]);
       vi.mocked(extractLinkFile).mockReturnValue(null);
 
       await asInternals(plugin).refreshBacklinks.call(plugin, 'note.md');
