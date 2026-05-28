@@ -1,10 +1,19 @@
 import type {
+  CanvasPlugin,
+  CanvasPluginInstance
+} from '@obsidian-typings/obsidian-public-latest';
+import type {
   App,
+  MetadataCache,
+  Reference,
   TAbstractFile
 } from 'obsidian';
+// eslint-disable-next-line import-x/no-namespace -- Type-only namespace alias used for vitest's importOriginal<T>() without dynamic import() in type position.
+import type * as ObjectUtilsModule from 'obsidian-dev-utils/object-utils';
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
 import { TFile } from 'obsidian';
+import { castTo } from 'obsidian-dev-utils/object-utils';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
 import { loop } from 'obsidian-dev-utils/obsidian/loop';
 import { getAllLinks } from 'obsidian-dev-utils/obsidian/metadata-cache';
@@ -52,9 +61,13 @@ vi.mock('obsidian-dev-utils/async', () => ({
   invokeAsyncSafely: vi.fn((fn: () => Promise<void>) => fn())
 }));
 
-vi.mock('obsidian-dev-utils/object-utils', () => ({
-  getPrototypeOf: vi.fn((obj: object) => Object.getPrototypeOf(obj) as object)
-}));
+vi.mock('obsidian-dev-utils/object-utils', async (importOriginal) => {
+  const original = await importOriginal<typeof ObjectUtilsModule>();
+  return {
+    ...original,
+    getPrototypeOf: vi.fn((obj: object) => Object.getPrototypeOf(obj) as object)
+  };
+});
 
 vi.mock('obsidian-dev-utils/obsidian/components/monkey-around-component', () => ({
   MonkeyAroundComponent: class MockMonkeyAroundComponent {
@@ -171,16 +184,16 @@ describe('initCanvasHandlers', () => {
   });
 
   it('should register canvas core plugin patches when canvas plugin exists', () => {
-    const canvasCorePlugin = {
+    const canvasCorePlugin = strictProxy<CanvasPlugin>({
       enabled: false,
-      instance: Object.create({
+      instance: castTo<CanvasPluginInstance>(Object.create({
         onUserDisable: vi.fn(),
         onUserEnable: vi.fn()
-      }) as object
-    };
+      }))
+    });
 
     const plugin = createMockPlugin();
-    vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin as never);
+    vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin);
 
     initCanvasHandlers(plugin);
 
@@ -190,16 +203,16 @@ describe('initCanvasHandlers', () => {
   });
 
   it('should process all canvas files when canvas plugin is already enabled', () => {
-    const canvasCorePlugin = {
+    const canvasCorePlugin = strictProxy<CanvasPlugin>({
       enabled: true,
-      instance: Object.create({
+      instance: castTo<CanvasPluginInstance>(Object.create({
         onUserDisable: vi.fn(),
         onUserEnable: vi.fn()
-      }) as object
-    };
+      }))
+    });
 
     const plugin = createMockPlugin();
-    vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin as never);
+    vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin);
 
     initCanvasHandlers(plugin);
 
@@ -330,20 +343,20 @@ describe('initCanvasHandlers', () => {
   it('should remove canvas metadata and call triggerRemove on disable with canvas files', () => {
     vi.mocked(isCanvasFile).mockReturnValue(true);
 
-    const canvasCorePlugin = {
+    const canvasCorePlugin = strictProxy<CanvasPlugin>({
       enabled: false,
-      instance: Object.create({
+      instance: castTo<CanvasPluginInstance>(Object.create({
         onUserDisable: vi.fn(),
         onUserEnable: vi.fn()
-      }) as object
-    };
+      }))
+    });
 
     const mockCanvasFile = Object.create(TFile.prototype);
     Object.assign(mockCanvasFile, { path: 'test.canvas' });
 
     const plugin = createMockPlugin();
-    vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin as never);
-    vi.mocked(plugin.app.vault.getFiles).mockReturnValue([mockCanvasFile] as never);
+    vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin);
+    vi.mocked(plugin.app.vault.getFiles).mockReturnValue(castTo<TFile[]>([mockCanvasFile]));
 
     initCanvasHandlers(plugin);
 
@@ -357,23 +370,23 @@ describe('initCanvasHandlers', () => {
   });
 
   it('should invoke processItem callback in processAllCanvasFiles via loop', async () => {
-    const canvasCorePlugin = {
+    const canvasCorePlugin = strictProxy<CanvasPlugin>({
       enabled: true,
-      instance: Object.create({
+      instance: castTo<CanvasPluginInstance>(Object.create({
         onUserDisable: vi.fn(),
         onUserEnable: vi.fn()
-      }) as object
-    };
+      }))
+    });
 
     const plugin = createMockPlugin();
-    vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin as never);
+    vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin);
     vi.mocked(isCanvasFile).mockReturnValue(true);
 
     const mockCanvasFile = Object.create(TFile.prototype);
     Object.assign(mockCanvasFile, { path: 'test.canvas', stat: { ctime: 0, mtime: 0, size: 0 } });
 
     // Provide canvas files so the items filter callback runs
-    vi.mocked(plugin.app.vault.getFiles).mockReturnValue([mockCanvasFile] as never);
+    vi.mocked(plugin.app.vault.getFiles).mockReturnValue(castTo<TFile[]>([mockCanvasFile]));
 
     // Make loop invoke processItem and buildNoticeMessage callbacks
     vi.mocked(loop).mockImplementation(async (opts) => {
@@ -394,13 +407,13 @@ describe('initCanvasHandlers', () => {
   it('should stop removeCanvasMetadataCache when aborted', () => {
     vi.mocked(isCanvasFile).mockReturnValue(true);
 
-    const canvasCorePlugin = {
+    const canvasCorePlugin = strictProxy<CanvasPlugin>({
       enabled: false,
-      instance: Object.create({
+      instance: castTo<CanvasPluginInstance>(Object.create({
         onUserDisable: vi.fn(),
         onUserEnable: vi.fn()
-      }) as object
-    };
+      }))
+    });
 
     const mockCanvasFile1 = Object.create(TFile.prototype);
     Object.assign(mockCanvasFile1, { path: 'a.canvas' });
@@ -408,8 +421,8 @@ describe('initCanvasHandlers', () => {
     Object.assign(mockCanvasFile2, { path: 'b.canvas' });
 
     const plugin = createMockPlugin();
-    vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin as never);
-    vi.mocked(plugin.app.vault.getFiles).mockReturnValue([mockCanvasFile1, mockCanvasFile2] as never);
+    vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin);
+    vi.mocked(plugin.app.vault.getFiles).mockReturnValue(castTo<TFile[]>([mockCanvasFile1, mockCanvasFile2]));
 
     // Abort after first file
     let callCount = 0;
@@ -430,16 +443,16 @@ describe('initCanvasHandlers', () => {
   });
 
   it('should call onCanvasCorePluginDisable on cleanup', () => {
-    const canvasCorePlugin = {
+    const canvasCorePlugin = strictProxy<CanvasPlugin>({
       enabled: false,
-      instance: Object.create({
+      instance: castTo<CanvasPluginInstance>(Object.create({
         onUserDisable: vi.fn(),
         onUserEnable: vi.fn()
-      }) as object
-    };
+      }))
+    });
 
     const plugin = createMockPlugin();
-    vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin as never);
+    vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin);
 
     initCanvasHandlers(plugin);
 
@@ -450,16 +463,16 @@ describe('initCanvasHandlers', () => {
   });
 
   it('should handle onUserEnable patch', () => {
-    const canvasCorePlugin = {
+    const canvasCorePlugin = strictProxy<CanvasPlugin>({
       enabled: false,
-      instance: Object.create({
+      instance: castTo<CanvasPluginInstance>(Object.create({
         onUserDisable: vi.fn(),
         onUserEnable: vi.fn()
-      }) as object
-    };
+      }))
+    });
 
     const plugin = createMockPlugin();
-    vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin as never);
+    vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin);
 
     initCanvasHandlers(plugin);
 
@@ -471,16 +484,16 @@ describe('initCanvasHandlers', () => {
   });
 
   it('should handle onUserDisable patch', () => {
-    const canvasCorePlugin = {
+    const canvasCorePlugin = strictProxy<CanvasPlugin>({
       enabled: false,
-      instance: Object.create({
+      instance: castTo<CanvasPluginInstance>(Object.create({
         onUserDisable: vi.fn(),
         onUserEnable: vi.fn()
-      }) as object
-    };
+      }))
+    });
 
     const plugin = createMockPlugin();
-    vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin as never);
+    vi.mocked(plugin.app.internalPlugins.getPluginById).mockReturnValue(canvasCorePlugin);
 
     initCanvasHandlers(plugin);
 
@@ -527,10 +540,10 @@ describe('initCanvasMetadataCache', () => {
     // Uses dynamic property access on resolvedLinks/unresolvedLinks
     const metadataCache = {
       getFirstLinkpathDest: overrides.getFirstLinkpathDest ?? vi.fn().mockReturnValue(null),
-      resolvedLinks: {} as Record<string, Record<string, number>>,
+      resolvedLinks: {} as MetadataCache['resolvedLinks'],
       saveFileCache: vi.fn(),
       saveMetaCache: vi.fn(),
-      unresolvedLinks: {} as Record<string, Record<string, number>>
+      unresolvedLinks: {} as MetadataCache['unresolvedLinks']
     };
     return asApp({
       metadataCache,
@@ -580,7 +593,7 @@ describe('initCanvasMetadataCache', () => {
     };
 
     const link = { link: 'target', original: '[[target]]', position: { end: { col: 10, line: 0, offset: 10 }, start: { col: 0, line: 0, offset: 0 } } };
-    vi.mocked(getAllLinks).mockReturnValue([link] as never);
+    vi.mocked(getAllLinks).mockReturnValue(castTo<Reference[]>([link]));
     vi.mocked(parseMetadataEx).mockResolvedValue({ links: [link] });
 
     const app = createCanvasApp({
