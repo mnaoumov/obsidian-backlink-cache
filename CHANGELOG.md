@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.12.2
+
+- refactor: new template
+
 ## 2.12.1
 
 - chore: fix typo
