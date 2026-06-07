@@ -91,6 +91,7 @@ describe('PluginSettingsTab', () => {
 
     const bindSpy = vi.spyOn(tab, 'bind').mockReturnValue(undefined);
 
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- Not ready to migrate `display()`.
     tab.display();
 
     expect(bindSpy).toHaveBeenCalledTimes(2);
