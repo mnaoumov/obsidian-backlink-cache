@@ -257,7 +257,7 @@ export class Plugin extends PluginBase {
   }
 
   private async refreshBacklinks(notePath: string): Promise<void> {
-    this.consoleDebugComponent.debug(`Refreshing backlinks for ${notePath}`);
+    this.consoleDebugComponent.consoleDebug(`Refreshing backlinks for ${notePath}`);
     this.removeLinkedPathEntries(notePath);
 
     const noteFile = getFileOrNull(this.app, notePath);
@@ -311,7 +311,7 @@ export class Plugin extends PluginBase {
   }
 
   private removeBacklinks(path: string): void {
-    this.consoleDebugComponent.debug(`Removing backlinks for ${path}`);
+    this.consoleDebugComponent.consoleDebug(`Removing backlinks for ${path}`);
     this.removePathEntries(path);
   }
 
@@ -329,7 +329,7 @@ export class Plugin extends PluginBase {
   }
 
   private removePathEntries(path: string): void {
-    this.consoleDebugComponent.debug(`Removing ${path} entries`);
+    this.consoleDebugComponent.consoleDebug(`Removing ${path} entries`);
     this.backlinksMap.delete(path);
     this.removeLinkedPathEntries(path);
   }

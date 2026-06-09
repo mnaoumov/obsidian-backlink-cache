@@ -111,7 +111,7 @@ vi.mock('obsidian-dev-utils/obsidian/plugin/plugin', () => {
   class MockPluginBase {
     public abortSignalComponent = { abortSignal: { aborted: false, throwIfAborted: vi.fn() } };
     public app: App;
-    public consoleDebugComponent = { debug: vi.fn() };
+    public consoleDebugComponent = { consoleDebug: vi.fn() };
     public manifest: PluginManifest;
 
     public constructor(app: App, manifest: PluginManifest) {
