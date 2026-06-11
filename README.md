@@ -5,7 +5,7 @@
 [![GitHub downloads](https://img.shields.io/github/downloads/mnaoumov/obsidian-backlink-cache/total)](https://github.com/mnaoumov/obsidian-backlink-cache/releases)
 [![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/mnaoumov/obsidian-backlink-cache)
 
-This is a plugin for [Obsidian](https://obsidian.md/) that maintains backlink cache to speed up undocumented `app.metadataCache.getBacklinksForFile` function.
+This is a plugin for [Obsidian](https://obsidian.md/) that maintains backlink cache to speed up undocumented `app.metadataCache.getBacklinksForFile()` function.
 
 It's mostly useful for users with the large vaults. On smaller vaults the difference might be unnoticeable.
 
