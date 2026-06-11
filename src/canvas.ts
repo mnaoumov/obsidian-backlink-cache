@@ -193,6 +193,7 @@ function getCache(app: App, path: string, next: GetCacheFn): CachedMetadata | nu
 
 async function getFileHash(app: App, file: TFile): Promise<string> {
   const bytes = await app.vault.readBinary(file);
+  // eslint-disable-next-line n/no-unsupported-features/node-builtins -- crypto.subtle is the Web Crypto API, available in Obsidian's Electron renderer; the rule incorrectly flags it as a Node experimental builtin.
   const cryptoBytes = await crypto.subtle.digest('SHA-256', new Uint8Array(bytes));
   return arrayBufferToHexString(cryptoBytes);
 }
