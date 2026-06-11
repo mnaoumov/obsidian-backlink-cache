@@ -1,6 +1,6 @@
 {
   "name": "backlink-cache",
-  "version": "2.12.4",
+  "version": "2.12.5",
   "description": "Stores backlink cache to speed up `app.metadataCache.getBacklinksForFile`",
   "keywords": [],
   "homepage": "https://github.com/mnaoumov/obsidian-backlink-cache#readme",
