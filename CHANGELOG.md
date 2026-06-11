@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.12.4
+
+- chore: update libs
+
 ## 2.12.3
 
 - chore: update libs
