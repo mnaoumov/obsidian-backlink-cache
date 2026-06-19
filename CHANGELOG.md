@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## 2.12.6
+
+- refactor: new template
+- chore: update version script
+
 ## 2.12.5
 
 - chore: update libs
