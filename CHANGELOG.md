@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.12.7
+
+- test: add README-call integration tests for desktop and mobile
+
 ## 2.12.6
 
 - refactor: new template
