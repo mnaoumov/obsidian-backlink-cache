@@ -1,0 +1,312 @@
+import type { CustomArrayDict } from '@obsidian-typings/obsidian-public-latest';
+import type {
+  App,
+  Debouncer,
+  Reference
+} from 'obsidian';
+import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/components/abort-signal-component';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+import type { PathOrFile } from 'obsidian-dev-utils/obsidian/file-system';
+import type { GetBacklinksForFileSafeWrapper } from 'obsidian-dev-utils/obsidian/metadata-cache';
+
+import {
+  CustomArrayDictImpl,
+  ViewType
+} from '@obsidian-typings/obsidian-public-latest/implementations';
+import {
+  debounce,
+  MarkdownView,
+  MetadataCache,
+  TAbstractFile,
+  TFile
+} from 'obsidian';
+import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
+import { LayoutReadyComponent } from 'obsidian-dev-utils/obsidian/components/layout-ready-component';
+import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/monkey-around-component';
+import {
+  getFileOrNull,
+  getPath,
+  isCanvasFile
+} from 'obsidian-dev-utils/obsidian/file-system';
+import { extractLinkFile } from 'obsidian-dev-utils/obsidian/link';
+import { loop } from 'obsidian-dev-utils/obsidian/loop';
+import {
+  getAllLinks,
+  getCacheSafe
+} from 'obsidian-dev-utils/obsidian/metadata-cache';
+import { sortReferences } from 'obsidian-dev-utils/obsidian/reference';
+import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/vault';
+
+import type { PluginSettingsComponent } from './plugin-settings-component.ts';
+
+import {
+  BacklinksCorePluginComponent,
+  reloadBacklinksView
+} from './backlink-core-plugin.ts';
+import {
+  CanvasComponent,
+  isCanvasPluginEnabled
+} from './canvas.ts';
+
+interface BacklinkCacheComponentConstructorParams {
+  readonly abortSignalComponent: AbortSignalComponent;
+  readonly app: App;
+  readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
+}
+
+type GetBacklinksForFileFn = MetadataCache['getBacklinksForFile'];
+
+const INTERVAL_IN_MILLISECONDS = 500;
+
+enum Action {
+  Refresh,
+  Remove
+}
+
+export class BacklinkCacheComponent extends LayoutReadyComponent {
+  private readonly abortSignalComponent: AbortSignalComponent;
+  private readonly backlinksMap = new Map<string, Map<string, Set<Reference>>>();
+  private readonly consoleDebugComponent: ConsoleDebugComponent;
+
+  private debouncedProcessPendingActions?: Debouncer<[], Promise<void>>;
+  private readonly linksMap = new Map<string, Set<string>>();
+  private readonly pendingActions = new Map<string, Action>();
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
+
+  public constructor(params: BacklinkCacheComponentConstructorParams) {
+    super(params.app);
+
+    this.abortSignalComponent = params.abortSignalComponent;
+    this.consoleDebugComponent = params.consoleDebugComponent;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
+  }
+
+  public async refreshBacklinkPanels(): Promise<void> {
+    await reloadBacklinksView(this.app);
+
+    for (const leaf of this.app.workspace.getLeavesOfType(ViewType.Markdown)) {
+      if (this.abortSignalComponent.abortSignal.aborted) {
+        return;
+      }
+
+      if (!(leaf.view instanceof MarkdownView)) {
+        continue;
+      }
+
+      if (!leaf.view.backlinks) {
+        continue;
+      }
+
+      leaf.view.backlinks.recomputeBacklink(leaf.view.backlinks.file);
+    }
+  }
+
+  public triggerRefresh(path: string): void {
+    this.setPendingAction(path, Action.Refresh);
+  }
+
+  public triggerRemove(path: string): void {
+    this.setPendingAction(path, Action.Remove);
+  }
+
+  protected override async onLayoutReady(): Promise<void> {
+    const patch = this.addChild(new MonkeyAroundComponent());
+    patch.registerPatch(this.app.metadataCache, {
+      getBacklinksForFile: (originalFn: GetBacklinksForFileFn): GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper => {
+        const patched: GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper = Object.assign(this.getBacklinksForFile.bind(this), {
+          originalFn: originalFn.bind(this.app.metadataCache),
+          safe: this.getBacklinksForFileSafe.bind(this)
+        });
+        return patched;
+      }
+    });
+
+    this.debouncedProcessPendingActions = debounce(this.processPendingActions.bind(this), INTERVAL_IN_MILLISECONDS, true);
+
+    this.addChild(new BacklinksCorePluginComponent(this.app));
+    this.addChild(
+      new CanvasComponent({
+        abortSignalComponent: this.abortSignalComponent,
+        app: this.app,
+        backlinkCacheComponent: this,
+        pluginSettingsComponent: this.pluginSettingsComponent
+      })
+    );
+    await this.processAllNotes();
+    this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
+    this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
+    this.registerEvent(this.app.vault.on('create', this.handleFileCreate.bind(this)));
+    this.registerEvent(this.app.vault.on('modify', this.handleFileModify.bind(this)));
+    this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
+  }
+
+  private getBacklinksForFile(pathOrFile: PathOrFile): CustomArrayDict<Reference> {
+    const notePathLinksMap = this.backlinksMap.get(getPath(this.app, pathOrFile)) ?? new Map<string, Set<Reference>>();
+    const dict = new CustomArrayDictImpl<Reference>();
+
+    for (const [notePath, links] of notePathLinksMap.entries()) {
+      this.abortSignalComponent.abortSignal.throwIfAborted();
+      for (const link of sortReferences(Array.from(links))) {
+        this.abortSignalComponent.abortSignal.throwIfAborted();
+        dict.add(notePath, link);
+      }
+    }
+
+    invokeAsyncSafely(this.processPendingActions.bind(this));
+    return dict;
+  }
+
+  private async getBacklinksForFileSafe(pathOrFile: PathOrFile): Promise<CustomArrayDict<Reference>> {
+    await this.processPendingActions();
+    return this.getBacklinksForFile(pathOrFile);
+  }
+
+  private handleFileCreate(file: TAbstractFile): void {
+    if (file instanceof TFile) {
+      this.setPendingAction(file.path, Action.Refresh);
+    }
+  }
+
+  private handleFileDelete(file: TAbstractFile): void {
+    this.setPendingAction(file.path, Action.Remove);
+  }
+
+  private handleFileModify(file: TAbstractFile): void {
+    if (file instanceof TFile) {
+      this.setPendingAction(file.path, Action.Refresh);
+    }
+  }
+
+  private handleFileRename(file: TAbstractFile, oldPath: string): void {
+    this.setPendingAction(oldPath, Action.Remove);
+    this.setPendingAction(file.path, Action.Refresh);
+  }
+
+  private handleMetadataChanged(file: TFile): void {
+    this.setPendingAction(file.path, Action.Refresh);
+  }
+
+  private async processAllNotes(): Promise<void> {
+    await loop({
+      abortSignal: this.abortSignalComponent.abortSignal,
+      buildNoticeMessage: (note, iterationStr) => `Processing backlinks ${iterationStr} - ${note.path}`,
+      items: getMarkdownFilesSorted(this.app),
+      processItem: async (note) => {
+        await this.refreshBacklinks(note.path);
+      },
+      progressBarTitle: 'Backlink Cache: Initializing...',
+      shouldContinueOnError: true,
+      shouldShowNotice: this.pluginSettingsComponent.settings.shouldShowProgressBarOnLoad
+    });
+  }
+
+  private async processPendingActions(): Promise<void> {
+    const pathActions = Array.from(this.pendingActions.entries());
+    this.pendingActions.clear();
+
+    for (const [path, action] of pathActions) {
+      if (this.abortSignalComponent.abortSignal.aborted) {
+        return;
+      }
+
+      switch (action) {
+        case Action.Refresh:
+          await this.refreshBacklinks(path);
+          break;
+        case Action.Remove:
+          this.removeBacklinks(path);
+          break;
+        default:
+          throw new Error('Unknown action');
+      }
+    }
+
+    if (pathActions.length > 0 && this.pluginSettingsComponent.settings.shouldAutomaticallyRefreshBacklinkPanels) {
+      await this.refreshBacklinkPanels();
+    }
+  }
+
+  private async refreshBacklinks(notePath: string): Promise<void> {
+    this.consoleDebugComponent.consoleDebug(`Refreshing backlinks for ${notePath}`);
+    this.removeLinkedPathEntries(notePath);
+
+    const noteFile = getFileOrNull(this.app, notePath);
+
+    if (!noteFile) {
+      return;
+    }
+
+    if (isCanvasFile(this.app, noteFile) && !isCanvasPluginEnabled(this.app)) {
+      return;
+    }
+
+    /* v8 ignore start -- removeLinkedPathEntries always deletes notePath from linksMap before this point. */
+    if (!this.linksMap.has(notePath)) {
+      /* v8 ignore stop */
+      this.linksMap.set(notePath, new Set<string>());
+    }
+
+    const cache = await getCacheSafe(this.app, noteFile);
+
+    if (!cache) {
+      return;
+    }
+
+    for (const link of getAllLinks(cache)) {
+      if (this.abortSignalComponent.abortSignal.aborted) {
+        return;
+      }
+      const linkFile = extractLinkFile(this.app, link, notePath, true);
+      if (!linkFile) {
+        continue;
+      }
+
+      let notePathLinksMap = this.backlinksMap.get(linkFile.path);
+
+      if (!notePathLinksMap) {
+        notePathLinksMap = new Map<string, Set<Reference>>();
+        this.backlinksMap.set(linkFile.path, notePathLinksMap);
+      }
+
+      let linkSet = notePathLinksMap.get(notePath);
+
+      if (!linkSet) {
+        linkSet = new Set<Reference>();
+        notePathLinksMap.set(notePath, linkSet);
+      }
+
+      linkSet.add(link);
+      this.linksMap.get(notePath)?.add(linkFile.path);
+    }
+  }
+
+  private removeBacklinks(path: string): void {
+    this.consoleDebugComponent.consoleDebug(`Removing backlinks for ${path}`);
+    this.removePathEntries(path);
+  }
+
+  private removeLinkedPathEntries(path: string): void {
+    const linkedNotePaths = this.linksMap.get(path) ?? [];
+
+    for (const linkedNotePath of linkedNotePaths) {
+      if (this.abortSignalComponent.abortSignal.aborted) {
+        return;
+      }
+      this.backlinksMap.get(linkedNotePath)?.delete(path);
+    }
+
+    this.linksMap.delete(path);
+  }
+
+  private removePathEntries(path: string): void {
+    this.consoleDebugComponent.consoleDebug(`Removing ${path} entries`);
+    this.backlinksMap.delete(path);
+    this.removeLinkedPathEntries(path);
+  }
+
+  private setPendingAction(path: string, action: Action): void {
+    this.pendingActions.set(path, action);
+    this.debouncedProcessPendingActions?.();
+  }
+}

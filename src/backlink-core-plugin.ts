@@ -1,5 +1,4 @@
 import type {
-  BacklinkPlugin,
   BacklinkView,
   ResultDomResult
 } from '@obsidian-typings/obsidian-public-latest';
@@ -19,6 +18,7 @@ import {
 } from '@obsidian-typings/obsidian-public-latest/implementations';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { getPrototypeOf } from 'obsidian-dev-utils/object-utils';
+import { ComponentEx } from 'obsidian-dev-utils/obsidian/components/component-ex';
 import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/monkey-around-component';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
 import { isFrontmatterLinkCacheWithOffsets } from 'obsidian-dev-utils/obsidian/frontmatter-link-cache-with-offsets';
@@ -29,8 +29,6 @@ import {
   isCanvasTextNodeReference
 } from 'obsidian-dev-utils/obsidian/reference';
 
-import type { Plugin } from './plugin.ts';
-
 import { getFileComparer } from './file-comparer.ts';
 
 const FILE_PREFIX = 'file: ';
@@ -39,24 +37,57 @@ const FILE_PREFIX = 'file: ';
 interface CanvasDomResult extends Record<`canvas-${string}`, [from: number, to: number][]>, ResultDomResult {
 }
 
-export function patchBacklinksCorePlugin(plugin: Plugin): void {
-  const app = plugin.app;
-  const backlinksCorePlugin = app.internalPlugins.getPluginById(InternalPluginName.Backlink);
-  if (!backlinksCorePlugin) {
-    return;
+export class BacklinksCorePluginComponent extends ComponentEx {
+  public constructor(private readonly app: App) {
+    super();
   }
 
-  const patch = plugin.addChild(new MonkeyAroundComponent());
-  patch.registerPatch(getPrototypeOf(backlinksCorePlugin.instance), {
-    onUserEnable: (next: () => void) =>
-      function onUserEnablePatched(this: BacklinkPlugin): void {
-        next.call(this);
-        onBacklinksCorePluginEnable(plugin);
-      }
-  });
+  public override onload(): void {
+    const backlinksCorePlugin = this.app.internalPlugins.getPluginById(InternalPluginName.Backlink);
+    if (!backlinksCorePlugin) {
+      return;
+    }
 
-  if (backlinksCorePlugin.enabled) {
-    onBacklinksCorePluginEnable(plugin);
+    const patch = this.addChild(new MonkeyAroundComponent());
+    patch.registerMethodPatch({
+      methodName: 'onUserEnable',
+      obj: getPrototypeOf(backlinksCorePlugin.instance),
+      patchHandler: ({
+        fallback
+      }) => {
+        fallback();
+        this.onBacklinksCorePluginEnable();
+      }
+    });
+
+    if (backlinksCorePlugin.enabled) {
+      this.onBacklinksCorePluginEnable();
+    }
+  }
+
+  private onBacklinksCorePluginEnable(): void {
+    invokeAsyncSafely(() => this.patchBacklinksPane());
+  }
+
+  private async patchBacklinksPane(): Promise<void> {
+    const backlinkView = await getBacklinkView(this.app);
+    if (!backlinkView) {
+      return;
+    }
+
+    const patch = this.addChild(new MonkeyAroundComponent());
+    patch.registerMethodPatch({
+      methodName: 'recomputeBacklink',
+      obj: getPrototypeOf(backlinkView.backlink),
+      patchHandler: ({
+        originalArgs: [backlinkFile],
+        originalThis
+      }) => {
+        invokeAsyncSafely(async () => {
+          await recomputeBacklinkAsync(originalThis, backlinkFile);
+        });
+      }
+    });
   }
 }
 
@@ -78,28 +109,6 @@ async function getBacklinkView(app: App): Promise<BacklinkView | null> {
 
   await backlinksLeaf.loadIfDeferred();
   return backlinksLeaf.view as BacklinkView;
-}
-
-function onBacklinksCorePluginEnable(plugin: Plugin): void {
-  invokeAsyncSafely(() => patchBacklinksPane(plugin));
-}
-
-async function patchBacklinksPane(plugin: Plugin): Promise<void> {
-  const app = plugin.app;
-  const backlinkView = await getBacklinkView(app);
-  if (!backlinkView) {
-    return;
-  }
-
-  const patch = plugin.addChild(new MonkeyAroundComponent());
-  patch.registerPatch(getPrototypeOf(backlinkView.backlink), {
-    recomputeBacklink: () =>
-      function recomputeBacklinkPatched(this: BacklinkComponent, backlinkFile: null | TFile): void {
-        invokeAsyncSafely(async () => {
-          await recomputeBacklinkAsync(this, backlinkFile);
-        });
-      }
-  });
 }
 
 function patchCanvasContent(canvasData: CanvasData): string {

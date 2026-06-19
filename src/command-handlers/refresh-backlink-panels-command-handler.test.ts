@@ -1,3 +1,4 @@
+import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   describe,
   expect,
@@ -5,13 +6,16 @@ import {
   vi
 } from 'vitest';
 
+import type { BacklinkCacheComponent } from '../backlink-cache-component.ts';
+
 import { RefreshBacklinkPanelsCommandHandler } from './refresh-backlink-panels-command-handler.ts';
 
 describe('RefreshBacklinkPanelsCommandHandler', () => {
   it('should create handler with correct id, name, and icon', () => {
-    const handler = new RefreshBacklinkPanelsCommandHandler({
-      refreshBacklinkPanels: vi.fn()
+    const backlinkCacheComponent = strictProxy<BacklinkCacheComponent>({
+      refreshBacklinkPanels: vi.fn<() => Promise<void>>().mockResolvedValue(undefined)
     });
+    const handler = new RefreshBacklinkPanelsCommandHandler(backlinkCacheComponent);
 
     expect(handler.id).toBe('refresh-backlink-panels');
     expect(handler.name).toBe('Refresh backlink panels');
@@ -20,9 +24,10 @@ describe('RefreshBacklinkPanelsCommandHandler', () => {
 
   it('should call refreshBacklinkPanels when command callback is invoked', async () => {
     const refreshBacklinkPanels = vi.fn<() => Promise<void>>().mockResolvedValue(undefined);
-    const handler = new RefreshBacklinkPanelsCommandHandler({
+    const backlinkCacheComponent = strictProxy<BacklinkCacheComponent>({
       refreshBacklinkPanels
     });
+    const handler = new RefreshBacklinkPanelsCommandHandler(backlinkCacheComponent);
 
     const command = handler.buildCommand();
     expect(command.checkCallback).toBeDefined();

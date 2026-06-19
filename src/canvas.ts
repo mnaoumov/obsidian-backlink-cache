@@ -1,9 +1,9 @@
 import type {
   App,
   CachedMetadata,
-  MetadataCache,
   TAbstractFile
 } from 'obsidian';
+import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/components/abort-signal-component';
 import type {
   CanvasFileNodeReference,
   CanvasReference,
@@ -15,13 +15,15 @@ import { InternalPluginName } from '@obsidian-typings/obsidian-public-latest/imp
 import { TFile } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { getPrototypeOf } from 'obsidian-dev-utils/object-utils';
+import { ComponentEx } from 'obsidian-dev-utils/obsidian/components/component-ex';
 import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/monkey-around-component';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
 import { splitSubpath } from 'obsidian-dev-utils/obsidian/link';
 import { loop } from 'obsidian-dev-utils/obsidian/loop';
 import { getAllLinks } from 'obsidian-dev-utils/obsidian/metadata-cache';
 
-import type { Plugin } from './plugin.ts';
+import type { BacklinkCacheComponent } from './backlink-cache-component.ts';
+import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
 import { reloadBacklinksView } from './backlink-core-plugin.ts';
 import { parseMetadataEx } from './metadata.ts';
@@ -32,125 +34,223 @@ export function isCanvasPluginEnabled(app: App): boolean {
 
 const canvasMetadataCacheMap = new Map<string, CachedMetadata>();
 
-type GetCacheFn = MetadataCache['getCache'];
-
-export function initCanvasHandlers(plugin: Plugin): void {
-  const app = plugin.app;
-  const patch = plugin.addChild(new MonkeyAroundComponent());
-  patch.registerPatch(app.metadataCache, {
-    getCache: (next: GetCacheFn) => (path: string): CachedMetadata | null => getCache(app, path, next)
-  });
-
-  plugin.registerEvent(app.vault.on('create', (file) => {
-    handleFileCreateOrModify(file, plugin);
-  }));
-  plugin.registerEvent(app.vault.on('modify', (file) => {
-    handleFileCreateOrModify(file, plugin);
-  }));
-  plugin.registerEvent(app.vault.on('delete', (file) => {
-    handleFileDelete(file, plugin);
-  }));
-  plugin.registerEvent(app.vault.on('rename', (file, oldPath) => {
-    handleFileRename(file, oldPath, plugin);
-  }));
-
-  const canvasCorePlugin = app.internalPlugins.getPluginById(InternalPluginName.Canvas);
-  if (!canvasCorePlugin) {
-    return;
-  }
-
-  patch.registerPatch(getPrototypeOf(canvasCorePlugin.instance), {
-    onUserDisable: () => (): void => {
-      onCanvasCorePluginDisable(plugin);
-    },
-    onUserEnable: () => (): void => {
-      onCanvasCorePluginEnable(plugin);
-    }
-  });
-
-  if (canvasCorePlugin.enabled) {
-    onCanvasCorePluginEnable(plugin);
-  }
-
-  plugin.register(() => {
-    onCanvasCorePluginDisable(plugin);
-  });
+interface CanvasComponentConstructorParams {
+  readonly abortSignalComponent: AbortSignalComponent;
+  readonly app: App;
+  readonly backlinkCacheComponent: BacklinkCacheComponent;
+  readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
-export async function initCanvasMetadataCache(app: App, file: TFile): Promise<void> {
-  if (!isCanvasFile(app, file)) {
-    return;
+export class CanvasComponent extends ComponentEx {
+  private readonly abortSignalComponent: AbortSignalComponent;
+  private readonly app: App;
+  private readonly backlinkCacheComponent: BacklinkCacheComponent;
+  private readonly pluginSettingsComponent: PluginSettingsComponent;
+
+  public constructor(params: CanvasComponentConstructorParams) {
+    super();
+
+    this.app = params.app;
+    this.abortSignalComponent = params.abortSignalComponent;
+    this.backlinkCacheComponent = params.backlinkCacheComponent;
+    this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
-  let partialCanvasData: Partial<CanvasData>;
+  public override onload(): void {
+    const patch = this.addChild(new MonkeyAroundComponent());
+    patch.registerMethodPatch({
+      methodName: 'getCache',
+      obj: this.app.metadataCache,
+      patchHandler: ({
+        fallback,
+        originalArgs: [path]
+      }) => {
+        if (isCanvasFile(this.app, path)) {
+          return canvasMetadataCacheMap.get(path) ?? null;
+        }
 
-  try {
-    const canvasJson = await app.vault.read(file);
-    partialCanvasData = JSON.parse(canvasJson) as Partial<CanvasData>;
-  } catch {
-    partialCanvasData = {};
+        return fallback();
+      }
+    });
+
+    this.registerEvent(this.app.vault.on('create', this.handleFileCreateOrModify.bind(this)));
+    this.registerEvent(this.app.vault.on('modify', this.handleFileCreateOrModify.bind(this)));
+    this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
+    this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
+
+    const canvasCorePlugin = this.app.internalPlugins.getPluginById(InternalPluginName.Canvas);
+    if (!canvasCorePlugin) {
+      return;
+    }
+
+    patch.registerMethodPatch({
+      methodName: 'onUserDisable',
+      obj: getPrototypeOf(canvasCorePlugin.instance),
+      patchHandler: () => {
+        this.onCanvasCorePluginDisable();
+      }
+    });
+
+    patch.registerMethodPatch({
+      methodName: 'onUserEnable',
+      obj: getPrototypeOf(canvasCorePlugin.instance),
+      patchHandler: () => {
+        this.onCanvasCorePluginEnable();
+      }
+    });
+
+    if (canvasCorePlugin.enabled) {
+      this.onCanvasCorePluginEnable();
+    }
+
+    this.register(() => {
+      this.onCanvasCorePluginDisable();
+    });
   }
 
-  const canvasData = partialCanvasData.nodes
-    ? partialCanvasData as CanvasData
-    : {
-      edges: [],
-      nodes: []
+  private handleFileCreateOrModify(file: TAbstractFile): void {
+    if (!isCanvasFile(this.app, file) || !(file instanceof TFile)) {
+      return;
+    }
+    invokeAsyncSafely(async () => {
+      await this.initCanvasMetadataCache(file);
+      this.backlinkCacheComponent.triggerRefresh(file.path);
+    });
+  }
+
+  private handleFileDelete(file: TAbstractFile): void {
+    if (!isCanvasFile(this.app, file)) {
+      return;
+    }
+    canvasMetadataCacheMap.delete(file.path);
+  }
+
+  private handleFileRename(file: TAbstractFile, oldPath: string): void {
+    if (!isCanvasFile(this.app, file)) {
+      return;
+    }
+    const canvasMetadataCache = canvasMetadataCacheMap.get(oldPath);
+    if (canvasMetadataCache) {
+      canvasMetadataCacheMap.set(file.path, canvasMetadataCache);
+    }
+    canvasMetadataCacheMap.delete(oldPath);
+  }
+
+  private async initCanvasMetadataCache(file: TFile): Promise<void> {
+    if (!isCanvasFile(this.app, file)) {
+      return;
+    }
+
+    let partialCanvasData: Partial<CanvasData>;
+
+    try {
+      const canvasJson = await this.app.vault.read(file);
+      partialCanvasData = JSON.parse(canvasJson) as Partial<CanvasData>;
+    } catch {
+      partialCanvasData = {};
+    }
+
+    const canvasData = partialCanvasData.nodes
+      ? partialCanvasData as CanvasData
+      : {
+        edges: [],
+        nodes: []
+      };
+
+    const cachedMetadata: CachedMetadata = {
+      frontmatterLinks: []
     };
 
-  const cachedMetadata: CachedMetadata = {
-    frontmatterLinks: []
-  };
-
-  for (let index = 0; index < canvasData.nodes.length; index++) {
-    const node = canvasData.nodes[index];
-    switch (node?.type) {
-      case 'file': {
-        const canvasFileNodeReference: CanvasFileNodeReference = {
-          isCanvas: true,
-          key: `nodes.${String(index)}.file`,
-          link: node.file,
-          nodeIndex: index,
-          original: node.file,
-          type: 'file'
-        };
-
-        addCanvasMetadata(app, cachedMetadata, canvasFileNodeReference, file.path);
-        break;
-      }
-      case 'text': {
-        const metadata = await parseMetadataEx(app, node.text);
-        const links = getAllLinks(metadata);
-        let linkIndex = 0;
-        for (const link of links) {
-          const canvasTextNodeReference: CanvasTextNodeReference = {
+    for (let index = 0; index < canvasData.nodes.length; index++) {
+      const node = canvasData.nodes[index];
+      switch (node?.type) {
+        case 'file': {
+          const canvasFileNodeReference: CanvasFileNodeReference = {
             isCanvas: true,
-            key: `nodes.${String(index)}.text.${String(linkIndex)}`,
-            link: link.link,
+            key: `nodes.${String(index)}.file`,
+            link: node.file,
             nodeIndex: index,
-            original: link.original,
-            originalReference: link,
-            type: 'text'
+            original: node.file,
+            type: 'file'
           };
 
-          addCanvasMetadata(app, cachedMetadata, canvasTextNodeReference, file.path);
-          linkIndex++;
+          addCanvasMetadata(this.app, cachedMetadata, canvasFileNodeReference, file.path);
+          break;
         }
-        break;
+        case 'text': {
+          const metadata = await parseMetadataEx(this.app, node.text);
+          const links = getAllLinks(metadata);
+          let linkIndex = 0;
+          for (const link of links) {
+            const canvasTextNodeReference: CanvasTextNodeReference = {
+              isCanvas: true,
+              key: `nodes.${String(index)}.text.${String(linkIndex)}`,
+              link: link.link,
+              nodeIndex: index,
+              original: link.original,
+              originalReference: link,
+              type: 'text'
+            };
+
+            addCanvasMetadata(this.app, cachedMetadata, canvasTextNodeReference, file.path);
+            linkIndex++;
+          }
+          break;
+        }
+        default:
+          break;
       }
-      default:
-        break;
     }
+
+    canvasMetadataCacheMap.set(file.path, cachedMetadata);
+    const hash = await getFileHash(this.app, file);
+    this.app.metadataCache.saveFileCache(file.path, {
+      hash,
+      mtime: file.stat.mtime,
+      size: file.stat.size
+    });
+    this.app.metadataCache.saveMetaCache(hash, cachedMetadata);
   }
 
-  canvasMetadataCacheMap.set(file.path, cachedMetadata);
-  const hash = await getFileHash(app, file);
-  app.metadataCache.saveFileCache(file.path, {
-    hash,
-    mtime: file.stat.mtime,
-    size: file.stat.size
-  });
-  app.metadataCache.saveMetaCache(hash, cachedMetadata);
+  private onCanvasCorePluginDisable(): void {
+    this.removeCanvasMetadataCache();
+    invokeAsyncSafely(async () => {
+      await reloadBacklinksView(this.app);
+    });
+  }
+
+  private onCanvasCorePluginEnable(): void {
+    invokeAsyncSafely(async () => {
+      await this.processAllCanvasFiles();
+      await reloadBacklinksView(this.app);
+    });
+  }
+
+  private async processAllCanvasFiles(): Promise<void> {
+    await loop({
+      abortSignal: this.abortSignalComponent.abortSignal,
+      buildNoticeMessage: (canvasFile, iterationStr) => `Processing backlinks ${iterationStr} - ${canvasFile.path}`,
+      items: this.app.vault.getFiles().filter((file) => isCanvasFile(this.app, file)),
+      processItem: async (canvasFile) => {
+        await this.initCanvasMetadataCache(canvasFile);
+        this.backlinkCacheComponent.triggerRefresh(canvasFile.path);
+      },
+      progressBarTitle: 'Backlink Cache: Processing canvas files...',
+      shouldContinueOnError: true,
+      shouldShowNotice: this.pluginSettingsComponent.settings.shouldShowProgressBarOnLoad
+    });
+  }
+
+  private removeCanvasMetadataCache(): void {
+    const canvasFiles = this.app.vault.getFiles().filter((file) => isCanvasFile(this.app, file));
+    for (const file of canvasFiles) {
+      if (this.abortSignalComponent.abortSignal.aborted) {
+        return;
+      }
+      this.app.metadataCache.deletePath(file.path);
+      this.backlinkCacheComponent.triggerRemove(file.path);
+    }
+  }
 }
 
 function addCanvasMetadata(app: App, cachedMetadata: CachedMetadata, reference: CanvasReference, canvasPath: string): void {
@@ -183,86 +283,9 @@ function arrayBufferToHexString(buffer: ArrayBuffer): string {
   return hexArray.join('');
 }
 
-function getCache(app: App, path: string, next: GetCacheFn): CachedMetadata | null {
-  if (isCanvasFile(app, path)) {
-    return canvasMetadataCacheMap.get(path) ?? null;
-  }
-
-  return next.call(app.metadataCache, path);
-}
-
 async function getFileHash(app: App, file: TFile): Promise<string> {
   const bytes = await app.vault.readBinary(file);
   // eslint-disable-next-line n/no-unsupported-features/node-builtins -- crypto.subtle is the Web Crypto API, available in Obsidian's Electron renderer; the rule incorrectly flags it as a Node experimental builtin.
   const cryptoBytes = await crypto.subtle.digest('SHA-256', new Uint8Array(bytes));
   return arrayBufferToHexString(cryptoBytes);
-}
-
-function handleFileCreateOrModify(file: TAbstractFile, plugin: Plugin): void {
-  if (!isCanvasFile(plugin.app, file) || !(file instanceof TFile)) {
-    return;
-  }
-  invokeAsyncSafely(async () => {
-    await initCanvasMetadataCache(plugin.app, file);
-    plugin.triggerRefresh(file.path);
-  });
-}
-
-function handleFileDelete(file: TAbstractFile, plugin: Plugin): void {
-  if (!isCanvasFile(plugin.app, file)) {
-    return;
-  }
-  canvasMetadataCacheMap.delete(file.path);
-}
-
-function handleFileRename(file: TAbstractFile, oldPath: string, plugin: Plugin): void {
-  if (!isCanvasFile(plugin.app, file)) {
-    return;
-  }
-  const canvasMetadataCache = canvasMetadataCacheMap.get(oldPath);
-  if (canvasMetadataCache) {
-    canvasMetadataCacheMap.set(file.path, canvasMetadataCache);
-  }
-  canvasMetadataCacheMap.delete(oldPath);
-}
-
-function onCanvasCorePluginDisable(plugin: Plugin): void {
-  removeCanvasMetadataCache(plugin);
-  invokeAsyncSafely(async () => {
-    await reloadBacklinksView(plugin.app);
-  });
-}
-
-function onCanvasCorePluginEnable(plugin: Plugin): void {
-  invokeAsyncSafely(async () => {
-    await processAllCanvasFiles(plugin);
-    await reloadBacklinksView(plugin.app);
-  });
-}
-
-async function processAllCanvasFiles(plugin: Plugin): Promise<void> {
-  await loop({
-    abortSignal: plugin.getAbortSignal(),
-    buildNoticeMessage: (canvasFile, iterationStr) => `Processing backlinks ${iterationStr} - ${canvasFile.path}`,
-    items: plugin.app.vault.getFiles().filter((file) => isCanvasFile(plugin.app, file)),
-    processItem: async (canvasFile) => {
-      await initCanvasMetadataCache(plugin.app, canvasFile);
-      plugin.triggerRefresh(canvasFile.path);
-    },
-    progressBarTitle: 'Backlink Cache: Processing canvas files...',
-    shouldContinueOnError: true,
-    shouldShowNotice: plugin.getPluginSettings().shouldShowProgressBarOnLoad
-  });
-}
-
-function removeCanvasMetadataCache(plugin: Plugin): void {
-  const app = plugin.app;
-  const canvasFiles = app.vault.getFiles().filter((file) => isCanvasFile(app, file));
-  for (const file of canvasFiles) {
-    if (plugin.getAbortSignal().aborted) {
-      return;
-    }
-    app.metadataCache.deletePath(file.path);
-    plugin.triggerRemove(file.path);
-  }
 }
