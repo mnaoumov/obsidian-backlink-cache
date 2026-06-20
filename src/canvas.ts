@@ -14,9 +14,7 @@ import type { CanvasData } from 'obsidian/canvas.d.ts';
 import { InternalPluginName } from '@obsidian-typings/obsidian-public-latest/implementations';
 import { TFile } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
-import { getPrototypeOf } from 'obsidian-dev-utils/object-utils';
 import { ComponentEx } from 'obsidian-dev-utils/obsidian/components/component-ex';
-import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/monkey-around-component';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
 import { splitSubpath } from 'obsidian-dev-utils/obsidian/link';
 import { loop } from 'obsidian-dev-utils/obsidian/loop';
@@ -27,6 +25,9 @@ import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
 import { reloadBacklinksView } from './backlink-core-plugin.ts';
 import { parseMetadataEx } from './metadata.ts';
+import { CanvasPluginInstanceOnUserDisablePatchComponent } from './patches/canvas-plugin-instance-on-user-disable-patch-component.ts';
+import { CanvasPluginInstanceOnUserEnablePatchComponent } from './patches/canvas-plugin-instance-on-user-enable-patch-component.ts';
+import { MetadataCacheGetCachePatchComponent } from './patches/metadata-cache-get-cache-patch-component.ts';
 
 export function isCanvasPluginEnabled(app: App): boolean {
   return !!app.internalPlugins.getEnabledPluginById(InternalPluginName.Canvas);
@@ -56,22 +57,31 @@ export class CanvasComponent extends ComponentEx {
     this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
-  public override onload(): void {
-    const patch = this.addChild(new MonkeyAroundComponent());
-    patch.registerMethodPatch({
-      methodName: 'getCache',
-      obj: this.app.metadataCache,
-      patchHandler: ({
-        fallback,
-        originalArgs: [path]
-      }) => {
-        if (isCanvasFile(this.app, path)) {
-          return canvasMetadataCacheMap.get(path) ?? null;
-        }
+  public getCache(path: string): CachedMetadata | null {
+    return canvasMetadataCacheMap.get(path) ?? null;
+  }
 
-        return fallback();
-      }
+  public onCanvasCorePluginDisable(): void {
+    this.removeCanvasMetadataCache();
+    invokeAsyncSafely(async () => {
+      await reloadBacklinksView(this.app);
     });
+  }
+
+  public onCanvasCorePluginEnable(): void {
+    invokeAsyncSafely(async () => {
+      await this.processAllCanvasFiles();
+      await reloadBacklinksView(this.app);
+    });
+  }
+
+  public override onload(): void {
+    this.addChild(
+      new MetadataCacheGetCachePatchComponent({
+        canvasComponent: this,
+        metadataCache: this.app.metadataCache
+      })
+    );
 
     this.registerEvent(this.app.vault.on('create', this.handleFileCreateOrModify.bind(this)));
     this.registerEvent(this.app.vault.on('modify', this.handleFileCreateOrModify.bind(this)));
@@ -83,21 +93,19 @@ export class CanvasComponent extends ComponentEx {
       return;
     }
 
-    patch.registerMethodPatch({
-      methodName: 'onUserDisable',
-      obj: getPrototypeOf(canvasCorePlugin.instance),
-      patchHandler: () => {
-        this.onCanvasCorePluginDisable();
-      }
-    });
+    this.addChild(
+      new CanvasPluginInstanceOnUserDisablePatchComponent({
+        canvasComponent: this,
+        canvasPluginInstance: canvasCorePlugin.instance
+      })
+    );
 
-    patch.registerMethodPatch({
-      methodName: 'onUserEnable',
-      obj: getPrototypeOf(canvasCorePlugin.instance),
-      patchHandler: () => {
-        this.onCanvasCorePluginEnable();
-      }
-    });
+    this.addChild(
+      new CanvasPluginInstanceOnUserEnablePatchComponent({
+        canvasComponent: this,
+        canvasPluginInstance: canvasCorePlugin.instance
+      })
+    );
 
     if (canvasCorePlugin.enabled) {
       this.onCanvasCorePluginEnable();
@@ -210,20 +218,6 @@ export class CanvasComponent extends ComponentEx {
       size: file.stat.size
     });
     this.app.metadataCache.saveMetaCache(hash, cachedMetadata);
-  }
-
-  private onCanvasCorePluginDisable(): void {
-    this.removeCanvasMetadataCache();
-    invokeAsyncSafely(async () => {
-      await reloadBacklinksView(this.app);
-    });
-  }
-
-  private onCanvasCorePluginEnable(): void {
-    invokeAsyncSafely(async () => {
-      await this.processAllCanvasFiles();
-      await reloadBacklinksView(this.app);
-    });
   }
 
   private async processAllCanvasFiles(): Promise<void> {

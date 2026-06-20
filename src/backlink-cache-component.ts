@@ -7,7 +7,6 @@ import type {
 import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/components/abort-signal-component';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PathOrFile } from 'obsidian-dev-utils/obsidian/file-system';
-import type { GetBacklinksForFileSafeWrapper } from 'obsidian-dev-utils/obsidian/metadata-cache';
 
 import {
   CustomArrayDictImpl,
@@ -16,13 +15,11 @@ import {
 import {
   debounce,
   MarkdownView,
-  MetadataCache,
   TAbstractFile,
   TFile
 } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { LayoutReadyComponent } from 'obsidian-dev-utils/obsidian/components/layout-ready-component';
-import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/monkey-around-component';
 import {
   getFileOrNull,
   getPath,
@@ -47,6 +44,7 @@ import {
   CanvasComponent,
   isCanvasPluginEnabled
 } from './canvas.ts';
+import { MetadataCacheGetBacklinksForFilePatchComponent } from './patches/metadata-cache-get-backlinks-for-file-patch-component.ts';
 
 interface BacklinkCacheComponentConstructorParams {
   readonly abortSignalComponent: AbortSignalComponent;
@@ -54,8 +52,6 @@ interface BacklinkCacheComponentConstructorParams {
   readonly consoleDebugComponent: ConsoleDebugComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
-
-type GetBacklinksForFileFn = MetadataCache['getBacklinksForFile'];
 
 const INTERVAL_IN_MILLISECONDS = 500;
 
@@ -80,6 +76,27 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
     this.abortSignalComponent = params.abortSignalComponent;
     this.consoleDebugComponent = params.consoleDebugComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
+  }
+
+  public getBacklinksForFile(pathOrFile: PathOrFile): CustomArrayDict<Reference> {
+    const notePathLinksMap = this.backlinksMap.get(getPath(this.app, pathOrFile)) ?? new Map<string, Set<Reference>>();
+    const dict = new CustomArrayDictImpl<Reference>();
+
+    for (const [notePath, links] of notePathLinksMap.entries()) {
+      this.abortSignalComponent.abortSignal.throwIfAborted();
+      for (const link of sortReferences(Array.from(links))) {
+        this.abortSignalComponent.abortSignal.throwIfAborted();
+        dict.add(notePath, link);
+      }
+    }
+
+    invokeAsyncSafely(this.processPendingActions.bind(this));
+    return dict;
+  }
+
+  public async getBacklinksForFileSafe(pathOrFile: PathOrFile): Promise<CustomArrayDict<Reference>> {
+    await this.processPendingActions();
+    return this.getBacklinksForFile(pathOrFile);
   }
 
   public async refreshBacklinkPanels(): Promise<void> {
@@ -111,16 +128,12 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
   }
 
   protected override async onLayoutReady(): Promise<void> {
-    const patch = this.addChild(new MonkeyAroundComponent());
-    patch.registerPatch(this.app.metadataCache, {
-      getBacklinksForFile: (originalFn: GetBacklinksForFileFn): GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper => {
-        const patched: GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper = Object.assign(this.getBacklinksForFile.bind(this), {
-          originalFn: originalFn.bind(this.app.metadataCache),
-          safe: this.getBacklinksForFileSafe.bind(this)
-        });
-        return patched;
-      }
-    });
+    this.addChild(
+      new MetadataCacheGetBacklinksForFilePatchComponent({
+        backlinkCacheComponent: this,
+        metadataCache: this.app.metadataCache
+      })
+    );
 
     this.debouncedProcessPendingActions = debounce(this.processPendingActions.bind(this), INTERVAL_IN_MILLISECONDS, true);
 
@@ -139,27 +152,6 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
     this.registerEvent(this.app.vault.on('create', this.handleFileCreate.bind(this)));
     this.registerEvent(this.app.vault.on('modify', this.handleFileModify.bind(this)));
     this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
-  }
-
-  private getBacklinksForFile(pathOrFile: PathOrFile): CustomArrayDict<Reference> {
-    const notePathLinksMap = this.backlinksMap.get(getPath(this.app, pathOrFile)) ?? new Map<string, Set<Reference>>();
-    const dict = new CustomArrayDictImpl<Reference>();
-
-    for (const [notePath, links] of notePathLinksMap.entries()) {
-      this.abortSignalComponent.abortSignal.throwIfAborted();
-      for (const link of sortReferences(Array.from(links))) {
-        this.abortSignalComponent.abortSignal.throwIfAborted();
-        dict.add(notePath, link);
-      }
-    }
-
-    invokeAsyncSafely(this.processPendingActions.bind(this));
-    return dict;
-  }
-
-  private async getBacklinksForFileSafe(pathOrFile: PathOrFile): Promise<CustomArrayDict<Reference>> {
-    await this.processPendingActions();
-    return this.getBacklinksForFile(pathOrFile);
   }
 
   private handleFileCreate(file: TAbstractFile): void {
