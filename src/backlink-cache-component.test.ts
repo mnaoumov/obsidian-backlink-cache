@@ -892,4 +892,70 @@ describe('BacklinkCacheComponent', () => {
       expect(context.app.metadataCache.getCachedFiles).not.toHaveBeenCalled();
     });
   });
+
+  /*
+   * Deterministic complexity guards: assert the work each patched operation performs
+   * is a function ONLY of the match/backlink count, with ZERO dependence on vault
+   * size, by checking an exact operation count is identical across sizes spanning
+   * 100..100_000. A single hidden `O(vault)` (let alone `O(vault^2)`) term would make
+   * the count at 100_000 differ from the count at 100 — which timing-based, few-point
+   * checks cannot rule out. No real Obsidian and no wall-clock are involved.
+   */
+  describe('complexity scaling (deterministic, no real app)', () => {
+    const VAULT_SIZES = [100, 1_000, 10_000, 100_000];
+
+    function buildFiller(backlinksMap: Map<string, Map<string, Set<Reference>>>, size: number): void {
+      const sharedEmpty = new Map<string, Set<Reference>>();
+      for (let index = 0; index < size; index++) {
+        backlinksMap.set(`filler-${String(index)}.md`, sharedEmpty);
+      }
+    }
+
+    it('getBacklinksForFile work depends only on the backlink count, not vault size', () => {
+      const BACKLINK_COUNT = 50;
+      // One throwIfAborted per source note plus one per link processed.
+      const EXPECTED_WORK_UNITS = BACKLINK_COUNT * 2;
+
+      for (const vaultSize of VAULT_SIZES) {
+        const localContext = createTestContext();
+        const internals = asInternals(localContext.component);
+        const sharedReference = createLink('target');
+        const targetBacklinks = new Map<string, Set<Reference>>();
+        for (let index = 0; index < BACKLINK_COUNT; index++) {
+          targetBacklinks.set(`source-${String(index)}.md`, new Set<Reference>([sharedReference]));
+        }
+        internals.backlinksMap.set('target.md', targetBacklinks);
+        buildFiller(internals.backlinksMap, vaultSize);
+
+        localContext.component.getBacklinksForFile('target.md');
+
+        expect(localContext.abortSignal.throwIfAborted.mock.calls.length).toBe(EXPECTED_WORK_UNITS);
+      }
+    });
+
+    it('updateRelatedLinks work depends only on the match count, not vault size', () => {
+      const MATCH_COUNT = 50;
+
+      for (const vaultSize of VAULT_SIZES) {
+        const localContext = createTestContext();
+        const internals = asInternals(localContext.component);
+        const matchedSources = new Set<string>();
+        for (let index = 0; index < MATCH_COUNT; index++) {
+          matchedSources.add(`source-${String(index)}.md`);
+        }
+        internals.resolvedBasenameMap.set('target.md', matchedSources);
+        for (let index = 0; index < vaultSize; index++) {
+          internals.resolvedBasenameMap.set(`filler-${String(index)}.md`, new Set([`filler-source-${String(index)}.md`]));
+        }
+
+        vi.mocked(localContext.app.vault.getFileByPath).mockClear();
+
+        localContext.component.updateRelatedLinks(['target.md']);
+
+        // One getFileByPath per matched source, regardless of vault size; no vault scan.
+        expect(localContext.app.vault.getFileByPath).toHaveBeenCalledTimes(MATCH_COUNT);
+        expect(localContext.app.metadataCache.getCachedFiles).not.toHaveBeenCalled();
+      }
+    });
+  });
 });
