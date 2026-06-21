@@ -53,17 +53,8 @@ interface RegisteredEventHandler {
 
 const registeredEventHandlers: RegisteredEventHandler[] = [];
 
-// R1 exception: stub `invokeAsyncSafely` so its fire-and-forget async runs synchronously and is awaitable in tests.
-vi.mock('obsidian-dev-utils/async', () => ({
-  invokeAsyncSafely: vi.fn((fn: () => Promise<void>) => fn())
-}));
-
 vi.mock('obsidian-dev-utils/obsidian/file-system', () => ({
   isCanvasFile: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/link', () => ({
-  splitSubpath: vi.fn((link: string) => ({ linkPath: link }))
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/loop', () => ({

@@ -20,7 +20,6 @@ import {
   isReferenceCache
 } from '@obsidian-typings/obsidian-public-latest/implementations';
 import { debounce } from 'obsidian';
-import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
 import { isFrontmatterLinkCacheWithOffsets } from 'obsidian-dev-utils/obsidian/frontmatter-link-cache-with-offsets';
 import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
@@ -42,11 +41,6 @@ import {
   BacklinksCorePluginComponent,
   reloadBacklinksView
 } from './backlink-core-plugin.ts';
-
-// R1 exception: stub `invokeAsyncSafely` so its fire-and-forget async runs synchronously and is awaitable in tests.
-vi.mock('obsidian-dev-utils/async', () => ({
-  invokeAsyncSafely: vi.fn((fn: () => Promise<void>) => fn())
-}));
 
 vi.mock('obsidian-dev-utils/obsidian/file-system', () => ({
   isCanvasFile: vi.fn()
@@ -294,7 +288,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
 
     return async (backlinkComponent: BacklinkComponent, file: null | TFile): Promise<void> => {
       backlinkProto.recomputeBacklink.call(backlinkComponent, file);
-      await vi.mocked(invokeAsyncSafely).mock.results.at(-1)?.value;
+      // `recomputeBacklink` dispatches its work via the real `invokeAsyncSafely` as fire-and-forget;
+      // Flush the microtask chain (mocked awaits resolve immediately) with a macrotask tick.
+      await new Promise<void>((resolve) => {
+        window.setTimeout(resolve, 0);
+      });
     };
   }
 

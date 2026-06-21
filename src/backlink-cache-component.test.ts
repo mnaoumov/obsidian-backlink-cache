@@ -9,6 +9,8 @@ import type {
 } from 'obsidian';
 import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/components/abort-signal-component';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+// eslint-disable-next-line import-x/no-namespace -- Type-only namespace alias used for vitest's importOriginal<T>() without dynamic import() in type position.
+import type * as FileSystemModule from 'obsidian-dev-utils/obsidian/file-system';
 
 import {
   Component,
@@ -44,21 +46,14 @@ import { reloadBacklinksView } from './backlink-core-plugin.ts';
 import { isCanvasPluginEnabled } from './canvas.ts';
 import { PluginSettings } from './plugin-settings.ts';
 
-// R1 exception: stub `invokeAsyncSafely` so its fire-and-forget async runs synchronously and is awaitable in tests.
-vi.mock('obsidian-dev-utils/async', () => ({
-  invokeAsyncSafely: vi.fn((fn: () => Promise<void>) => fn())
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/file-system', () => ({
-  getFileOrNull: vi.fn(),
-  getPath: vi.fn((_app: unknown, pathOrFile: unknown) => {
-    if (typeof pathOrFile === 'string') {
-      return pathOrFile;
-    }
-    return (pathOrFile as TAbstractFile).path;
-  }),
-  isCanvasFile: vi.fn().mockReturnValue(false)
-}));
+vi.mock('obsidian-dev-utils/obsidian/file-system', async (importOriginal) => {
+  const original = await importOriginal<typeof FileSystemModule>();
+  return {
+    ...original,
+    getFileOrNull: vi.fn(),
+    isCanvasFile: vi.fn().mockReturnValue(false)
+  };
+});
 
 vi.mock('obsidian-dev-utils/obsidian/link', () => ({
   extractLinkFile: vi.fn()
