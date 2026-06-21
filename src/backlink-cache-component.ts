@@ -25,7 +25,10 @@ import {
   getPath,
   isCanvasFile
 } from 'obsidian-dev-utils/obsidian/file-system';
-import { extractLinkFile } from 'obsidian-dev-utils/obsidian/link';
+import {
+  extractLinkFile,
+  splitSubpath
+} from 'obsidian-dev-utils/obsidian/link';
 import { loop } from 'obsidian-dev-utils/obsidian/loop';
 import {
   getAllLinks,
@@ -45,6 +48,7 @@ import {
   isCanvasPluginEnabled
 } from './canvas.ts';
 import { MetadataCacheGetBacklinksForFilePatchComponent } from './patches/metadata-cache-get-backlinks-for-file-patch-component.ts';
+import { MetadataCacheUpdateRelatedLinksPatchComponent } from './patches/metadata-cache-update-related-links-patch-component.ts';
 
 interface BacklinkCacheComponentConstructorParams {
   readonly abortSignalComponent: AbortSignalComponent;
@@ -54,6 +58,7 @@ interface BacklinkCacheComponentConstructorParams {
 }
 
 const INTERVAL_IN_MILLISECONDS = 500;
+const MARKDOWN_EXTENSION = '.md';
 
 enum Action {
   Refresh,
@@ -69,6 +74,9 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
   private readonly linksMap = new Map<string, Set<string>>();
   private readonly pendingActions = new Map<string, Action>();
   private readonly pluginSettingsComponent: PluginSettingsComponent;
+  private readonly resolvedBasenameMap = new Map<string, Set<string>>();
+  private readonly unresolvedBasenameMap = new Map<string, Set<string>>();
+  private readonly unresolvedLinksMap = new Map<string, Set<string>>();
 
   public constructor(params: BacklinkCacheComponentConstructorParams) {
     super(params.app);
@@ -127,9 +135,24 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
     this.setPendingAction(path, Action.Remove);
   }
 
+  public updateRelatedLinks(fileNames: string[]): void {
+    for (const sourcePath of this.getSourcePathsToReResolve(fileNames)) {
+      const sourceFile = this.app.vault.getFileByPath(sourcePath);
+      if (sourceFile) {
+        this.app.metadataCache.queueFileForLinkResolution(sourceFile);
+      }
+    }
+  }
+
   protected override async onLayoutReady(): Promise<void> {
     this.addChild(
       new MetadataCacheGetBacklinksForFilePatchComponent({
+        backlinkCacheComponent: this,
+        metadataCache: this.app.metadataCache
+      })
+    );
+    this.addChild(
+      new MetadataCacheUpdateRelatedLinksPatchComponent({
         backlinkCacheComponent: this,
         metadataCache: this.app.metadataCache
       })
@@ -152,6 +175,43 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
     this.registerEvent(this.app.vault.on('create', this.handleFileCreate.bind(this)));
     this.registerEvent(this.app.vault.on('modify', this.handleFileModify.bind(this)));
     this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
+  }
+
+  private addBacklink(targetPath: string, sourcePath: string, link: Reference): void {
+    let notePathLinksMap = this.backlinksMap.get(targetPath);
+
+    if (!notePathLinksMap) {
+      notePathLinksMap = new Map<string, Set<Reference>>();
+      this.backlinksMap.set(targetPath, notePathLinksMap);
+    }
+
+    let linkSet = notePathLinksMap.get(sourcePath);
+
+    if (!linkSet) {
+      linkSet = new Set<Reference>();
+      notePathLinksMap.set(sourcePath, linkSet);
+    }
+
+    linkSet.add(link);
+    this.linksMap.get(sourcePath)?.add(targetPath);
+  }
+
+  private getSourcePathsToReResolve(fileNames: string[]): Set<string> {
+    const sourcePaths = new Set<string>();
+    const loweredFileNames = fileNames.map((fileName) => fileName.toLowerCase());
+
+    for (const loweredFileName of loweredFileNames) {
+      addAllToSet(sourcePaths, this.resolvedBasenameMap.get(loweredFileName));
+    }
+
+    for (const loweredFileName of loweredFileNames) {
+      addAllToSet(sourcePaths, this.unresolvedBasenameMap.get(loweredFileName));
+      if (loweredFileName.endsWith(MARKDOWN_EXTENSION)) {
+        addAllToSet(sourcePaths, this.unresolvedBasenameMap.get(loweredFileName.slice(0, -MARKDOWN_EXTENSION.length)));
+      }
+    }
+
+    return sourcePaths;
   }
 
   private handleFileCreate(file: TAbstractFile): void {
@@ -249,27 +309,23 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
       if (this.abortSignalComponent.abortSignal.aborted) {
         return;
       }
-      const linkFile = extractLinkFile(this.app, link, notePath, true);
-      if (!linkFile) {
+
+      const resolvedLinkFile = extractLinkFile(this.app, link, notePath);
+      if (resolvedLinkFile) {
+        this.addBacklink(resolvedLinkFile.path, notePath, link);
+        addToMapSet(this.resolvedBasenameMap, getBasenameLower(resolvedLinkFile.path), notePath);
         continue;
       }
 
-      let notePathLinksMap = this.backlinksMap.get(linkFile.path);
-
-      if (!notePathLinksMap) {
-        notePathLinksMap = new Map<string, Set<Reference>>();
-        this.backlinksMap.set(linkFile.path, notePathLinksMap);
+      const nonExistingLinkFile = extractLinkFile(this.app, link, notePath, true);
+      if (nonExistingLinkFile) {
+        this.addBacklink(nonExistingLinkFile.path, notePath, link);
       }
 
-      let linkSet = notePathLinksMap.get(notePath);
-
-      if (!linkSet) {
-        linkSet = new Set<Reference>();
-        notePathLinksMap.set(notePath, linkSet);
-      }
-
-      linkSet.add(link);
-      this.linksMap.get(notePath)?.add(linkFile.path);
+      const { linkPath } = splitSubpath(link.link);
+      const unresolvedBasename = getBasenameLower(linkPath);
+      addToMapSet(this.unresolvedBasenameMap, unresolvedBasename, notePath);
+      addToMapSet(this.unresolvedLinksMap, notePath, unresolvedBasename);
     }
   }
 
@@ -286,9 +342,21 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
         return;
       }
       this.backlinksMap.get(linkedNotePath)?.delete(path);
+      this.resolvedBasenameMap.get(getBasenameLower(linkedNotePath))?.delete(path);
     }
 
     this.linksMap.delete(path);
+
+    const unresolvedBasenames = this.unresolvedLinksMap.get(path) ?? [];
+
+    for (const unresolvedBasename of unresolvedBasenames) {
+      if (this.abortSignalComponent.abortSignal.aborted) {
+        return;
+      }
+      this.unresolvedBasenameMap.get(unresolvedBasename)?.delete(path);
+    }
+
+    this.unresolvedLinksMap.delete(path);
   }
 
   private removePathEntries(path: string): void {
@@ -301,4 +369,31 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
     this.pendingActions.set(path, action);
     this.debouncedProcessPendingActions?.();
   }
+}
+
+function addAllToSet(target: Set<string>, source: Set<string> | undefined): void {
+  if (!source) {
+    return;
+  }
+
+  for (const value of source) {
+    target.add(value);
+  }
+}
+
+function addToMapSet(map: Map<string, Set<string>>, key: string, value: string): void {
+  let set = map.get(key);
+
+  if (!set) {
+    set = new Set<string>();
+    map.set(key, set);
+  }
+
+  set.add(value);
+}
+
+function getBasenameLower(path: string): string {
+  const slashIndex = path.lastIndexOf('/');
+  const basename = slashIndex === -1 ? path : path.slice(slashIndex + 1);
+  return basename.toLowerCase();
 }
