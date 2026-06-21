@@ -11,11 +11,11 @@ import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/component
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
 import {
+  Component,
   MarkdownView,
   TAbstractFile,
   TFile
 } from 'obsidian';
-import { noop } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import {
   getFileOrNull,
@@ -44,37 +44,9 @@ import { reloadBacklinksView } from './backlink-core-plugin.ts';
 import { isCanvasPluginEnabled } from './canvas.ts';
 import { PluginSettings } from './plugin-settings.ts';
 
+// R1 exception: stub `invokeAsyncSafely` so its fire-and-forget async runs synchronously and is awaitable in tests.
 vi.mock('obsidian-dev-utils/async', () => ({
   invokeAsyncSafely: vi.fn((fn: () => Promise<void>) => fn())
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/components/layout-ready-component', () => ({
-  LayoutReadyComponent: class MockLayoutReadyComponent {
-    public app: App;
-
-    public constructor(app: App) {
-      this.app = app;
-    }
-
-    public addChild(child: unknown): unknown {
-      return child;
-    }
-
-    public registerEvent(): void {
-      noop();
-    }
-  }
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/components/monkey-around-component', () => ({
-  MonkeyAroundComponent: class MockMonkeyAroundComponent {
-    public registerPatch(target: object, patches: Record<string, (next: (...args: unknown[]) => unknown) => (...args: unknown[]) => unknown>): void {
-      for (const [key, factory] of Object.entries(patches)) {
-        const original = (target as Record<string, (...args: unknown[]) => unknown>)[key] ?? noop;
-        (target as Record<string, unknown>)[key] = factory(original);
-      }
-    }
-  }
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/file-system', () => ({
@@ -110,12 +82,12 @@ vi.mock('obsidian-dev-utils/obsidian/vault', () => ({
 }));
 
 vi.mock('./backlink-core-plugin.ts', () => ({
-  BacklinksCorePluginComponent: vi.fn(),
+  BacklinksCorePluginComponent: class MockBacklinksCorePluginComponent extends Component {},
   reloadBacklinksView: vi.fn().mockResolvedValue(undefined)
 }));
 
 vi.mock('./canvas.ts', () => ({
-  CanvasComponent: vi.fn(),
+  CanvasComponent: class MockCanvasComponent extends Component {},
   isCanvasPluginEnabled: vi.fn().mockReturnValue(true)
 }));
 
@@ -169,7 +141,8 @@ function createMockApp(): App {
       on: vi.fn().mockReturnValue({ id: 'event' })
     },
     workspace: {
-      getLeavesOfType: vi.fn().mockReturnValue([])
+      getLeavesOfType: vi.fn().mockReturnValue([]),
+      onLayoutReady: vi.fn()
     }
   });
 }
@@ -254,6 +227,7 @@ describe('BacklinkCacheComponent', () => {
 
   describe('onLayoutReady and internal methods', () => {
     async function setupOnLayoutReady(): Promise<void> {
+      context.component.load();
       await asInternals(context.component).onLayoutReady();
     }
 
@@ -300,8 +274,7 @@ describe('BacklinkCacheComponent', () => {
     it('should expose originalFn', async () => {
       await setupOnLayoutReady();
 
-      const originalFn = getBacklinksForFileFn(context.app).originalFn;
-      expect(originalFn).toBeDefined();
+      expect(getBacklinksForFileFn(context.app).originalFn).toBeDefined();
     });
 
     it('should process refresh action via pending actions', async () => {

@@ -12,11 +12,10 @@ import type {
   TFile,
   WorkspaceLeaf
 } from 'obsidian';
-// eslint-disable-next-line import-x/no-namespace -- Type-only namespace alias used for vitest's importOriginal<T>() without dynamic import() in type position.
-import type * as ObjectUtilsModule from 'obsidian-dev-utils/object-utils';
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
 import {
+  InternalPluginName,
   isFrontmatterLinkCache,
   isReferenceCache
 } from '@obsidian-typings/obsidian-public-latest/implementations';
@@ -33,7 +32,6 @@ import {
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   afterEach,
-  beforeEach,
   describe,
   expect,
   it,
@@ -45,52 +43,9 @@ import {
   reloadBacklinksView
 } from './backlink-core-plugin.ts';
 
-type PatchHandler = (args: PatchHandlerArgs) => unknown;
-
-interface PatchHandlerArgs {
-  fallback?(): unknown;
-  originalArgs?: unknown[];
-  originalThis?: unknown;
-}
-
-interface RegisteredMethodPatch {
-  methodName: string;
-  obj: object;
-  patchHandler: PatchHandler;
-}
-
-const registeredMethodPatches: RegisteredMethodPatch[] = [];
-
+// R1 exception: stub `invokeAsyncSafely` so its fire-and-forget async runs synchronously and is awaitable in tests.
 vi.mock('obsidian-dev-utils/async', () => ({
   invokeAsyncSafely: vi.fn((fn: () => Promise<void>) => fn())
-}));
-
-vi.mock('obsidian-dev-utils/object-utils', async (importOriginal) => {
-  const original = await importOriginal<typeof ObjectUtilsModule>();
-  return {
-    ...original,
-    getPrototypeOf: vi.fn((obj: object) => Object.getPrototypeOf(obj) as object)
-  };
-});
-
-vi.mock('obsidian-dev-utils/obsidian/components/component-ex', () => ({
-  ComponentEx: class MockComponentEx {
-    public addChild(child: unknown): unknown {
-      return child;
-    }
-  }
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/components/monkey-around-component', () => ({
-  MonkeyAroundComponent: class MockMonkeyAroundComponent {
-    public registerMethodPatch(params: RegisteredMethodPatch): void {
-      registeredMethodPatches.push({
-        methodName: params.methodName,
-        obj: params.obj,
-        patchHandler: params.patchHandler
-      });
-    }
-  }
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/file-system', () => ({
@@ -123,10 +78,6 @@ vi.mock('@obsidian-typings/obsidian-public-latest/implementations', async (impor
 vi.mock('./file-comparer.ts', () => ({
   getFileComparer: vi.fn((): () => number => () => 0)
 }));
-
-beforeEach(() => {
-  registeredMethodPatches.length = 0;
-});
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -194,14 +145,16 @@ describe('BacklinksCorePluginComponent', () => {
     });
 
     const component = new BacklinksCorePluginComponent(app);
-    component.onload();
-    expect(registeredMethodPatches.length).toBe(0);
+    component.load();
+    expect(app.internalPlugins.getPluginById).toHaveBeenCalledWith(InternalPluginName.Backlink);
   });
 
-  it('should register onUserEnable patch when plugin exists but is disabled', () => {
+  it('should patch onUserEnable on the plugin instance when disabled', () => {
+    const onUserEnable = vi.fn();
+    const instanceProto = { onUserEnable };
     const backlinksCorePlugin = {
       enabled: false,
-      instance: Object.create({ onUserEnable: vi.fn() }) as object
+      instance: Object.create(instanceProto) as object
     };
 
     const app = strictProxy<App>({
@@ -214,10 +167,9 @@ describe('BacklinksCorePluginComponent', () => {
     });
 
     const component = new BacklinksCorePluginComponent(app);
-    component.onload();
+    component.load();
 
-    expect(registeredMethodPatches.length).toBe(1);
-    expect(registeredMethodPatches[0]?.methodName).toBe('onUserEnable');
+    expect(instanceProto.onUserEnable).not.toBe(onUserEnable);
   });
 
   it('should patch backlinks pane when plugin is already enabled', async () => {
@@ -226,10 +178,12 @@ describe('BacklinksCorePluginComponent', () => {
       instance: Object.create({ onUserEnable: vi.fn() }) as object
     };
 
+    const recomputeBacklink = vi.fn();
+    const backlinkProto = { recomputeBacklink };
     const backlinksLeaf = strictProxy<WorkspaceLeaf>({
       loadIfDeferred: vi.fn().mockResolvedValue(undefined),
       view: strictProxy<BacklinkView>({
-        backlink: Object.assign(Object.create({ recomputeBacklink: vi.fn() }), {}),
+        backlink: Object.create(backlinkProto),
         file: null
       })
     });
@@ -244,18 +198,19 @@ describe('BacklinksCorePluginComponent', () => {
     });
 
     const component = new BacklinksCorePluginComponent(app);
-    component.onload();
+    component.load();
 
     await vi.waitFor(() => {
-      expect(registeredMethodPatches.some((p) => p.methodName === 'recomputeBacklink')).toBe(true);
+      expect(backlinkProto.recomputeBacklink).not.toBe(recomputeBacklink);
     });
   });
 
   it('should invoke fallback and enable handler in patched onUserEnable', () => {
-    const fallback = vi.fn();
+    const onUserEnable = vi.fn();
+    const instanceProto = { onUserEnable };
     const backlinksCorePlugin = {
       enabled: false,
-      instance: Object.create({ onUserEnable: vi.fn() }) as object
+      instance: Object.create(instanceProto) as object
     };
 
     const app = strictProxy<App>({
@@ -268,12 +223,11 @@ describe('BacklinksCorePluginComponent', () => {
     });
 
     const component = new BacklinksCorePluginComponent(app);
-    component.onload();
+    component.load();
 
-    const onUserEnablePatch = registeredMethodPatches.find((p) => p.methodName === 'onUserEnable');
-    onUserEnablePatch?.patchHandler({ fallback });
+    instanceProto.onUserEnable();
 
-    expect(fallback).toHaveBeenCalled();
+    expect(onUserEnable).toHaveBeenCalled();
   });
 });
 
@@ -312,11 +266,12 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
       instance: Object.create({ onUserEnable: vi.fn() }) as object
     };
 
-    const backlinkPrototype = { recomputeBacklink: vi.fn() };
+    const originalRecomputeBacklink = vi.fn();
+    const backlinkProto = { recomputeBacklink: originalRecomputeBacklink };
     const backlinksLeaf = strictProxy<WorkspaceLeaf>({
       loadIfDeferred: vi.fn().mockResolvedValue(undefined),
       view: strictProxy<BacklinkView>({
-        backlink: Object.assign(Object.create(backlinkPrototype), {}),
+        backlink: Object.create(backlinkProto),
         file: null
       })
     });
@@ -331,16 +286,14 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
     });
 
     const component = new BacklinksCorePluginComponent(app);
-    component.onload();
+    component.load();
 
-    let recomputePatch: RegisteredMethodPatch | undefined;
     await vi.waitFor(() => {
-      recomputePatch = registeredMethodPatches.find((p) => p.methodName === 'recomputeBacklink');
-      expect(recomputePatch).toBeDefined();
+      expect(backlinkProto.recomputeBacklink).not.toBe(originalRecomputeBacklink);
     });
 
     return async (backlinkComponent: BacklinkComponent, file: null | TFile): Promise<void> => {
-      recomputePatch?.patchHandler({ originalArgs: [file], originalThis: backlinkComponent });
+      backlinkProto.recomputeBacklink.call(backlinkComponent, file);
       await vi.mocked(invokeAsyncSafely).mock.results.at(-1)?.value;
     };
   }

@@ -4,17 +4,15 @@ import type {
 } from '@obsidian-typings/obsidian-public-latest';
 import type {
   App,
+  CachedMetadata,
   MetadataCache,
   Reference,
   TAbstractFile
 } from 'obsidian';
-// eslint-disable-next-line import-x/no-namespace -- Type-only namespace alias used for vitest's importOriginal<T>() without dynamic import() in type position.
-import type * as ObjectUtilsModule from 'obsidian-dev-utils/object-utils';
 import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/components/abort-signal-component';
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
 import { TFile } from 'obsidian';
-import { noop } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
 import { loop } from 'obsidian-dev-utils/obsidian/loop';
@@ -48,65 +46,16 @@ interface MutableAbortSignal {
   throwIfAborted: ReturnType<typeof vi.fn>;
 }
 
-interface PatchHandlerArgs {
-  fallback?(): unknown;
-  originalArgs?: unknown[];
-  originalThis?: unknown;
-}
-
 interface RegisteredEventHandler {
   callback(...args: unknown[]): void;
   event: string;
 }
 
-interface RegisteredMethodPatch {
-  methodName: string;
-  obj: object;
-  patchHandler(args: PatchHandlerArgs): unknown;
-}
-
-const registeredMethodPatches: RegisteredMethodPatch[] = [];
 const registeredEventHandlers: RegisteredEventHandler[] = [];
-const registeredCleanups: (() => void)[] = [];
 
+// R1 exception: stub `invokeAsyncSafely` so its fire-and-forget async runs synchronously and is awaitable in tests.
 vi.mock('obsidian-dev-utils/async', () => ({
   invokeAsyncSafely: vi.fn((fn: () => Promise<void>) => fn())
-}));
-
-vi.mock('obsidian-dev-utils/object-utils', async (importOriginal) => {
-  const original = await importOriginal<typeof ObjectUtilsModule>();
-  return {
-    ...original,
-    getPrototypeOf: vi.fn((obj: object) => Object.getPrototypeOf(obj) as object)
-  };
-});
-
-vi.mock('obsidian-dev-utils/obsidian/components/component-ex', () => ({
-  ComponentEx: class MockComponentEx {
-    public addChild(child: unknown): unknown {
-      return child;
-    }
-
-    public register(cb: () => void): void {
-      registeredCleanups.push(cb);
-    }
-
-    public registerEvent(): void {
-      noop();
-    }
-  }
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/components/monkey-around-component', () => ({
-  MonkeyAroundComponent: class MockMonkeyAroundComponent {
-    public registerMethodPatch(params: RegisteredMethodPatch): void {
-      registeredMethodPatches.push({
-        methodName: params.methodName,
-        obj: params.obj,
-        patchHandler: params.patchHandler
-      });
-    }
-  }
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/file-system', () => ({
@@ -133,6 +82,16 @@ vi.mock('./metadata.ts', () => ({
   parseMetadataEx: vi.fn().mockResolvedValue({})
 }));
 
+interface CanvasInstanceProto {
+  onUserDisable(): void;
+  onUserEnable(): void;
+}
+
+interface CreateCanvasCorePluginResult {
+  readonly instanceProto: CanvasInstanceProto;
+  readonly plugin: CanvasPlugin;
+}
+
 interface CreateComponentOverrides {
   readonly abortSignal?: MutableAbortSignal;
   readonly app?: App;
@@ -145,14 +104,16 @@ interface CreateComponentResult {
   readonly component: CanvasComponent;
 }
 
-function createCanvasCorePlugin(enabled: boolean): CanvasPlugin {
-  return strictProxy<CanvasPlugin>({
+function createCanvasCorePlugin(enabled: boolean): CreateCanvasCorePluginResult {
+  const instanceProto: CanvasInstanceProto = {
+    onUserDisable: vi.fn(),
+    onUserEnable: vi.fn()
+  };
+  const plugin = strictProxy<CanvasPlugin>({
     enabled,
-    instance: castTo<CanvasPluginInstance>(Object.create({
-      onUserDisable: vi.fn(),
-      onUserEnable: vi.fn()
-    }))
+    instance: castTo<CanvasPluginInstance>(Object.create(instanceProto))
   });
+  return { instanceProto, plugin };
 }
 
 function createComponent(overrides: CreateComponentOverrides = {}): CreateComponentResult {
@@ -198,13 +159,12 @@ function createMockApp(): App {
   });
   app.metadataCache.resolvedLinks = {};
   app.metadataCache.unresolvedLinks = {};
+  app.metadataCache.app = app;
   return app;
 }
 
 beforeEach(() => {
-  registeredMethodPatches.length = 0;
   registeredEventHandlers.length = 0;
-  registeredCleanups.length = 0;
 });
 
 afterEach(() => {
@@ -235,32 +195,34 @@ describe('isCanvasPluginEnabled', () => {
 
 describe('CanvasComponent.onload', () => {
   it('should register getCache patch and event handlers', () => {
-    const { component } = createComponent();
+    const { app, component } = createComponent();
+    const originalGetCache = app.metadataCache.getCache;
 
-    component.onload();
+    component.load();
 
-    expect(registeredMethodPatches.some((p) => p.methodName === 'getCache')).toBe(true);
+    expect(app.metadataCache.getCache).not.toBe(originalGetCache);
     expect(registeredEventHandlers.length).toBe(4);
     expect(registeredEventHandlers.map((h) => h.event)).toEqual(['create', 'modify', 'delete', 'rename']);
   });
 
   it('should register canvas core plugin patches when canvas plugin exists', () => {
     const { app, component } = createComponent();
-    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(createCanvasCorePlugin(false));
+    const { instanceProto, plugin } = createCanvasCorePlugin(false);
+    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(plugin);
+    const originalOnUserEnable = instanceProto.onUserEnable;
+    const originalOnUserDisable = instanceProto.onUserDisable;
 
-    component.onload();
+    component.load();
 
-    const methodNames = registeredMethodPatches.map((p) => p.methodName);
-    expect(methodNames).toContain('onUserEnable');
-    expect(methodNames).toContain('onUserDisable');
-    expect(registeredCleanups.length).toBe(1);
+    expect(instanceProto.onUserEnable).not.toBe(originalOnUserEnable);
+    expect(instanceProto.onUserDisable).not.toBe(originalOnUserDisable);
   });
 
   it('should process all canvas files when canvas plugin is already enabled', () => {
     const { app, component } = createComponent();
-    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(createCanvasCorePlugin(true));
+    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(createCanvasCorePlugin(true).plugin);
 
-    component.onload();
+    component.load();
 
     expect(loop).toHaveBeenCalled();
   });
@@ -269,7 +231,7 @@ describe('CanvasComponent.onload', () => {
     vi.mocked(isCanvasFile).mockReturnValue(true);
     const { backlinkCacheComponent, component } = createComponent();
 
-    component.onload();
+    component.load();
 
     const createHandler = registeredEventHandlers.find((h) => h.event === 'create');
     const mockFile = Object.create(TFile.prototype);
@@ -286,7 +248,7 @@ describe('CanvasComponent.onload', () => {
     vi.mocked(isCanvasFile).mockReturnValue(false);
     const { backlinkCacheComponent, component } = createComponent();
 
-    component.onload();
+    component.load();
 
     const createHandler = registeredEventHandlers.find((h) => h.event === 'create');
     const mockFile = strictProxy<TAbstractFile>({ path: 'test.md' });
@@ -300,7 +262,7 @@ describe('CanvasComponent.onload', () => {
     vi.mocked(isCanvasFile).mockReturnValue(true);
     const { component } = createComponent();
 
-    component.onload();
+    component.load();
 
     const deleteHandler = registeredEventHandlers.find((h) => h.event === 'delete');
     const mockFile = strictProxy<TAbstractFile>({ path: 'test.canvas' });
@@ -313,7 +275,7 @@ describe('CanvasComponent.onload', () => {
     vi.mocked(isCanvasFile).mockReturnValue(false);
     const { component } = createComponent();
 
-    component.onload();
+    component.load();
 
     const deleteHandler = registeredEventHandlers.find((h) => h.event === 'delete');
     const mockFile = strictProxy<TAbstractFile>({ path: 'test.md' });
@@ -326,7 +288,7 @@ describe('CanvasComponent.onload', () => {
     vi.mocked(isCanvasFile).mockReturnValue(true);
     const { component } = createComponent();
 
-    component.onload();
+    component.load();
 
     const renameHandler = registeredEventHandlers.find((h) => h.event === 'rename');
     const mockFile = strictProxy<TAbstractFile>({ path: 'new.canvas' });
@@ -339,7 +301,7 @@ describe('CanvasComponent.onload', () => {
     vi.mocked(isCanvasFile).mockReturnValue(false);
     const { component } = createComponent();
 
-    component.onload();
+    component.load();
 
     const renameHandler = registeredEventHandlers.find((h) => h.event === 'rename');
     const mockFile = strictProxy<TAbstractFile>({ path: 'new.md' });
@@ -352,7 +314,7 @@ describe('CanvasComponent.onload', () => {
     vi.mocked(isCanvasFile).mockReturnValue(true);
     const { backlinkCacheComponent, component } = createComponent();
 
-    component.onload();
+    component.load();
 
     const modifyHandler = registeredEventHandlers.find((h) => h.event === 'modify');
     const mockFile = Object.create(TFile.prototype);
@@ -367,9 +329,9 @@ describe('CanvasComponent.onload', () => {
 
   it('should transfer metadata cache on canvas file rename with existing cache', async () => {
     vi.mocked(isCanvasFile).mockReturnValue(true);
-    const { component } = createComponent();
+    const { app, component } = createComponent();
 
-    component.onload();
+    component.load();
 
     const mockFile = strictProxy<TFile>({
       path: 'old.canvas',
@@ -381,8 +343,7 @@ describe('CanvasComponent.onload', () => {
     const renamedFile = strictProxy<TAbstractFile>({ path: 'new.canvas' });
     renameHandler?.callback(renamedFile, 'old.canvas');
 
-    const getCachePatch = registeredMethodPatches.find((p) => p.methodName === 'getCache');
-    const result = getCachePatch?.patchHandler({ fallback: vi.fn(), originalArgs: ['new.canvas'] });
+    const result = app.metadataCache.getCache('new.canvas');
     expect(result).not.toBeNull();
   });
 
@@ -393,13 +354,13 @@ describe('CanvasComponent.onload', () => {
     Object.assign(mockCanvasFile, { path: 'test.canvas' });
 
     const { app, backlinkCacheComponent, component } = createComponent();
-    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(createCanvasCorePlugin(false));
+    const { instanceProto, plugin } = createCanvasCorePlugin(false);
+    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(plugin);
     vi.mocked(app.vault.getFiles).mockReturnValue(castTo<TFile[]>([mockCanvasFile]));
 
-    component.onload();
+    component.load();
 
-    const disablePatch = registeredMethodPatches.find((p) => p.methodName === 'onUserDisable');
-    disablePatch?.patchHandler({});
+    instanceProto.onUserDisable();
 
     expect(app.metadataCache.deletePath).toHaveBeenCalledWith('test.canvas');
     expect(backlinkCacheComponent.triggerRemove).toHaveBeenCalledWith('test.canvas');
@@ -407,7 +368,7 @@ describe('CanvasComponent.onload', () => {
 
   it('should invoke processItem callback in processAllCanvasFiles via loop', async () => {
     const { app, backlinkCacheComponent, component } = createComponent();
-    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(createCanvasCorePlugin(true));
+    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(createCanvasCorePlugin(true).plugin);
     vi.mocked(isCanvasFile).mockReturnValue(true);
 
     const mockCanvasFile = Object.create(TFile.prototype);
@@ -420,7 +381,7 @@ describe('CanvasComponent.onload', () => {
       await (opts.processItem as (item: TFile) => Promise<void>)(mockCanvasFile);
     });
 
-    component.onload();
+    component.load();
 
     await vi.waitFor(() => {
       expect(backlinkCacheComponent.triggerRefresh).toHaveBeenCalledWith('test.canvas');
@@ -447,13 +408,13 @@ describe('CanvasComponent.onload', () => {
     };
 
     const { app, component } = createComponent({ abortSignal });
-    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(createCanvasCorePlugin(false));
+    const { instanceProto, plugin } = createCanvasCorePlugin(false);
+    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(plugin);
     vi.mocked(app.vault.getFiles).mockReturnValue(castTo<TFile[]>([mockCanvasFile1, mockCanvasFile2]));
 
-    component.onload();
+    component.load();
 
-    const disablePatch = registeredMethodPatches.find((p) => p.methodName === 'onUserDisable');
-    disablePatch?.patchHandler({});
+    instanceProto.onUserDisable();
 
     expect(app.metadataCache.deletePath).toHaveBeenCalledTimes(1);
     expect(app.metadataCache.deletePath).toHaveBeenCalledWith('a.canvas');
@@ -461,57 +422,52 @@ describe('CanvasComponent.onload', () => {
 
   it('should reload backlinks view on cleanup', () => {
     const { app, component } = createComponent();
-    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(createCanvasCorePlugin(false));
+    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(createCanvasCorePlugin(false).plugin);
 
-    component.onload();
-
-    expect(registeredCleanups.length).toBe(1);
-    registeredCleanups[0]?.();
+    component.load();
+    component.unload();
 
     expect(reloadBacklinksView).toHaveBeenCalled();
   });
 
   it('should handle onUserEnable patch', () => {
     const { app, component } = createComponent();
-    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(createCanvasCorePlugin(false));
+    const { instanceProto, plugin } = createCanvasCorePlugin(false);
+    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(plugin);
 
-    component.onload();
+    component.load();
 
-    const enablePatch = registeredMethodPatches.find((p) => p.methodName === 'onUserEnable');
-    enablePatch?.patchHandler({});
+    instanceProto.onUserEnable();
 
     expect(loop).toHaveBeenCalled();
   });
 
   it('should handle onUserDisable patch', () => {
     const { app, component } = createComponent();
-    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(createCanvasCorePlugin(false));
+    const { instanceProto, plugin } = createCanvasCorePlugin(false);
+    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(plugin);
 
-    component.onload();
+    component.load();
 
-    const disablePatch = registeredMethodPatches.find((p) => p.methodName === 'onUserDisable');
-    disablePatch?.patchHandler({});
+    instanceProto.onUserDisable();
 
     expect(reloadBacklinksView).toHaveBeenCalled();
   });
 
   it('should return cached metadata for canvas files via getCache patch', () => {
-    const { component } = createComponent();
+    const { app, component } = createComponent();
+    const originalGetCache = vi.mocked(app.metadataCache.getCache);
+    originalGetCache.mockReturnValue(castTo<CachedMetadata>({ sections: [] }));
 
-    component.onload();
-
-    const getCachePatch = registeredMethodPatches.find((p) => p.methodName === 'getCache');
-    expect(getCachePatch).toBeDefined();
-
-    const fallback = vi.fn().mockReturnValue({ sections: [] });
+    component.load();
 
     vi.mocked(isCanvasFile).mockReturnValue(false);
-    const nonCanvasResult = getCachePatch?.patchHandler({ fallback, originalArgs: ['test.md'] });
-    expect(fallback).toHaveBeenCalled();
+    const nonCanvasResult = app.metadataCache.getCache('test.md');
+    expect(originalGetCache).toHaveBeenCalled();
     expect(nonCanvasResult).toEqual({ sections: [] });
 
     vi.mocked(isCanvasFile).mockReturnValue(true);
-    const result = getCachePatch?.patchHandler({ fallback, originalArgs: ['uncached.canvas'] });
+    const result = app.metadataCache.getCache('uncached.canvas');
     expect(result).toBeNull();
   });
 });

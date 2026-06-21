@@ -13,43 +13,6 @@ import type { PluginSettings } from './plugin-settings.ts';
 
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 
-vi.mock('obsidian-dev-utils/obsidian/setting-ex', () => {
-  class MockSettingEx {
-    private readonly callbacks: ((toggle: unknown) => void)[] = [];
-    private desc = '';
-    private name = '';
-
-    public constructor(public readonly containerEl: HTMLElement) {
-    }
-
-    public addToggle(cb: (toggle: unknown) => void): this {
-      this.callbacks.push(cb);
-      cb({ getValue: vi.fn(), onChange: vi.fn(), setValue: vi.fn() });
-      return this;
-    }
-
-    public getDesc(): string {
-      return this.desc;
-    }
-
-    public getName(): string {
-      return this.name;
-    }
-
-    public setDesc(desc: string): this {
-      this.desc = desc;
-      return this;
-    }
-
-    public setName(name: string): this {
-      this.name = name;
-      return this;
-    }
-  }
-
-  return { SettingEx: MockSettingEx };
-});
-
 describe('PluginSettingsTab', () => {
   it('should display two toggle settings bound to the correct properties', () => {
     const pluginSettingsComponent = strictProxy<PluginSettingsComponentBase<PluginSettings>>({

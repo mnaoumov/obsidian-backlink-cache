@@ -2,6 +2,8 @@ import type {
   App,
   PluginManifest
 } from 'obsidian';
+import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/components/abort-signal-component';
+import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
@@ -42,25 +44,6 @@ vi.mock('obsidian-dev-utils/obsidian/data-handler', () => ({
   PluginDataHandler: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/plugin/plugin', () => {
-  class MockPluginBase {
-    public abortSignalComponent = { abortSignal: { aborted: false } };
-    public app: App;
-    public consoleDebugComponent = { consoleDebug: vi.fn() };
-    public manifest: PluginManifest;
-
-    public constructor(app: App, manifest: PluginManifest) {
-      this.app = app;
-      this.manifest = manifest;
-    }
-
-    public addChild(child: unknown): unknown {
-      return child;
-    }
-  }
-  return { PluginBase: MockPluginBase };
-});
-
 vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-event-source', () => ({
   PluginEventSourceImpl: vi.fn()
 }));
@@ -82,6 +65,8 @@ vi.mock('./plugin-settings-tab.ts', () => ({
 }));
 
 interface PluginInternals {
+  _abortSignalComponent: AbortSignalComponent;
+  _consoleDebugComponent: ConsoleDebugComponent;
   onloadImpl(): void;
 }
 
@@ -100,9 +85,12 @@ describe('Plugin', () => {
   it('should wire up all components in onloadImpl', () => {
     const app = createMockApp();
     const plugin = new Plugin(app, createMockManifest());
+    const internals = castTo<PluginInternals>(plugin);
+    internals._abortSignalComponent = strictProxy<AbortSignalComponent>({ abortSignal: castTo<AbortSignal>({ aborted: false }) });
+    internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
     const addChildSpy = vi.spyOn(plugin, 'addChild');
 
-    castTo<PluginInternals>(plugin).onloadImpl();
+    internals.onloadImpl();
 
     expect(PluginSettingsComponent).toHaveBeenCalledOnce();
     expect(PluginSettingsTab).toHaveBeenCalledOnce();
