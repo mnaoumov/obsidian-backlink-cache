@@ -23,13 +23,22 @@ export class MetadataCacheGetBacklinksForFilePatchComponent extends MonkeyAround
   }
 
   public override onload(): void {
-    this.registerPatch(this.metadataCache, {
-      getBacklinksForFile: (originalFn: GetBacklinksForFileFn): GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper => {
-        const patched: GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper = Object.assign(this.backlinkCacheComponent.getBacklinksForFile.bind(this.backlinkCacheComponent), {
-          originalFn: originalFn.bind(this.metadataCache),
+    this.registerMethodPatch({
+      methodName: 'getBacklinksForFile',
+      obj: this.metadataCache,
+      patchHandler: ({
+        originalArgs: [file]
+      }) => {
+        return this.backlinkCacheComponent.getBacklinksForFile(file);
+      },
+      postPatchHandler: ({
+        originalMethod,
+        patchedMethod
+      }): GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper => {
+        return Object.assign(patchedMethod, {
+          originalFn: originalMethod.bind(this.metadataCache),
           safe: this.backlinkCacheComponent.getBacklinksForFileSafe.bind(this.backlinkCacheComponent)
         });
-        return patched;
       }
     });
   }
