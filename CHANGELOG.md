@@ -1,5 +1,17 @@
 # CHANGELOG
 
+## 2.13.0
+
+- test: add real-Obsidian functional guard for the getCache canvas patch
+- test: add real-Obsidian functional guard for the backlink panel patch
+- test: add real-Obsidian on/off perf tripwire for core patches
+- test: add deterministic complexity-scaling guards for index lookups
+- test: add real-Obsidian perf guard for updateRelatedLinks patch
+- feat: make bulk folder deletion O(N) by patching updateRelatedLinks
+- chore: update libs
+- chore: unify tsconfig
+- test: cleanup
+
 ## 2.12.8
 
 - test: avoid reimplementing
