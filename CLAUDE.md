@@ -5,60 +5,40 @@ in this repository.
 
 ## Known Issues
 
-### Bulk-deletion freeze: O(vault) per-call cost in the `getCache` patch's canvas check
+### Bulk-deletion freeze: O(vault) `getCache` miss-scan via `isCanvasFile` (RESOLVED 2026-06-22)
 
-First observed 2026-06-22 by CPU-profiling the real vault `F:\Obsidian` (~90k files)
-while Advanced Exclude hid a large folder in `Full` mode. Hiding a folder makes Obsidian
-run its internal `removeFile` cascade once per descendant file (~943 files in the test),
-and for each one Obsidian's `MetadataCache.onDelete` reads the file's cache via
-`getCache` (reached through `getFileCache`) — the method this plugin patches
-(`src/patches/metadata-cache-get-cache-patch-component.ts`). The profile attributed
+First observed by CPU-profiling the real vault `F:\Obsidian` (~90k files) while Advanced
+Exclude hid a large folder in `Full` mode. Hiding a folder makes Obsidian run its internal
+`removeFile` cascade once per descendant file (~943 files), and Advanced Exclude also calls
+`getFileCache` per descendant to drop it from the index. Both reach this plugin's `getCache`
+patch (`src/patches/metadata-cache-get-cache-patch-component.ts`). The profile attributed
 ~11–12 s of the multi-plugin freeze to this plugin's frames.
 
-The original hypothesis was that the patch does heavy reverse-index work per deleted
-file (O(N × index)). The dedicated troubleshooting harness
-(`src/bulk-delete.desktop-performance.integration.test.ts`) **disproves that** and
-localizes the real cost. It deletes two identical folders of linking notes — one with
-the plugin enabled, one disabled — and instruments the cascade.
+**Root cause (measured, not guessed).** The patch decided canvas routing with
+`isCanvasFile(app, path)`, which resolves the path via a **case-insensitive
+`getAbstractFileByPath` lookup**. That lookup is O(1) on a *hit* but does an **O(vault) scan
+on a *miss*** — and during/after deletion (real or synthetic) the path is exactly a miss. So
+the patched `getCache` became **O(vault) per call**: measured ~4.5 ms/call at 20k files vs
+~0.0005 ms native, scaling linearly with vault size.
 
-**What the measurements show** (per-deleted-file, plugin-enabled vs Obsidian-native):
+Why it surfaced as a freeze despite the plugin elsewhere *saving* time: in a genuine delete
+cascade the per-call miss-scan partly nets out against the work the `getBacklinksForFile`
+patch saves (net sync cascade time enabled ≈ disabled). But a hot-loop caller that hits
+`getCache`/`getFileCache` on already-removed paths **without** triggering that offsetting
+work — Advanced Exclude's synthetic hide, ~943 calls — pays the full O(vault) cost with
+nothing to offset it. (The deferred debounced reverse-index batch was never the problem; it
+blocks only ~3–16 ms — the original "heavy reverse-index work per deleted file" hypothesis
+was wrong.)
 
-| vault size | native sync/file | patched sync/file | sync overhead | native getCache/call | patched getCache/call |
-|------------|------------------|-------------------|---------------|----------------------|-----------------------|
-| 300        | 4.16 ms          | 3.44 ms           | 0.83×         | 0.005 ms             | 0.13 ms               |
-| 20 000     | 33.15 ms         | 32.63 ms          | 0.98×         | 0.005 ms             | 4.79 ms               |
+**Fix.** Route canvas files by the path's `.canvas` extension *string* (O(1)) instead of
+resolving the file. `getCache` is always called with the canonical file path, so the routing
+decision is identical, and both hits and misses are now O(1) (~0.0005 ms/call at 20k).
 
-1. **The plugin is not the bottleneck for a genuine delete cascade.** Net synchronous
-   cascade time is the same with the plugin on or off (overhead factor ~0.8–1.0 across
-   scales). The cascade is dominated by Obsidian's own native delete work, which is
-   itself roughly O(vault): per-file cost rises from ~4 ms (300-file vault) to ~33 ms
-   (20k-file vault) **even with the plugin disabled**. That native scaling is what froze
-   the UI at 90k.
-2. **The deferred debounced reverse-index batch is cheap** — it blocks the main thread
-   for only ~3–16 ms total (it is an incremental per-path drop, not a rebuild). This
-   directly refutes the "heavy reverse-index work per deleted file" hypothesis, and the
-   harness has a tripwire that fails if that batch ever exceeds 2 s.
-3. **But the patched `getCache` is far more expensive *per call* than native, and that
-   per-call cost grows with vault size** (0.005 ms native and flat, vs 0.13 ms → 4.79 ms
-   patched as the vault grows). The growth is entirely the patch's added work: its
-   `isCanvasFile(app, path)` check (`metadata-cache-get-cache-patch-component.ts:31`)
-   resolves the path via `getFileOrNull` → a **case-insensitive `getAbstractFileByPath`
-   lookup that scales with vault size**. Native `getCache` is a flat O(1) map hit.
+**Guarded by** (real-Obsidian `*.desktop-performance.integration.test.ts`, run manually with
+`BC_PERF_VAULT_SIZE` / `BC_PERF_DELETE_COUNT`):
 
-**Why the freeze still happened despite (1).** In a genuine delete cascade the O(vault)
-per-call `getCache` overhead nets out against the time the `getBacklinksForFile` patch
-*saves* elsewhere in `onDelete` (likely Obsidian's native backlink recompute). But any
-caller that hits the patched `getCache`/`getFileCache` in a hot loop **without**
-triggering that offsetting work pays the full per-call O(vault) cost. That is exactly
-Advanced Exclude's **synthetic** hide path: it calls `getFileCache` per descendant to
-remove the file from the index (the file still exists on disk), so it eats the
-`isCanvasFile` vault scan ~943 times with nothing to offset it — the plugin's real,
-fixable contribution to the freeze.
-
-**Fix direction (revised):** make the `getCache` patch's canvas check **O(1)** — decide
-whether to route to the canvas component by the path's extension *string* (e.g. a cheap
-`.canvas` suffix check) instead of resolving the file through the case-insensitive
-`getAbstractFileByPath` lookup. That removes the per-call vault scan entirely while
-keeping routing behavior identical, since Obsidian always calls `getCache` with the
-full file path. After the fix, add a tripwire to the harness asserting the patched
-`getCache` per-call overhead stays flat (does not grow with vault size).
+- `get-cache-patch-overhead.desktop-performance.integration.test.ts` — asserts patched
+  `getCache` stays sub-millisecond per call (incl. the missing-path case) and flat across
+  vault sizes; fires if routing ever resolves the file again.
+- `bulk-delete.desktop-performance.integration.test.ts` — full cascade breakdown (enabled vs
+  disabled), with tripwires on per-file sync overhead and the deferred batch's block time.
