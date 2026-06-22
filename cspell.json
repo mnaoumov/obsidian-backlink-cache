@@ -26,7 +26,8 @@
     "postversion",
     "preversion",
     "subkey",
-    "tsbuildinfo"
+    "tsbuildinfo",
+    "undercounts"
   ],
   "ignoreWords": [],
   "import": [],
