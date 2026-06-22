@@ -10,6 +10,8 @@ import type {
   TAbstractFile
 } from 'obsidian';
 import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/components/abort-signal-component';
+// eslint-disable-next-line import-x/no-namespace -- Type-only namespace alias used for vitest's importOriginal<T>() without dynamic import() in type position.
+import type * as FileSystemModule from 'obsidian-dev-utils/obsidian/file-system';
 import type { CanvasData } from 'obsidian/canvas.d.ts';
 
 import { TFile } from 'obsidian';
@@ -53,9 +55,13 @@ interface RegisteredEventHandler {
 
 const registeredEventHandlers: RegisteredEventHandler[] = [];
 
-vi.mock('obsidian-dev-utils/obsidian/file-system', () => ({
-  isCanvasFile: vi.fn()
-}));
+vi.mock('obsidian-dev-utils/obsidian/file-system', async (importOriginal) => {
+  const original = await importOriginal<typeof FileSystemModule>();
+  return {
+    ...original,
+    isCanvasFile: vi.fn()
+  };
+});
 
 vi.mock('obsidian-dev-utils/obsidian/loop', () => ({
   loop: vi.fn()
