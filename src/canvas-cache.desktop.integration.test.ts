@@ -50,9 +50,7 @@ describe('getCache exposes canvas node links', () => {
         const deadline = Date.now() + waitMs;
         let cache = app.metadataCache.getCache(canvasPath);
         while ((!cache || (cache.frontmatterLinks?.length ?? 0) === 0) && Date.now() < deadline) {
-          await new Promise<void>((resolve) => {
-            window.setTimeout(resolve, pollMs);
-          });
+          await sleep(pollMs);
           cache = app.metadataCache.getCache(canvasPath);
         }
 

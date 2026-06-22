@@ -46,9 +46,7 @@ describe('updateRelatedLinks avoids the vault scan', () => {
         LINKER_PREFIX: linkerPrefix,
         TARGET_BASENAME: targetBasename
       }) {
-        await new Promise<void>((resolve) => {
-          window.setTimeout(resolve, settleMs);
-        });
+        await sleep(settleMs);
 
         const metadataCache = app.metadataCache;
         const targetFile = app.vault.getFileByPath(targetBasename);

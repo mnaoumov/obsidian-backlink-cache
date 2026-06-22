@@ -65,9 +65,7 @@ describe('plugin on/off perf tripwire', () => {
         const deadline = Date.now() + waitMs;
         let backlinkCount = metadataCache.getBacklinksForFile(targetFile).keys().length;
         while (backlinkCount < linkerCount && Date.now() < deadline) {
-          await new Promise<void>((resolve) => {
-            window.setTimeout(resolve, pollMs);
-          });
+          await sleep(pollMs);
           backlinkCount = metadataCache.getBacklinksForFile(targetFile).keys().length;
         }
 

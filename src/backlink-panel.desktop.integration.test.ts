@@ -55,9 +55,7 @@ describe('backlink panel renders backlinks via the plugin index', () => {
         const deadline = Date.now() + waitMs;
         let backlinkCount = app.metadataCache.getBacklinksForFile(targetFile).keys().length;
         while (backlinkCount < linkerCount && Date.now() < deadline) {
-          await new Promise<void>((resolve) => {
-            window.setTimeout(resolve, pollMs);
-          });
+          await sleep(pollMs);
           backlinkCount = app.metadataCache.getBacklinksForFile(targetFile).keys().length;
         }
 
@@ -65,9 +63,7 @@ describe('backlink panel renders backlinks via the plugin index', () => {
         await leaf.openFile(targetFile);
 
         app.internalPlugins.getPluginById('backlink')?.instance.openBacklinksForActiveFile(true);
-        await new Promise<void>((resolve) => {
-          window.setTimeout(resolve, settleMs);
-        });
+        await sleep(settleMs);
 
         const backlinkLeaf = app.workspace.getLeavesOfType('backlink')[0];
         if (!backlinkLeaf) {
@@ -80,9 +76,7 @@ describe('backlink panel renders backlinks via the plugin index', () => {
 
         const backlinkComponent = (backlinkLeaf.view as BacklinkView).backlink;
         backlinkComponent.recomputeBacklink(targetFile);
-        await new Promise<void>((resolve) => {
-          window.setTimeout(resolve, settleMs);
-        });
+        await sleep(settleMs);
 
         return { error: null, matchCount: backlinkComponent.backlinkDom.getMatchCount(), openLeafTypes: [] as string[] };
       },
