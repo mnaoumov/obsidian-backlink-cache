@@ -110,12 +110,6 @@ export function registerReadmeCallsSuite(platform: string): void {
           }
 
           return { found: false };
-
-          function sleep(milliseconds: number): Promise<void> {
-            return new Promise((resolve) => {
-              window.setTimeout(resolve, milliseconds);
-            });
-          }
         },
         vaultPath: getTempVault().path
       });
