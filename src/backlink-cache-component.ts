@@ -289,7 +289,7 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
       return;
     }
 
-    if (isCanvasFile(this.app, noteFile) && !isCanvasPluginEnabled(this.app)) {
+    if (isCanvasFile(noteFile) && !isCanvasPluginEnabled(this.app)) {
       return;
     }
 

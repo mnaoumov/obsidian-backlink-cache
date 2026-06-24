@@ -17,9 +17,10 @@ describe('RefreshBacklinkPanelsCommandHandler', () => {
     });
     const handler = new RefreshBacklinkPanelsCommandHandler(backlinkCacheComponent);
 
-    expect(handler.id).toBe('refresh-backlink-panels');
-    expect(handler.name).toBe('Refresh backlink panels');
-    expect(handler.icon).toBe('refresh');
+    const command = handler.buildCommand();
+    expect(command.id).toBe('refresh-backlink-panels');
+    expect(command.name).toBe('Refresh backlink panels');
+    expect(command.icon).toBe('refresh');
   });
 
   it('should call refreshBacklinkPanels when command callback is invoked', async () => {

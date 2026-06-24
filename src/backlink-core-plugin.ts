@@ -59,16 +59,6 @@ export class BacklinksCorePluginComponent extends ComponentEx {
   }
 }
 
-export async function getBacklinkView(app: App): Promise<BacklinkView | null> {
-  const backlinksLeaf = app.workspace.getLeavesOfType(ViewType.Backlink)[0];
-  if (!backlinksLeaf) {
-    return null;
-  }
-
-  await backlinksLeaf.loadIfDeferred();
-  return backlinksLeaf.view as BacklinkView;
-}
-
 export async function reloadBacklinksView(app: App): Promise<void> {
   const backlinkView = await getBacklinkView(app);
   if (!backlinkView) {
@@ -77,4 +67,14 @@ export async function reloadBacklinksView(app: App): Promise<void> {
   if (backlinkView.file) {
     backlinkView.backlink.recomputeBacklink(backlinkView.file);
   }
+}
+
+async function getBacklinkView(app: App): Promise<BacklinkView | null> {
+  const backlinksLeaf = app.workspace.getLeavesOfType(ViewType.Backlink)[0];
+  if (!backlinksLeaf) {
+    return null;
+  }
+
+  await backlinksLeaf.loadIfDeferred();
+  return backlinksLeaf.view as BacklinkView;
 }

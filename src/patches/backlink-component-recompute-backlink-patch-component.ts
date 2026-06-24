@@ -92,7 +92,7 @@ export class BacklinkComponentRecomputeBacklinkPatchComponent extends MonkeyArou
     }
 
     let canvasData: CanvasData | null = null;
-    if (isCanvasFile(app, backlinkNoteFile)) {
+    if (isCanvasFile(backlinkNoteFile)) {
       canvasData = JSON.parse(content) as CanvasData;
       content = patchCanvasContent(canvasData);
     }
@@ -128,7 +128,7 @@ export class BacklinkComponentRecomputeBacklinkPatchComponent extends MonkeyArou
         });
         isValidLink = true;
 
-        if (isCanvasFile(app, backlinkNoteFile)) {
+        if (isCanvasFile(backlinkNoteFile)) {
           if (!isCanvasReference(link)) {
             console.warn('Unknown link type', {
               link
@@ -190,8 +190,8 @@ export class BacklinkComponentRecomputeBacklinkPatchComponent extends MonkeyArou
     }
   }
 }
-export const FILE_PREFIX = 'file: ';
-export function patchCanvasContent(canvasData: CanvasData): string {
+const FILE_PREFIX = 'file: ';
+function patchCanvasContent(canvasData: CanvasData): string {
   const patched: CanvasData = {
     edges: canvasData.edges,
     nodes: []

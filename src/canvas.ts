@@ -117,7 +117,7 @@ export class CanvasComponent extends ComponentEx {
   }
 
   private handleFileCreateOrModify(file: TAbstractFile): void {
-    if (!isCanvasFile(this.app, file) || !(file instanceof TFile)) {
+    if (!isCanvasFile(file) || !(file instanceof TFile)) {
       return;
     }
     invokeAsyncSafely(async () => {
@@ -127,14 +127,14 @@ export class CanvasComponent extends ComponentEx {
   }
 
   private handleFileDelete(file: TAbstractFile): void {
-    if (!isCanvasFile(this.app, file)) {
+    if (!isCanvasFile(file)) {
       return;
     }
     canvasMetadataCacheMap.delete(file.path);
   }
 
   private handleFileRename(file: TAbstractFile, oldPath: string): void {
-    if (!isCanvasFile(this.app, file)) {
+    if (!isCanvasFile(file)) {
       return;
     }
     const canvasMetadataCache = canvasMetadataCacheMap.get(oldPath);
@@ -145,7 +145,7 @@ export class CanvasComponent extends ComponentEx {
   }
 
   private async initCanvasMetadataCache(file: TFile): Promise<void> {
-    if (!isCanvasFile(this.app, file)) {
+    if (!isCanvasFile(file)) {
       return;
     }
 
@@ -224,7 +224,7 @@ export class CanvasComponent extends ComponentEx {
     await loop({
       abortSignal: this.abortSignalComponent.abortSignal,
       buildNoticeMessage: (canvasFile, iterationStr) => `Processing backlinks ${iterationStr} - ${canvasFile.path}`,
-      items: this.app.vault.getFiles().filter((file) => isCanvasFile(this.app, file)),
+      items: this.app.vault.getFiles().filter((file) => isCanvasFile(file)),
       processItem: async (canvasFile) => {
         await this.initCanvasMetadataCache(canvasFile);
         this.backlinkCacheComponent.triggerRefresh(canvasFile.path);
@@ -236,7 +236,7 @@ export class CanvasComponent extends ComponentEx {
   }
 
   private removeCanvasMetadataCache(): void {
-    const canvasFiles = this.app.vault.getFiles().filter((file) => isCanvasFile(this.app, file));
+    const canvasFiles = this.app.vault.getFiles().filter((file) => isCanvasFile(file));
     for (const file of canvasFiles) {
       if (this.abortSignalComponent.abortSignal.aborted) {
         return;
