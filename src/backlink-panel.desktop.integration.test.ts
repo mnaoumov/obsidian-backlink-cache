@@ -18,7 +18,11 @@ import {
  */
 
 const LINKER_COUNT = 5;
-const TARGET_PATH = 'target.md';
+// Unique to this test so it never collides with other functional guards.
+// Canvas-cache also creates a root `target.md` in this shared temp vault.
+const TARGET_BASENAME = 'backlink-panel-target';
+const TARGET_PATH = `${TARGET_BASENAME}.md`;
+const LINKER_PREFIX = 'backlink-panel-link';
 const INDEX_WAIT_IN_MS = 60_000;
 const INDEX_POLL_IN_MS = 1_000;
 const PANEL_SETTLE_IN_MS = 5_000;
@@ -31,7 +35,9 @@ describe('backlink panel renders backlinks via the plugin index', () => {
         INDEX_POLL_IN_MS,
         INDEX_WAIT_IN_MS,
         LINKER_COUNT,
+        LINKER_PREFIX,
         PANEL_SETTLE_IN_MS,
+        TARGET_BASENAME,
         TARGET_PATH
       },
       async fn({
@@ -39,12 +45,14 @@ describe('backlink panel renders backlinks via the plugin index', () => {
         INDEX_POLL_IN_MS: pollMs,
         INDEX_WAIT_IN_MS: waitMs,
         LINKER_COUNT: linkerCount,
+        LINKER_PREFIX: linkerPrefix,
         PANEL_SETTLE_IN_MS: settleMs,
+        TARGET_BASENAME: targetBasename,
         TARGET_PATH: targetPath
       }) {
         await app.vault.create(targetPath, '');
         for (let index = 0; index < linkerCount; index++) {
-          await app.vault.create(`link-${String(index)}.md`, '[[target]]\n');
+          await app.vault.create(`${linkerPrefix}-${String(index)}.md`, `[[${targetBasename}]]\n`);
         }
 
         const targetFile = app.vault.getFileByPath(targetPath);
