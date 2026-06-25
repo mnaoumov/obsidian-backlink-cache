@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.14.0
+
+- perf: make faster
+
 ## 2.13.0
 
 - test: add real-Obsidian functional guard for the getCache canvas patch
