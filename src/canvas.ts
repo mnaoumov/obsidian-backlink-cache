@@ -4,6 +4,7 @@ import type {
   TAbstractFile
 } from 'obsidian';
 import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/components/abort-signal-component';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type {
   CanvasFileNodeReference,
   CanvasReference,
@@ -39,6 +40,7 @@ interface CanvasComponentConstructorParams {
   readonly abortSignalComponent: AbortSignalComponent;
   readonly app: App;
   readonly backlinkCacheComponent: BacklinkCacheComponent;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
@@ -46,6 +48,7 @@ export class CanvasComponent extends ComponentEx {
   private readonly abortSignalComponent: AbortSignalComponent;
   private readonly app: App;
   private readonly backlinkCacheComponent: BacklinkCacheComponent;
+  private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
 
   public constructor(params: CanvasComponentConstructorParams) {
@@ -54,6 +57,7 @@ export class CanvasComponent extends ComponentEx {
     this.app = params.app;
     this.abortSignalComponent = params.abortSignalComponent;
     this.backlinkCacheComponent = params.backlinkCacheComponent;
+    this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
@@ -225,6 +229,7 @@ export class CanvasComponent extends ComponentEx {
       abortSignal: this.abortSignalComponent.abortSignal,
       buildNoticeMessage: (canvasFile, iterationStr) => `Processing backlinks ${iterationStr} - ${canvasFile.path}`,
       items: this.app.vault.getFiles().filter((file) => isCanvasFile(file)),
+      pluginNoticeComponent: this.pluginNoticeComponent,
       processItem: async (canvasFile) => {
         await this.initCanvasMetadataCache(canvasFile);
         this.backlinkCacheComponent.triggerRefresh(canvasFile.path);

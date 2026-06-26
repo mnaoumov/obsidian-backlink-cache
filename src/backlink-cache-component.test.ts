@@ -12,6 +12,7 @@ import type {
 } from 'obsidian';
 import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/components/abort-signal-component';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 // eslint-disable-next-line import-x/no-namespace -- Type-only namespace alias used for vitest's importOriginal<T>() without dynamic import() in type position.
 import type * as FileSystemModule from 'obsidian-dev-utils/obsidian/file-system';
 // eslint-disable-next-line import-x/no-namespace -- Type-only namespace alias used for vitest's importOriginal<T>() without dynamic import() in type position.
@@ -206,6 +207,7 @@ function createTestContext(): TestContext {
     abortSignalComponent: strictProxy<AbortSignalComponent>({ abortSignal: castTo<AbortSignal>(abortSignal) }),
     app,
     consoleDebugComponent: strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() }),
+    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({}),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({ settings })
   });
 
@@ -484,7 +486,12 @@ describe('BacklinkCacheComponent', () => {
 
       await asInternals(context.component).refreshBacklinks.call(context.component, 'note.md');
 
-      expect(extractLinkFile).toHaveBeenCalledWith(context.app, mockLink, 'note.md', true);
+      expect(extractLinkFile).toHaveBeenCalledWith({
+        app: context.app,
+        link: mockLink,
+        shouldAllowNonExistingFile: true,
+        sourcePathOrFile: 'note.md'
+      });
     });
 
     it('should reuse existing linkSet for multiple links to same target', async () => {
@@ -730,7 +737,7 @@ describe('BacklinkCacheComponent', () => {
 
     it('should index a resolved link by target basename and add a backlink', async () => {
       const linkFile = createTFile('folder/target.md');
-      vi.mocked(extractLinkFile).mockImplementation((_app, _link, _path, shouldAllowNonExistingFile) => shouldAllowNonExistingFile ? null : linkFile);
+      vi.mocked(extractLinkFile).mockImplementation((params) => params.shouldAllowNonExistingFile ? null : linkFile);
 
       await refreshNote('note.md', [createLink('target')]);
 
@@ -742,7 +749,7 @@ describe('BacklinkCacheComponent', () => {
 
     it('should index an unresolved link to a non-existing file as a backlink and an unresolved basename', async () => {
       const nonExistingLinkFile = createTFile('folder/ghost.md');
-      vi.mocked(extractLinkFile).mockImplementation((_app, _link, _path, shouldAllowNonExistingFile) => shouldAllowNonExistingFile ? nonExistingLinkFile : null);
+      vi.mocked(extractLinkFile).mockImplementation((params) => params.shouldAllowNonExistingFile ? nonExistingLinkFile : null);
 
       await refreshNote('note.md', [createLink('ghost')]);
 
@@ -766,11 +773,11 @@ describe('BacklinkCacheComponent', () => {
 
     it('should clear resolved and unresolved basename entries when a source is removed', async () => {
       const linkFile = createTFile('target.md');
-      vi.mocked(extractLinkFile).mockImplementation((_app, link, _path, shouldAllowNonExistingFile) => {
-        if (shouldAllowNonExistingFile) {
+      vi.mocked(extractLinkFile).mockImplementation((params) => {
+        if (params.shouldAllowNonExistingFile) {
           return null;
         }
-        return link.link === 'target' ? linkFile : null;
+        return params.link.link === 'target' ? linkFile : null;
       });
 
       await refreshNote('note.md', [createLink('target'), createLink('ghost')]);

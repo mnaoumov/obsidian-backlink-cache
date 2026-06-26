@@ -291,7 +291,7 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
       backlinkProto.recomputeBacklink.call(backlinkComponent, file);
       // `recomputeBacklink` dispatches its work via the real `invokeAsyncSafely` as fire-and-forget;
       // Flush the microtask chain (mocked awaits resolve immediately) with a macrotask tick.
-      await sleep(0);
+      await sleep({ milliseconds: 0 });
     };
   }
 

@@ -52,12 +52,12 @@ describe('PluginSettingsTab', () => {
 
     tab.containerEl = activeDocument.createElement('div');
 
-    const bindSpy = vi.spyOn(tab, 'bind').mockReturnValue(undefined);
+    const bindSpy = vi.spyOn(tab, 'bind').mockImplementation((params) => params.valueComponent);
 
     tab.displayLegacy();
 
     expect(bindSpy).toHaveBeenCalledTimes(2);
-    expect(bindSpy.mock.calls[0]?.[1]).toBe('shouldAutomaticallyRefreshBacklinkPanels');
-    expect(bindSpy.mock.calls[1]?.[1]).toBe('shouldShowProgressBarOnLoad');
+    expect(bindSpy.mock.calls[0]?.[0].propertyName).toBe('shouldAutomaticallyRefreshBacklinkPanels');
+    expect(bindSpy.mock.calls[1]?.[0].propertyName).toBe('shouldShowProgressBarOnLoad');
   });
 });

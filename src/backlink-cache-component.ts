@@ -6,6 +6,7 @@ import type {
 } from 'obsidian';
 import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/components/abort-signal-component';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 import type { PathOrFile } from 'obsidian-dev-utils/obsidian/file-system';
 
 import {
@@ -54,6 +55,7 @@ interface BacklinkCacheComponentConstructorParams {
   readonly abortSignalComponent: AbortSignalComponent;
   readonly app: App;
   readonly consoleDebugComponent: ConsoleDebugComponent;
+  readonly pluginNoticeComponent: PluginNoticeComponent;
   readonly pluginSettingsComponent: PluginSettingsComponent;
 }
 
@@ -73,6 +75,7 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
   private debouncedProcessPendingActions?: Debouncer<[], Promise<void>>;
   private readonly linksMap = new Map<string, Set<string>>();
   private readonly pendingActions = new Map<string, Action>();
+  private readonly pluginNoticeComponent: PluginNoticeComponent;
   private readonly pluginSettingsComponent: PluginSettingsComponent;
   private readonly resolvedBasenameMap = new Map<string, Set<string>>();
   private readonly unresolvedBasenameMap = new Map<string, Set<string>>();
@@ -83,6 +86,7 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
 
     this.abortSignalComponent = params.abortSignalComponent;
     this.consoleDebugComponent = params.consoleDebugComponent;
+    this.pluginNoticeComponent = params.pluginNoticeComponent;
     this.pluginSettingsComponent = params.pluginSettingsComponent;
   }
 
@@ -166,6 +170,7 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
         abortSignalComponent: this.abortSignalComponent,
         app: this.app,
         backlinkCacheComponent: this,
+        pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent: this.pluginSettingsComponent
       })
     );
@@ -244,6 +249,7 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
       abortSignal: this.abortSignalComponent.abortSignal,
       buildNoticeMessage: (note, iterationStr) => `Processing backlinks ${iterationStr} - ${note.path}`,
       items: getMarkdownFilesSorted(this.app),
+      pluginNoticeComponent: this.pluginNoticeComponent,
       processItem: async (note) => {
         await this.refreshBacklinks(note.path);
       },
@@ -283,7 +289,10 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
     this.consoleDebugComponent.consoleDebug(`Refreshing backlinks for ${notePath}`);
     this.removeLinkedPathEntries(notePath);
 
-    const noteFile = getFileOrNull(this.app, notePath);
+    const noteFile = getFileOrNull({
+      app: this.app,
+      pathOrFile: notePath
+    });
 
     if (!noteFile) {
       return;
@@ -310,14 +319,23 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
         return;
       }
 
-      const resolvedLinkFile = extractLinkFile(this.app, link, notePath);
+      const resolvedLinkFile = extractLinkFile({
+        app: this.app,
+        link,
+        sourcePathOrFile: notePath
+      });
       if (resolvedLinkFile) {
         this.addBacklink(resolvedLinkFile.path, notePath, link);
         addToMapSet(this.resolvedBasenameMap, getBasenameLower(resolvedLinkFile.path), notePath);
         continue;
       }
 
-      const nonExistingLinkFile = extractLinkFile(this.app, link, notePath, true);
+      const nonExistingLinkFile = extractLinkFile({
+        app: this.app,
+        link,
+        shouldAllowNonExistingFile: true,
+        sourcePathOrFile: notePath
+      });
       if (nonExistingLinkFile) {
         this.addBacklink(nonExistingLinkFile.path, notePath, link);
       }

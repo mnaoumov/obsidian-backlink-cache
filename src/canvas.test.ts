@@ -10,6 +10,7 @@ import type {
   TAbstractFile
 } from 'obsidian';
 import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/components/abort-signal-component';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 // eslint-disable-next-line import-x/no-namespace -- Type-only namespace alias used for vitest's importOriginal<T>() without dynamic import() in type position.
 import type * as FileSystemModule from 'obsidian-dev-utils/obsidian/file-system';
 import type { CanvasData } from 'obsidian/canvas.d.ts';
@@ -125,6 +126,7 @@ function createComponent(overrides: CreateComponentOverrides = {}): CreateCompon
     abortSignalComponent: strictProxy<AbortSignalComponent>({ abortSignal: castTo<AbortSignal>(abortSignal) }),
     app,
     backlinkCacheComponent,
+    pluginNoticeComponent: strictProxy<PluginNoticeComponent>({}),
     pluginSettingsComponent: strictProxy<PluginSettingsComponent>({ settings: new PluginSettings() })
   });
 

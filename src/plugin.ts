@@ -38,6 +38,7 @@ export class Plugin extends PluginBase {
         abortSignalComponent: this.abortSignalComponent,
         app: this.app,
         consoleDebugComponent: this.consoleDebugComponent,
+        pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent
       })
     );

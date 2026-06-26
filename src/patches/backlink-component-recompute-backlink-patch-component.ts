@@ -68,7 +68,10 @@ export class BacklinkComponentRecomputeBacklinkPatchComponent extends MonkeyArou
       return;
     }
 
-    const backlinks = await getBacklinksForFileSafe(app, backlinkFile);
+    const backlinks = await getBacklinksForFileSafe({
+      app,
+      pathOrFile: backlinkFile
+    });
     backlinkComponent.backlinkCountEl.setText(backlinks.count().toString());
     backlinkComponent.backlinkDom.changed();
     backlinkComponent.backlinkDom.emptyResults();

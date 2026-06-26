@@ -4,6 +4,7 @@ import type {
 } from 'obsidian';
 import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/components/abort-signal-component';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
+import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
@@ -67,6 +68,7 @@ vi.mock('./plugin-settings-tab.ts', () => ({
 interface PluginInternals {
   _abortSignalComponent: AbortSignalComponent;
   _consoleDebugComponent: ConsoleDebugComponent;
+  _pluginNoticeComponent: PluginNoticeComponent;
   onloadImpl(): void;
 }
 
@@ -88,6 +90,7 @@ describe('Plugin', () => {
     const internals = castTo<PluginInternals>(plugin);
     internals._abortSignalComponent = strictProxy<AbortSignalComponent>({ abortSignal: castTo<AbortSignal>({ aborted: false }) });
     internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
+    internals._pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
     const addChildSpy = vi.spyOn(plugin, 'addChild');
 
     internals.onloadImpl();
