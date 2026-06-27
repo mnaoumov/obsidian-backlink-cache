@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 2.14.1
+
+- refactor: new template
+
 ## 2.14.0
 
 - perf: make faster
