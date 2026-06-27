@@ -20,7 +20,6 @@ import {
   isReferenceCache
 } from '@obsidian-typings/obsidian-public-latest/implementations';
 import { debounce } from 'obsidian';
-import { sleep } from 'obsidian-dev-utils/async';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
 import { isFrontmatterLinkCacheWithOffsets } from 'obsidian-dev-utils/obsidian/frontmatter-link-cache-with-offsets';
 import { getBacklinksForFileSafe } from 'obsidian-dev-utils/obsidian/metadata-cache';
@@ -291,7 +290,7 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
       backlinkProto.recomputeBacklink.call(backlinkComponent, file);
       // `recomputeBacklink` dispatches its work via the real `invokeAsyncSafely` as fire-and-forget;
       // Flush the microtask chain (mocked awaits resolve immediately) with a macrotask tick.
-      await sleep({ milliseconds: 0 });
+      await sleep(0);
     };
   }
 
