@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 2.14.2
+
+- chore: update libs
+- chore: update libs
+- chore: update obsidian-dev-utils to 85.0.0
+- refactor: pass params objects to backlink cache helpers
+- build: lock typescript to 6.0.3
+- test: wire integration-testing vitest-setup into integration projects
+- chore: update libs
+- chore: sort tsconfig types
+
 ## 2.14.1
 
 - refactor: new template
