@@ -4,7 +4,6 @@ import type {
 } from '@obsidian-typings/obsidian-public-latest';
 import type {
   App,
-  CachedMetadata,
   LinkCache,
   Reference,
   ReferenceCache,
@@ -17,6 +16,7 @@ import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/componen
 import type * as FileSystemModule from 'obsidian-dev-utils/obsidian/file-system';
 // eslint-disable-next-line import-x/no-namespace -- Type-only namespace alias used for vitest's importOriginal<T>() without dynamic import() in type position.
 import type * as LinkModule from 'obsidian-dev-utils/obsidian/link';
+import type { CachedMetadataEx } from 'obsidian-dev-utils/obsidian/metadata-cache';
 
 import {
   Component,
@@ -35,8 +35,8 @@ import {
 } from 'obsidian-dev-utils/obsidian/link';
 import { loop } from 'obsidian-dev-utils/obsidian/loop';
 import {
-  getAllLinks,
-  getCacheSafe
+  getCacheSafe,
+  getLinks
 } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
@@ -74,8 +74,8 @@ vi.mock('obsidian-dev-utils/obsidian/loop', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/metadata-cache', () => ({
-  getAllLinks: vi.fn().mockReturnValue([]),
-  getCacheSafe: vi.fn()
+  getCacheSafe: vi.fn(),
+  getLinks: vi.fn().mockReturnValue([])
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/reference', () => ({
@@ -351,7 +351,7 @@ describe('BacklinkCacheComponent', () => {
       vi.mocked(getCacheSafe).mockResolvedValue(null);
 
       vi.mocked(loop).mockImplementation(async (opts) => {
-        opts.buildNoticeMessage(mockFile, '1/1');
+        opts.buildNoticeMessage({ item: mockFile, iterationStr: '1/1' });
         await (opts.processItem as (item: TFile) => Promise<void>)(mockFile);
       });
 
@@ -394,8 +394,8 @@ describe('BacklinkCacheComponent', () => {
       });
 
       vi.mocked(getFileOrNull).mockReturnValue(mockFile);
-      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadata>({ links: [link] }));
-      vi.mocked(getAllLinks).mockReturnValue([link]);
+      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadataEx>({ links: [link] }));
+      vi.mocked(getLinks).mockReturnValue([link]);
       vi.mocked(extractLinkFile).mockReturnValue(linkFile);
 
       await setupOnLayoutReady();
@@ -480,8 +480,8 @@ describe('BacklinkCacheComponent', () => {
 
       vi.mocked(getFileOrNull).mockReturnValue(mockFile);
       vi.mocked(isCanvasFile).mockReturnValue(false);
-      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadata>({ links: [mockLink] }));
-      vi.mocked(getAllLinks).mockReturnValue([mockLink]);
+      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadataEx>({ links: [mockLink] }));
+      vi.mocked(getLinks).mockReturnValue([mockLink]);
       vi.mocked(extractLinkFile).mockReturnValue(null);
 
       await asInternals(context.component).refreshBacklinks.call(context.component, 'note.md');
@@ -514,8 +514,8 @@ describe('BacklinkCacheComponent', () => {
 
       vi.mocked(getFileOrNull).mockReturnValue(mockFile);
       vi.mocked(isCanvasFile).mockReturnValue(false);
-      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadata>({ links: [link1, link2] }));
-      vi.mocked(getAllLinks).mockReturnValue([link1, link2]);
+      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadataEx>({ links: [link1, link2] }));
+      vi.mocked(getLinks).mockReturnValue([link1, link2]);
       vi.mocked(extractLinkFile).mockReturnValue(linkFile);
 
       await asInternals(context.component).refreshBacklinks.call(context.component, 'note.md');
@@ -547,8 +547,8 @@ describe('BacklinkCacheComponent', () => {
 
       vi.mocked(getFileOrNull).mockReturnValue(mockFile);
       vi.mocked(isCanvasFile).mockReturnValue(false);
-      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadata>({ links: [link] }));
-      vi.mocked(getAllLinks).mockReturnValue([link]);
+      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadataEx>({ links: [link] }));
+      vi.mocked(getLinks).mockReturnValue([link]);
 
       context.abortSignal.aborted = true;
 
@@ -730,8 +730,8 @@ describe('BacklinkCacheComponent', () => {
       const noteFile = createTFile(notePath);
       vi.mocked(getFileOrNull).mockReturnValue(noteFile);
       vi.mocked(isCanvasFile).mockReturnValue(false);
-      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadata>({ links }));
-      vi.mocked(getAllLinks).mockReturnValue(links);
+      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadataEx>({ links }));
+      vi.mocked(getLinks).mockReturnValue(links);
       await asInternals(context.component).refreshBacklinks.call(context.component, notePath);
     }
 

@@ -141,8 +141,7 @@ describe('bulk-delete cascade cost breakdown', () => {
 
         const enabledSyncStartMs = performance.now();
         for (const file of filesA) {
-          // eslint-disable-next-line obsidianmd/prefer-file-manager-trash-file -- The harness reproduces Obsidian's internal removeFile cascade and needs deterministic permanent deletion, not user-preference trashing.
-          await app.vault.delete(file, true);
+          await app.fileManager.trashFile(file);
         }
         const enabledSyncMs = performance.now() - enabledSyncStartMs;
 
@@ -176,8 +175,7 @@ describe('bulk-delete cascade cost breakdown', () => {
 
         const disabledSyncStartMs = performance.now();
         for (const file of filesB) {
-          // eslint-disable-next-line obsidianmd/prefer-file-manager-trash-file -- The harness reproduces Obsidian's internal removeFile cascade and needs deterministic permanent deletion, not user-preference trashing.
-          await app.vault.delete(file, true);
+          await app.fileManager.trashFile(file);
         }
         const disabledSyncMs = performance.now() - disabledSyncStartMs;
 
@@ -222,8 +220,7 @@ describe('bulk-delete cascade cost breakdown', () => {
     const enabledGetCachePerCallMs = result.enabledGetCacheMs / result.enabledGetCacheCalls;
     const disabledGetCachePerCallMs = result.disabledGetCacheMs / result.disabledGetCacheCalls;
 
-    // eslint-disable-next-line no-console, obsidianmd/rule-custom-message -- Diagnostic breakdown is the point of this troubleshooting harness.
-    console.info('[bulk-delete breakdown]', {
+    console.warn('[bulk-delete breakdown]', {
       deletedPerFolder: result.deletedA,
       disabledGetCachePerCallMs: disabledGetCachePerCallMs.toFixed(4),
       disabledGetCacheTotalMs: result.disabledGetCacheMs.toFixed(1),

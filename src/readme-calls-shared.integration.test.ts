@@ -91,8 +91,7 @@ export function registerReadmeCallsSuite(platform: string): void {
           for (const path of [targetPath, sourcePath]) {
             const existing = app.vault.getAbstractFileByPath(path);
             if (existing) {
-              // eslint-disable-next-line obsidianmd/prefer-file-manager-trash-file -- Permanent cleanup of stale test fixtures.
-              await app.vault.delete(existing, true);
+              await app.fileManager.trashFile(existing);
             }
           }
 

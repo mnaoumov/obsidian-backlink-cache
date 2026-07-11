@@ -117,8 +117,7 @@ describe('getCache patch per-call overhead', () => {
 
     expect(result.cacheReady).toBe(true);
 
-    // eslint-disable-next-line no-console, obsidianmd/rule-custom-message -- Diagnostic breakdown is the point of this troubleshooting harness.
-    console.info('[getCache overhead]', {
+    console.warn('[getCache overhead]', {
       fileCount: result.fileCount,
       nativeMissingPerCallMs: result.nativeMissingPerCallMs.toFixed(6),
       nativeWithCachePerCallMs: result.nativeWithCachePerCallMs.toFixed(6),

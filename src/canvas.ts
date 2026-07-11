@@ -19,7 +19,7 @@ import { ComponentEx } from 'obsidian-dev-utils/obsidian/components/component-ex
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
 import { splitSubpath } from 'obsidian-dev-utils/obsidian/link';
 import { loop } from 'obsidian-dev-utils/obsidian/loop';
-import { getAllLinks } from 'obsidian-dev-utils/obsidian/metadata-cache';
+import { getLinks } from 'obsidian-dev-utils/obsidian/metadata-cache';
 
 import type { BacklinkCacheComponent } from './backlink-cache-component.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
@@ -198,7 +198,7 @@ export class CanvasComponent extends ComponentEx {
         }
         case 'text': {
           const metadata = await parseMetadataEx(this.app, node.text);
-          const links = getAllLinks(metadata);
+          const links = getLinks({ cache: metadata });
           let linkIndex = 0;
           for (const link of links) {
             const canvasTextNodeReference: CanvasTextNodeReference = {
@@ -234,7 +234,7 @@ export class CanvasComponent extends ComponentEx {
   private async processAllCanvasFiles(): Promise<void> {
     await loop({
       abortSignal: this.abortSignalComponent.abortSignal,
-      buildNoticeMessage: (canvasFile, iterationStr) => `Processing backlinks ${iterationStr} - ${canvasFile.path}`,
+      buildNoticeMessage: ({ item, iterationStr }) => `Processing backlinks ${iterationStr} - ${item.path}`,
       items: this.app.vault.getFiles().filter((file) => isCanvasFile(file)),
       pluginNoticeComponent: this.pluginNoticeComponent,
       processItem: async (canvasFile) => {

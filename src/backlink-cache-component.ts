@@ -32,8 +32,8 @@ import {
 } from 'obsidian-dev-utils/obsidian/link';
 import { loop } from 'obsidian-dev-utils/obsidian/loop';
 import {
-  getAllLinks,
-  getCacheSafe
+  getCacheSafe,
+  getLinks
 } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { sortReferences } from 'obsidian-dev-utils/obsidian/reference';
 import { getMarkdownFilesSorted } from 'obsidian-dev-utils/obsidian/vault';
@@ -260,7 +260,7 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
   private async processAllNotes(): Promise<void> {
     await loop({
       abortSignal: this.abortSignalComponent.abortSignal,
-      buildNoticeMessage: (note, iterationStr) => `Processing backlinks ${iterationStr} - ${note.path}`,
+      buildNoticeMessage: ({ item, iterationStr }) => `Processing backlinks ${iterationStr} - ${item.path}`,
       items: getMarkdownFilesSorted(this.app),
       pluginNoticeComponent: this.pluginNoticeComponent,
       processItem: async (note) => {
@@ -327,7 +327,7 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
       return;
     }
 
-    for (const link of getAllLinks(cache)) {
+    for (const link of getLinks({ cache })) {
       if (this.abortSignalComponent.abortSignal.aborted) {
         return;
       }

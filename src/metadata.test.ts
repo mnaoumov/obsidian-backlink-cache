@@ -1,7 +1,5 @@
-import type {
-  App,
-  CachedMetadata
-} from 'obsidian';
+import type { App } from 'obsidian';
+import type { CachedMetadataEx } from 'obsidian-dev-utils/obsidian/metadata-cache';
 
 import { fixFrontmatterMarkdownLinks } from 'obsidian-dev-utils/obsidian/link';
 import { parseMetadata } from 'obsidian-dev-utils/obsidian/metadata-cache';
@@ -25,7 +23,7 @@ vi.mock('obsidian-dev-utils/obsidian/metadata-cache', () => ({
 
 describe('parseMetadataEx', () => {
   it('should return parsed metadata without fixing frontmatter links when plugin is not enabled', async () => {
-    const metadata: CachedMetadata = {};
+    const metadata = strictProxy<CachedMetadataEx>({});
     vi.mocked(parseMetadata).mockResolvedValue(metadata);
 
     const app = strictProxy<App>({
@@ -42,7 +40,7 @@ describe('parseMetadataEx', () => {
   });
 
   it('should fix frontmatter markdown links when frontmatter-markdown-links plugin is enabled', async () => {
-    const metadata: CachedMetadata = {};
+    const metadata = strictProxy<CachedMetadataEx>({});
     vi.mocked(parseMetadata).mockResolvedValue(metadata);
 
     const app = strictProxy<App>({

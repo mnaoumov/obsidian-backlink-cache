@@ -50,7 +50,7 @@ describe('PluginSettingsTab', () => {
       pluginSettingsComponent
     });
 
-    tab.containerEl = activeDocument.createElement('div');
+    tab.containerEl = activeWindow.createDiv();
 
     const bindSpy = vi.spyOn(tab, 'bind').mockImplementation((params) => params.valueComponent);
 

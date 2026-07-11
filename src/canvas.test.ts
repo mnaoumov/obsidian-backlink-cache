@@ -19,7 +19,7 @@ import { TFile } from 'obsidian';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
 import { loop } from 'obsidian-dev-utils/obsidian/loop';
-import { getAllLinks } from 'obsidian-dev-utils/obsidian/metadata-cache';
+import { getLinks } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import {
   afterEach,
@@ -69,7 +69,7 @@ vi.mock('obsidian-dev-utils/obsidian/loop', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/metadata-cache', () => ({
-  getAllLinks: vi.fn(() => [])
+  getLinks: vi.fn(() => [])
 }));
 
 vi.mock('./backlink-core-plugin.ts', () => ({
@@ -376,7 +376,7 @@ describe('CanvasComponent.onload', () => {
     vi.mocked(app.vault.getFiles).mockReturnValue(castTo<TFile[]>([mockCanvasFile]));
 
     vi.mocked(loop).mockImplementation(async (opts) => {
-      opts.buildNoticeMessage(mockCanvasFile, '1/1');
+      opts.buildNoticeMessage({ item: mockCanvasFile, iterationStr: '1/1' });
       await (opts.processItem as (item: TFile) => Promise<void>)(mockCanvasFile);
     });
 
@@ -540,7 +540,7 @@ describe('CanvasComponent.initCanvasMetadataCache', () => {
     };
 
     const link = { link: 'target', original: '[[target]]', position: { end: { col: 10, line: 0, offset: 10 }, start: { col: 0, line: 0, offset: 0 } } };
-    vi.mocked(getAllLinks).mockReturnValue(castTo<Reference[]>([link]));
+    vi.mocked(getLinks).mockReturnValue(castTo<Reference[]>([link]));
     vi.mocked(parseMetadataEx).mockResolvedValue({ links: [link] });
 
     const app = createCanvasApp({
