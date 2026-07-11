@@ -51,6 +51,18 @@ import {
 import { MetadataCacheGetBacklinksForFilePatchComponent } from './patches/metadata-cache-get-backlinks-for-file-patch-component.ts';
 import { MetadataCacheUpdateRelatedLinksPatchComponent } from './patches/metadata-cache-update-related-links-patch-component.ts';
 
+interface AddToMapSetParams {
+  readonly key: string;
+  readonly map: Map<string, Set<string>>;
+  readonly value: string;
+}
+
+interface BacklinkCacheComponentAddBacklinkParams {
+  readonly link: Reference;
+  readonly sourcePath: string;
+  readonly targetPath: string;
+}
+
 interface BacklinkCacheComponentConstructorParams {
   readonly abortSignalComponent: AbortSignalComponent;
   readonly app: App;
@@ -182,7 +194,8 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
     this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
   }
 
-  private addBacklink(targetPath: string, sourcePath: string, link: Reference): void {
+  private addBacklink(params: BacklinkCacheComponentAddBacklinkParams): void {
+    const { link, sourcePath, targetPath } = params;
     let notePathLinksMap = this.backlinksMap.get(targetPath);
 
     if (!notePathLinksMap) {
@@ -325,8 +338,8 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
         sourcePathOrFile: notePath
       });
       if (resolvedLinkFile) {
-        this.addBacklink(resolvedLinkFile.path, notePath, link);
-        addToMapSet(this.resolvedBasenameMap, getBasenameLower(resolvedLinkFile.path), notePath);
+        this.addBacklink({ link, sourcePath: notePath, targetPath: resolvedLinkFile.path });
+        addToMapSet({ key: getBasenameLower(resolvedLinkFile.path), map: this.resolvedBasenameMap, value: notePath });
         continue;
       }
 
@@ -337,13 +350,13 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
         sourcePathOrFile: notePath
       });
       if (nonExistingLinkFile) {
-        this.addBacklink(nonExistingLinkFile.path, notePath, link);
+        this.addBacklink({ link, sourcePath: notePath, targetPath: nonExistingLinkFile.path });
       }
 
       const { linkPath } = splitSubpath(link.link);
       const unresolvedBasename = getBasenameLower(linkPath);
-      addToMapSet(this.unresolvedBasenameMap, unresolvedBasename, notePath);
-      addToMapSet(this.unresolvedLinksMap, notePath, unresolvedBasename);
+      addToMapSet({ key: unresolvedBasename, map: this.unresolvedBasenameMap, value: notePath });
+      addToMapSet({ key: notePath, map: this.unresolvedLinksMap, value: unresolvedBasename });
     }
   }
 
@@ -399,7 +412,8 @@ function addAllToSet(target: Set<string>, source: Set<string> | undefined): void
   }
 }
 
-function addToMapSet(map: Map<string, Set<string>>, key: string, value: string): void {
+function addToMapSet(params: AddToMapSetParams): void {
+  const { key, map, value } = params;
   let set = map.get(key);
 
   if (!set) {

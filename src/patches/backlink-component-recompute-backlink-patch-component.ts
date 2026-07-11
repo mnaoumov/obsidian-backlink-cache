@@ -29,6 +29,12 @@ interface BacklinkComponentRecomputeBacklinkPatchComponentConstructorParams {
   readonly backlinkComponent: BacklinkComponent;
 }
 
+interface BacklinkComponentRecomputeBacklinkPatchComponentShowBacklinksParams {
+  readonly backlinkComponent: BacklinkComponent;
+  readonly backlinkNoteFile: TFile;
+  readonly links: Reference[];
+}
+
 export class BacklinkComponentRecomputeBacklinkPatchComponent extends MonkeyAroundComponent {
   private readonly backlinkComponent: BacklinkComponent;
 
@@ -80,14 +86,15 @@ export class BacklinkComponentRecomputeBacklinkPatchComponent extends MonkeyArou
     backlinkNoteFiles.sort(getFileComparer(backlinkComponent.backlinkDom.sortOrder));
 
     for (const backlinkNoteFile of backlinkNoteFiles) {
-      await this.showBacklinks(backlinkComponent, backlinkNoteFile, backlinks.get(backlinkNoteFile.path) ?? []);
+      await this.showBacklinks({ backlinkComponent, backlinkNoteFile, links: backlinks.get(backlinkNoteFile.path) ?? [] });
     }
 
     backlinkComponent.backlinkCountEl.setText(backlinkComponent.backlinkDom.getMatchCount().toString());
     backlinkComponent.backlinkDom.changed();
   }
 
-  private async showBacklinks(backlinkComponent: BacklinkComponent, backlinkNoteFile: TFile, links: Reference[]): Promise<void> {
+  private async showBacklinks(params: BacklinkComponentRecomputeBacklinkPatchComponentShowBacklinksParams): Promise<void> {
+    const { backlinkComponent, backlinkNoteFile, links } = params;
     const app = backlinkComponent.app;
     let content = await app.vault.read(backlinkNoteFile);
     if (!backlinkComponent.passSearchFilter(backlinkNoteFile, content)) {

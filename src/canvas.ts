@@ -36,6 +36,13 @@ export function isCanvasPluginEnabled(app: App): boolean {
 
 const canvasMetadataCacheMap = new Map<string, CachedMetadata>();
 
+interface AddCanvasMetadataParams {
+  readonly app: App;
+  readonly cachedMetadata: CachedMetadata;
+  readonly canvasPath: string;
+  readonly reference: CanvasReference;
+}
+
 interface CanvasComponentConstructorParams {
   readonly abortSignalComponent: AbortSignalComponent;
   readonly app: App;
@@ -186,7 +193,7 @@ export class CanvasComponent extends ComponentEx {
             type: 'file'
           };
 
-          addCanvasMetadata(this.app, cachedMetadata, canvasFileNodeReference, file.path);
+          addCanvasMetadata({ app: this.app, cachedMetadata, canvasPath: file.path, reference: canvasFileNodeReference });
           break;
         }
         case 'text': {
@@ -204,7 +211,7 @@ export class CanvasComponent extends ComponentEx {
               type: 'text'
             };
 
-            addCanvasMetadata(this.app, cachedMetadata, canvasTextNodeReference, file.path);
+            addCanvasMetadata({ app: this.app, cachedMetadata, canvasPath: file.path, reference: canvasTextNodeReference });
             linkIndex++;
           }
           break;
@@ -252,7 +259,8 @@ export class CanvasComponent extends ComponentEx {
   }
 }
 
-function addCanvasMetadata(app: App, cachedMetadata: CachedMetadata, reference: CanvasReference, canvasPath: string): void {
+function addCanvasMetadata(params: AddCanvasMetadataParams): void {
+  const { app, cachedMetadata, canvasPath, reference } = params;
   cachedMetadata.frontmatterLinks?.push(reference);
 
   const linkPath = splitSubpath(reference.link).linkPath;
