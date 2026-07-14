@@ -76,6 +76,19 @@ export const config = defineConfig({
       {
         test: {
           environment: 'node',
+          /*
+           * The performance closures hold a single `evalInObsidian` evaluation open
+           * for the whole vault-index settle (up to a few minutes), which exceeds the
+           * CDP transport's 30s default per-command timeout. Match the command timeout
+           * to this project's test budget so a legitimately long evaluation is not
+           * killed early; a genuine hang is still caught by `testTimeout`.
+           */
+          environmentOptions: {
+            obsidianTransport: {
+              commandTimeoutInMilliseconds: PERFORMANCE_TIMEOUT_IN_MILLISECONDS,
+              type: 'obsidian-cdp'
+            }
+          },
           fileParallelism: false,
           globalSetup: ['./scripts/vitest-global-setup-performance.ts'],
           hookTimeout: PERFORMANCE_TIMEOUT_IN_MILLISECONDS,

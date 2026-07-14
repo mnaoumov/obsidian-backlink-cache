@@ -2,6 +2,7 @@ import type {
   App,
   PluginManifest
 } from 'obsidian';
+import type { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
 import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/components/abort-signal-component';
 import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
@@ -20,22 +21,6 @@ import { RefreshBacklinkPanelsCommandHandler } from './command-handlers/refresh-
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { Plugin } from './plugin.ts';
-
-vi.mock('obsidian-dev-utils/obsidian/active-file-provider', () => ({
-  AppActiveFileProvider: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/command-handlers/command-handler-component', () => ({
-  CommandHandlerComponent: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/command-registrar', () => ({
-  PluginCommandRegistrar: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/components/menu-event-registrar-component', () => ({
-  MenuEventRegistrarComponent: vi.fn()
-}));
 
 vi.mock('obsidian-dev-utils/obsidian/components/plugin-settings-tab-component', () => ({
   PluginSettingsTabComponent: vi.fn()
@@ -67,6 +52,7 @@ vi.mock('./plugin-settings-tab.ts', () => ({
 
 interface PluginInternals {
   _abortSignalComponent: AbortSignalComponent;
+  _commandHandlerComponent: CommandHandlerComponent;
   _consoleDebugComponent: ConsoleDebugComponent;
   _pluginNoticeComponent: PluginNoticeComponent;
   onloadImpl(): void;
@@ -91,6 +77,8 @@ describe('Plugin', () => {
     internals._abortSignalComponent = strictProxy<AbortSignalComponent>({ abortSignal: castTo<AbortSignal>({ aborted: false }) });
     internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
     internals._pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
+    const registerCommandHandlers = vi.fn();
+    internals._commandHandlerComponent = strictProxy<CommandHandlerComponent>({ registerCommandHandlers });
     const addChildSpy = vi.spyOn(plugin, 'addChild');
 
     internals.onloadImpl();
@@ -99,6 +87,7 @@ describe('Plugin', () => {
     expect(PluginSettingsTab).toHaveBeenCalledOnce();
     expect(BacklinkCacheComponent).toHaveBeenCalledOnce();
     expect(RefreshBacklinkPanelsCommandHandler).toHaveBeenCalledOnce();
-    expect(addChildSpy).toHaveBeenCalledTimes(5);
+    expect(registerCommandHandlers).toHaveBeenCalledOnce();
+    expect(addChildSpy).toHaveBeenCalledTimes(3);
   });
 });

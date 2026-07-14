@@ -1,7 +1,3 @@
-import { AppActiveFileProvider } from 'obsidian-dev-utils/obsidian/active-file-provider';
-import { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
-import { PluginCommandRegistrar } from 'obsidian-dev-utils/obsidian/command-registrar';
-import { MenuEventRegistrarComponent } from 'obsidian-dev-utils/obsidian/components/menu-event-registrar-component';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
 import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
 import { PluginBase } from 'obsidian-dev-utils/obsidian/plugin/plugin';
@@ -31,7 +27,6 @@ export class Plugin extends PluginBase {
         pluginSettingsTab
       })
     );
-    const menuEventRegistrar = this.addChild(new MenuEventRegistrarComponent(this.app));
 
     const backlinkCacheComponent = this.addChild(
       new BacklinkCacheComponent({
@@ -43,16 +38,8 @@ export class Plugin extends PluginBase {
       })
     );
 
-    this.addChild(
-      new CommandHandlerComponent({
-        activeFileProvider: new AppActiveFileProvider(this.app),
-        commandHandlers: [
-          new RefreshBacklinkPanelsCommandHandler(backlinkCacheComponent)
-        ],
-        commandRegistrar: new PluginCommandRegistrar(this),
-        menuEventRegistrar,
-        pluginName: this.manifest.name
-      })
-    );
+    this.commandHandlerComponent.registerCommandHandlers([
+      new RefreshBacklinkPanelsCommandHandler(backlinkCacheComponent)
+    ]);
   }
 }
