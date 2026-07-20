@@ -1,29 +1,27 @@
+/* eslint-disable @typescript-eslint/no-extraneous-class -- Test mocks of the plugin's own sibling modules need constructor-only classes. */
 import type {
-  App,
+  App as AppOriginal,
   PluginManifest
 } from 'obsidian';
-import type { CommandHandlerComponent } from 'obsidian-dev-utils/obsidian/command-handlers/command-handler-component';
-import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/components/abort-signal-component';
-import type { ConsoleDebugComponent } from 'obsidian-dev-utils/obsidian/components/console-debug-component';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
+import { Component } from 'obsidian';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { App } from 'obsidian-test-mocks/obsidian';
 import {
+  afterEach,
   describe,
   expect,
   it,
   vi
 } from 'vitest';
 
-import { BacklinkCacheComponent } from './backlink-cache-component.ts';
-import { RefreshBacklinkPanelsCommandHandler } from './command-handlers/refresh-backlink-panels-command-handler.ts';
-import { PluginSettingsComponent } from './plugin-settings-component.ts';
-import { PluginSettingsTab } from './plugin-settings-tab.ts';
-import { Plugin } from './plugin.ts';
+// --- Mocks for the plugin's OWN sibling modules (allowed: not obsidian-dev-utils / obsidian-test-mocks) ---
 
-vi.mock('obsidian-dev-utils/obsidian/components/plugin-settings-tab-component', () => ({
-  PluginSettingsTabComponent: vi.fn()
+const hoisted = vi.hoisted(() => ({
+  backlinkCacheComponentConstructor: vi.fn(),
+  pluginSettingsComponentConstructor: vi.fn(),
+  pluginSettingsTabConstructor: vi.fn()
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/data-handler', () => ({
@@ -34,60 +32,97 @@ vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-event-source', () => ({
   PluginEventSourceImpl: vi.fn()
 }));
 
-vi.mock('./backlink-cache-component.ts', () => ({
-  BacklinkCacheComponent: vi.fn()
-}));
-
-vi.mock('./command-handlers/refresh-backlink-panels-command-handler.ts', () => ({
-  RefreshBacklinkPanelsCommandHandler: vi.fn()
-}));
-
 vi.mock('./plugin-settings-component.ts', () => ({
-  PluginSettingsComponent: vi.fn()
+  // Extends the real obsidian-test-mocks Component so the real addChild lifecycle can load it.
+  PluginSettingsComponent: class extends Component {
+    public constructor(params: unknown) {
+      super();
+      hoisted.pluginSettingsComponentConstructor(params);
+    }
+  }
 }));
 
 vi.mock('./plugin-settings-tab.ts', () => ({
-  PluginSettingsTab: vi.fn()
+  PluginSettingsTab: class {
+    public constructor(params: unknown) {
+      hoisted.pluginSettingsTabConstructor(params);
+    }
+  }
 }));
 
-interface PluginInternals {
-  _abortSignalComponent: AbortSignalComponent;
-  _commandHandlerComponent: CommandHandlerComponent;
-  _consoleDebugComponent: ConsoleDebugComponent;
-  _pluginNoticeComponent: PluginNoticeComponent;
-  onloadImpl(): void;
+vi.mock('./backlink-cache-component.ts', () => ({
+  // Extends the real obsidian-test-mocks Component so the real addChild lifecycle can load it.
+  BacklinkCacheComponent: class extends Component {
+    public constructor(params: unknown) {
+      super();
+      hoisted.backlinkCacheComponentConstructor(params);
+    }
+  }
+}));
+
+// eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
+import { Plugin } from './plugin.ts';
+
+interface SettingTabsHolder {
+  settingTabs__: unknown[];
 }
 
-function createMockApp(): App {
-  return strictProxy<App>({});
+function createApp(): AppOriginal {
+  const appMock = App.createConfigured__();
+  appMock.workspace.onLayoutReady = vi.fn((cb: () => void) => {
+    cb();
+  });
+  return appMock.asOriginalType__();
 }
 
-function createMockManifest(): PluginManifest {
+async function createLoadedPlugin(app: AppOriginal): Promise<Plugin> {
+  const plugin = new Plugin(app, createManifest());
+  await plugin.onload();
+  return plugin;
+}
+
+function createManifest(): PluginManifest {
   return strictProxy<PluginManifest>({
     id: 'backlink-cache',
-    name: 'Backlink Cache'
+    name: 'Backlink Cache',
+    version: '1.0.0'
   });
 }
 
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
 describe('Plugin', () => {
-  it('should wire up all components in onloadImpl', () => {
-    const app = createMockApp();
-    const plugin = new Plugin(app, createMockManifest());
-    const internals = castTo<PluginInternals>(plugin);
-    internals._abortSignalComponent = strictProxy<AbortSignalComponent>({ abortSignal: castTo<AbortSignal>({ aborted: false }) });
-    internals._consoleDebugComponent = strictProxy<ConsoleDebugComponent>({ consoleDebug: vi.fn() });
-    internals._pluginNoticeComponent = strictProxy<PluginNoticeComponent>({});
-    const registerCommandHandlers = vi.fn();
-    internals._commandHandlerComponent = strictProxy<CommandHandlerComponent>({ registerCommandHandlers });
-    const addChildSpy = vi.spyOn(plugin, 'addChild');
+  it('should create a plugin instance', async () => {
+    const plugin = await createLoadedPlugin(createApp());
+    expect(plugin).toBeInstanceOf(Plugin);
+  });
 
-    internals.onloadImpl();
+  it('should wire up all components in onloadImpl', async () => {
+    await createLoadedPlugin(createApp());
+    expect(hoisted.pluginSettingsComponentConstructor).toHaveBeenCalledOnce();
+    expect(hoisted.pluginSettingsTabConstructor).toHaveBeenCalledOnce();
+    expect(hoisted.backlinkCacheComponentConstructor).toHaveBeenCalledOnce();
+  });
 
-    expect(PluginSettingsComponent).toHaveBeenCalledOnce();
-    expect(PluginSettingsTab).toHaveBeenCalledOnce();
-    expect(BacklinkCacheComponent).toHaveBeenCalledOnce();
-    expect(RefreshBacklinkPanelsCommandHandler).toHaveBeenCalledOnce();
-    expect(registerCommandHandlers).toHaveBeenCalledOnce();
-    expect(addChildSpy).toHaveBeenCalledTimes(3);
+  it('should add the plugin settings tab via its child component', async () => {
+    const plugin = await createLoadedPlugin(createApp());
+    expect(castTo<SettingTabsHolder>(plugin).settingTabs__).toHaveLength(1);
+  });
+
+  it('should register the refresh backlink panels command via its command handler', async () => {
+    const plugin = new Plugin(createApp(), createManifest());
+    const addCommandSpy = vi.spyOn(plugin, 'addCommand');
+    await plugin.onload();
+    expect(addCommandSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'refresh-backlink-panels' }));
+  });
+
+  it('should register the open demo vault command via its command handler', async () => {
+    const plugin = new Plugin(createApp(), createManifest());
+    const addCommandSpy = vi.spyOn(plugin, 'addCommand');
+    await plugin.onload();
+    expect(addCommandSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'open-demo-vault' }));
   });
 });
+/* eslint-enable @typescript-eslint/no-extraneous-class -- End of test file. */
