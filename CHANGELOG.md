@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 2.14.4
+
+- chore: update libs
+- chore(demo-vault): drop committed Invocables placeholder
+- fix(demo-vault): export invoke() from startup script; add Invocables folder
+
 ## 2.14.3
 
 - docs: standardize demo-vault README
