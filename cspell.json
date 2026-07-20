@@ -25,6 +25,7 @@
     "outfile",
     "postversion",
     "preversion",
+    "rescanning",
     "subkey",
     "tsbuildinfo",
     "undercounts"
