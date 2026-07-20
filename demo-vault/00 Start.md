@@ -4,17 +4,8 @@ Welcome to the [Backlink Cache](https://github.com/mnaoumov/obsidian-backlink-ca
 
 **How to see it:** open [[01 Backlink cache]] and click its **Run** button - it asks the cache for the backlinks of [[Central topic]] and lists the notes that link to it.
 
-> [!TIP] Interactive buttons
->
-> The two setup notes have **Run** buttons, powered by [`CodeScript Toolkit`](https://github.com/mnaoumov/obsidian-codescript-toolkit/), which this vault installs for you automatically on first open (see [[CodeScript Toolkit prerequisite]]). The feature notes use the same buttons to call Backlink Cache's API.
-
 ## Feature
 
 - [[01 Backlink cache]]
 - [[02 Fast, safe, and original backlinks]]
 - [[03 Settings]]
-
-## Setup
-
-- [[Code buttons check]]
-- [[CodeScript Toolkit prerequisite]]
