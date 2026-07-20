@@ -6,7 +6,7 @@ Welcome to the [Backlink Cache](https://github.com/mnaoumov/obsidian-backlink-ca
 
 > [!TIP] Interactive buttons
 >
-> The two setup notes have **Run** buttons, powered by [`CodeScript Toolkit`](https://github.com/mnaoumov/obsidian-codescript-toolkit/), which this vault installs for you automatically on first open (see [[05 CodeScript Toolkit prerequisite]]). The feature notes use the same buttons to call Backlink Cache's API.
+> The two setup notes have **Run** buttons, powered by [`CodeScript Toolkit`](https://github.com/mnaoumov/obsidian-codescript-toolkit/), which this vault installs for you automatically on first open (see [[CodeScript Toolkit prerequisite]]). The feature notes use the same buttons to call Backlink Cache's API.
 
 ## Feature
 
@@ -16,5 +16,5 @@ Welcome to the [Backlink Cache](https://github.com/mnaoumov/obsidian-backlink-ca
 
 ## Setup
 
-- [[04 Code buttons check]]
-- [[05 CodeScript Toolkit prerequisite]]
+- [[Code buttons check]]
+- [[CodeScript Toolkit prerequisite]]
