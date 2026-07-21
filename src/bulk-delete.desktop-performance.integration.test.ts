@@ -117,6 +117,7 @@ describe('bulk-delete cascade cost breakdown', () => {
 
         // The plugin must have indexed every linking note before timing starts.
         // Poll the delete-target's backlink count until it is fully populated.
+        const settleStartMs = Date.now();
         let deleteTargetBacklinkCount = -1;
         if (deleteTargetFile) {
           deleteTargetBacklinkCount = metadataCache.getBacklinksForFile(deleteTargetFile).keys().length;
@@ -126,6 +127,21 @@ describe('bulk-delete cascade cost breakdown', () => {
             deleteTargetBacklinkCount = metadataCache.getBacklinksForFile(deleteTargetFile).keys().length;
           }
         }
+        const settleMs = Date.now() - settleStartMs;
+
+        /*
+         * Delete permanently instead of routing to the OS recycle bin. The harness
+         * measures the plugin's per-delete cache-invalidation cost, not the platform's
+         * trash implementation; with the default `system` trash option each
+         * `trashFile` pays an Electron `shell.trashItem` round-trip (~200ms/file at 90k
+         * scale) that dwarfs — and is unrelated to — the plugin work under test. The
+         * vault `delete` event and Obsidian's `MetadataCache.onDelete` → `getCache`
+         * cascade fire identically for a permanent delete, so the call path stays exact.
+         * (`local` trash would also avoid the round-trip — Obsidian ignores the `.trash`
+         * dot-folder, so the moved copies are not re-indexed — but `none` is the simplest
+         * deterministic removal, leaving no residual files.)
+         */
+        app.vault.setConfig('trashOption', 'none');
 
         // ENABLED: time the synchronous cascade over folder A through the patched getCache.
         let enabledGetCacheCalls = 0;
@@ -194,7 +210,8 @@ describe('bulk-delete cascade cost breakdown', () => {
           enabledGetCacheCalls,
           enabledGetCacheMs,
           enabledSyncMs,
-          error: null
+          error: null,
+          settleMs
         };
       },
       vaultPath: getTempVault().path
@@ -231,6 +248,7 @@ describe('bulk-delete cascade cost breakdown', () => {
       enabledGetCacheTotalMs: result.enabledGetCacheMs.toFixed(1),
       enabledSyncMs: result.enabledSyncMs.toFixed(1),
       enabledSyncPerFileMs: enabledSyncPerFileMs.toFixed(4),
+      indexSettleMs: result.settleMs,
       syncOverheadFactor: (enabledSyncPerFileMs / disabledSyncPerFileMs).toFixed(2)
     });
 
