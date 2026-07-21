@@ -26,35 +26,50 @@ import {
 const LINKER_PREFIX = `${PERFORMANCE_VAULT_LINKER_FOLDER}/`;
 
 /*
- * Time for Obsidian's startup scan and backlink-cache's initial processAllNotes to
- * finish indexing the vault before we probe updateRelatedLinks.
+ * Deadline for Obsidian's startup scan and backlink-cache's initial processAllNotes to
+ * finish indexing the vault before we probe updateRelatedLinks. We POLL the target's
+ * backlink count up to this deadline rather than sleeping a fixed interval: at 90k the
+ * initial index alone takes ~50s, so a fixed wait races the index and intermittently
+ * reads an empty cache. Mirrors the poll in the bulk-delete / getCache-overhead harnesses.
  */
-const INDEX_SETTLE_IN_MS = 60_000;
+const INDEX_WAIT_IN_MS = 240_000;
+const INDEX_POLL_IN_MS = 2_000;
 const SCENARIO_TIMEOUT_IN_MS = 300_000;
 
 describe('updateRelatedLinks avoids the vault scan', () => {
   it('queues only the linking files and never calls getCachedFiles', async () => {
     const result = await evalInObsidian({
       args: {
-        INDEX_SETTLE_IN_MS,
+        EXPECTED_LINKER_COUNT: PERFORMANCE_VAULT_LINKER_COUNT,
+        INDEX_POLL_IN_MS,
+        INDEX_WAIT_IN_MS,
         LINKER_PREFIX,
         TARGET_BASENAME: PERFORMANCE_VAULT_TARGET
       },
       async fn({
         app,
-        INDEX_SETTLE_IN_MS: settleMs,
+        EXPECTED_LINKER_COUNT: expectedLinkerCount,
+        INDEX_POLL_IN_MS: pollMs,
+        INDEX_WAIT_IN_MS: waitMs,
         LINKER_PREFIX: linkerPrefix,
         TARGET_BASENAME: targetBasename
       }) {
-        await sleep(settleMs);
-
         const metadataCache = app.metadataCache;
         const targetFile = app.vault.getFileByPath(targetBasename);
         if (!targetFile) {
           return { backlinkCount: -1, error: 'Target note not found', getCachedFilesCalls: -1, queuedLinkerCount: -1, queuedTotal: -1 };
         }
 
-        const backlinkCount = metadataCache.getBacklinksForFile(targetFile).keys().length;
+        /*
+         * Poll until the initial index has populated the target's backlinks; a fixed
+         * wait races the ~50s index at 90k and can read an empty cache.
+         */
+        let backlinkCount = metadataCache.getBacklinksForFile(targetFile).keys().length;
+        const deadline = Date.now() + waitMs;
+        while (backlinkCount < expectedLinkerCount && Date.now() < deadline) {
+          await sleep(pollMs);
+          backlinkCount = metadataCache.getBacklinksForFile(targetFile).keys().length;
+        }
 
         const originalGetCachedFiles = metadataCache.getCachedFiles.bind(metadataCache);
         const originalQueueFileForLinkResolution = metadataCache.queueFileForLinkResolution.bind(metadataCache);
