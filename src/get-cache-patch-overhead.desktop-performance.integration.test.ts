@@ -16,7 +16,7 @@ import {
  * (src/patches/metadata-cache-get-cache-patch-component.ts) is O(1) per call and does
  * NOT scale with vault size — including for paths that do not resolve to a file.
  *
- * This guards the bulk-deletion fix (see CLAUDE.md "Known Issues"). The patch previously
+ * This guards the bulk-deletion fix. The patch previously
  * decided canvas routing with `isCanvasFile(app, path)`, which resolves the path via a
  * case-insensitive `getAbstractFileByPath` lookup. That lookup is O(1) on a HIT but does
  * an O(vault) scan on a MISS — and during/after deletion (real or Advanced Exclude's

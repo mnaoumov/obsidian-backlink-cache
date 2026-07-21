@@ -19,8 +19,8 @@ import {
 const EXPECTED_DELETE_TARGET_BACKLINKS = PERFORMANCE_VAULT_DELETE_COUNT * 2;
 
 /*
- * Real-Obsidian bulk-deletion troubleshooting harness for the documented freeze
- * (see CLAUDE.md "Known Issues"). When a large folder is removed, Obsidian runs its
+ * Real-Obsidian bulk-deletion troubleshooting harness for the documented freeze.
+ * When a large folder is removed, Obsidian runs its
  * internal delete cascade once per descendant file and, per file, its
  * `MetadataCache.onDelete` reads the file's cache via `getCache` — the method this
  * plugin patches. The open question is WHERE the per-file time goes: the plugin's
