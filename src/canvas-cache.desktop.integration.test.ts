@@ -10,9 +10,14 @@ import {
  * Functional "still useful" guard for the getCache canvas patch
  * (MetadataCacheGetCachePatchComponent). It is not a perf optimization — it gives
  * canvas files a metadata cache (parsed node links) that Obsidian natively does not
- * provide. This test creates a canvas whose text node links to a target note and
- * asserts metadataCache.getCache for the canvas exposes that link, so a regression
- * that breaks canvas parsing is caught.
+ * provide (Obsidian resolves canvas backlinks natively since 1.12.4 but still leaves the
+ * per-file getCache empty for canvas files). This test creates a canvas whose text node
+ * links to a target note and asserts metadataCache.getCache for the canvas exposes that
+ * link, so a regression that breaks canvas parsing is caught.
+ *
+ * It also asserts resolvedLinks for the canvas is NOT double-counted: Obsidian owns
+ * resolvedLinks/unresolvedLinks for canvas natively, and the plugin must not mirror into
+ * them on top (which would inflate the count from 1 to 2).
  */
 
 const TARGET_PATH = 'target.md';
@@ -49,9 +54,14 @@ describe('getCache exposes canvas node links', () => {
 
         const deadline = Date.now() + waitMs;
         let cache = app.metadataCache.getCache(canvasPath);
-        while ((!cache || (cache.frontmatterLinks?.length ?? 0) === 0) && Date.now() < deadline) {
+        let resolved = app.metadataCache.resolvedLinks[canvasPath];
+        while (
+          (!cache || (cache.frontmatterLinks?.length ?? 0) === 0 || !resolved || !(targetPath in resolved))
+          && Date.now() < deadline
+        ) {
           await sleep(pollMs);
           cache = app.metadataCache.getCache(canvasPath);
+          resolved = app.metadataCache.resolvedLinks[canvasPath];
         }
 
         const links = cache?.frontmatterLinks ?? [];
@@ -59,7 +69,8 @@ describe('getCache exposes canvas node links', () => {
           error: null,
           hasCache: !!cache,
           hasTargetLink: links.some((link) => link.link === targetLink),
-          linkCount: links.length
+          linkCount: links.length,
+          resolvedTargetCount: resolved?.[targetPath] ?? null
         };
       },
       vaultPath: getTempVault().path
@@ -70,5 +81,8 @@ describe('getCache exposes canvas node links', () => {
     expect(result.hasCache).toBe(true);
     // ...whose links include the canvas text node's link to the target.
     expect(result.hasTargetLink).toBe(true);
+    // Obsidian owns resolvedLinks for canvas natively; the plugin no longer mirrors into it,
+    // So the single `[[target]]` reference must resolve to a count of 1, not 2 (double-counted).
+    expect(result.resolvedTargetCount).toBe(1);
   }, SCENARIO_TIMEOUT_IN_MS);
 });

@@ -12,7 +12,7 @@ registerDemoVaultCoverageSuite({
   configInterfaces: [{ interfaceName: 'PluginSettings', sourcePath: 'src/plugin-settings.ts' }],
   interfaces: [],
   nonTrivialGuard: {
-    expectDemoNote: '03 Settings.md',
+    expectDemoNote: '04 Settings.md',
     expectMember: 'shouldShowProgressBarOnLoad',
     interfaceName: 'PluginSettings',
     sourcePath: 'src/plugin-settings.ts'

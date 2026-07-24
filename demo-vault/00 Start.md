@@ -8,4 +8,5 @@ Welcome to the [Backlink Cache](https://github.com/mnaoumov/obsidian-backlink-ca
 
 - [[01 Backlink cache]]
 - [[02 Fast, safe, and original backlinks]]
-- [[03 Settings]]
+- [[03 Canvas backlinks]]
+- [[04 Settings]]

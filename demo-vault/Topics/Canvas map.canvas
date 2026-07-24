@@ -1,0 +1,31 @@
+{
+	"nodes": [
+		{
+			"id": "central-file-card",
+			"type": "file",
+			"file": "Topics/Central topic.md",
+			"x": -260,
+			"y": -80,
+			"width": 320,
+			"height": 160
+		},
+		{
+			"id": "central-text-card",
+			"type": "text",
+			"text": "A canvas text card that links to [[Central topic]].",
+			"x": 160,
+			"y": -80,
+			"width": 320,
+			"height": 160
+		}
+	],
+	"edges": [
+		{
+			"id": "edge-1",
+			"fromNode": "central-text-card",
+			"fromSide": "left",
+			"toNode": "central-file-card",
+			"toSide": "right"
+		}
+	]
+}

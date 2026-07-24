@@ -15,7 +15,7 @@ This plugin the most likely will be useful for other plugin developers that deal
 
 Its idea came from the [forum](https://forum.obsidian.md/t/store-backlinks-in-metadatacache/67000).
 
-Also the plugin includes canvas into the backlinks for the referenced files. This includes the `app.metadataCache.getBacklinksForFile` function and the `Backlinks Pane`.
+Also the plugin includes canvas (`.canvas`) files in the backlinks for the referenced notes, and exposes a canvas file's links through `app.metadataCache.getCache()`. See [Canvas backlinks](#canvas-backlinks).
 
 ## Usage
 
@@ -51,7 +51,9 @@ If you want to use the updated functions from your plugin, you can copy [types.d
 
 ### Canvas backlinks
 
-The plugin handles links from the canvas file/text cards if [`Canvas`](https://help.obsidian.md/plugins/canvas) core plugin is enabled.
+Obsidian resolves canvas backlinks natively since `v1.12.4`: links from canvas file/text cards appear in the `Backlinks` pane and graph, and in `app.metadataCache.getBacklinksForFile()` and `resolvedLinks` / `unresolvedLinks`.
+
+On top of that, the plugin keeps canvas files in its fast backlink index and additionally exposes each canvas file's links through `app.metadataCache.getCache()`, which Obsidian leaves empty for canvas files. This runs when the [`Canvas`](https://help.obsidian.md/plugins/canvas) core plugin is enabled.
 
 ### Backlinks panel
 
