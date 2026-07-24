@@ -5,27 +5,21 @@ import type {
 } from 'obsidian';
 import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/components/abort-signal-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type {
-  CanvasFileNodeReference,
-  CanvasReference,
-  CanvasTextNodeReference
-} from 'obsidian-dev-utils/obsidian/reference';
-import type { CanvasData } from 'obsidian/canvas.d.ts';
+import type { CanvasReference } from 'obsidian-dev-utils/obsidian/reference';
 
 import { InternalPluginName } from '@obsidian-typings/obsidian-public-latest/implementations';
 import { TFile } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
+import { getCanvasReferences } from 'obsidian-dev-utils/obsidian/canvas';
 import { ComponentEx } from 'obsidian-dev-utils/obsidian/components/component-ex';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
 import { splitSubpath } from 'obsidian-dev-utils/obsidian/link';
 import { loop } from 'obsidian-dev-utils/obsidian/loop';
-import { getLinks } from 'obsidian-dev-utils/obsidian/metadata-cache';
 
 import type { BacklinkCacheComponent } from './backlink-cache-component.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
 import { reloadBacklinksView } from './backlink-core-plugin.ts';
-import { parseMetadataEx } from './metadata.ts';
 import { CanvasPluginInstanceOnUserDisablePatchComponent } from './patches/canvas-plugin-instance-on-user-disable-patch-component.ts';
 import { CanvasPluginInstanceOnUserEnablePatchComponent } from './patches/canvas-plugin-instance-on-user-enable-patch-component.ts';
 import { MetadataCacheGetCachePatchComponent } from './patches/metadata-cache-get-cache-patch-component.ts';
@@ -160,65 +154,14 @@ export class CanvasComponent extends ComponentEx {
       return;
     }
 
-    let partialCanvasData: Partial<CanvasData>;
-
-    try {
-      const canvasJson = await this.app.vault.read(file);
-      partialCanvasData = JSON.parse(canvasJson) as Partial<CanvasData>;
-    } catch {
-      partialCanvasData = {};
-    }
-
-    const canvasData = partialCanvasData.nodes
-      ? partialCanvasData as CanvasData
-      : {
-        edges: [],
-        nodes: []
-      };
+    const references = await getCanvasReferences(this.app, file);
 
     const cachedMetadata: CachedMetadata = {
       frontmatterLinks: []
     };
 
-    for (let index = 0; index < canvasData.nodes.length; index++) {
-      const node = canvasData.nodes[index];
-      switch (node?.type) {
-        case 'file': {
-          const canvasFileNodeReference: CanvasFileNodeReference = {
-            isCanvas: true,
-            key: `nodes.${String(index)}.file`,
-            link: node.file,
-            nodeIndex: index,
-            original: node.file,
-            type: 'file'
-          };
-
-          addCanvasMetadata({ app: this.app, cachedMetadata, canvasPath: file.path, reference: canvasFileNodeReference });
-          break;
-        }
-        case 'text': {
-          const metadata = await parseMetadataEx(this.app, node.text);
-          const links = getLinks({ cache: metadata });
-          let linkIndex = 0;
-          for (const link of links) {
-            const canvasTextNodeReference: CanvasTextNodeReference = {
-              isCanvas: true,
-              key: `nodes.${String(index)}.text.${String(linkIndex)}`,
-              link: link.link,
-              nodeIndex: index,
-              original: link.original,
-              originalReference: link,
-              type: 'text'
-            };
-
-            addCanvasMetadata({ app: this.app, cachedMetadata, canvasPath: file.path, reference: canvasTextNodeReference });
-            linkIndex++;
-          }
-          break;
-        }
-        default:
-          break;
-      }
+    for (const reference of references) {
+      addCanvasMetadata({ app: this.app, cachedMetadata, canvasPath: file.path, reference });
     }
 
     canvasMetadataCacheMap.set(file.path, cachedMetadata);
