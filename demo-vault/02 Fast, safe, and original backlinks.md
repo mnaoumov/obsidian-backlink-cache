@@ -29,4 +29,4 @@ new Notice([
 ].join('\n'));
 ```
 
-See [[03 Settings]] for the options that control refresh behavior.
+See [[04 Settings]] for the options that control refresh behavior.

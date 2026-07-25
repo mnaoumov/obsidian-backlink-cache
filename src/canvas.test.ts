@@ -5,7 +5,6 @@ import type {
 import type {
   App,
   CachedMetadata,
-  MetadataCache,
   Reference,
   TAbstractFile
 } from 'obsidian';
@@ -472,17 +471,10 @@ describe('CanvasComponent.onload', () => {
 });
 
 describe('CanvasComponent.initCanvasMetadataCache', () => {
-  interface CreateCanvasAppOptions {
-    readonly getFirstLinkpathDest?: ReturnType<typeof vi.fn>;
-  }
-
-  function createCanvasApp(overrides: CreateCanvasAppOptions = {}): App {
+  function createCanvasApp(): App {
     const metadataCache = {
-      getFirstLinkpathDest: overrides.getFirstLinkpathDest ?? vi.fn().mockReturnValue(null),
-      resolvedLinks: {} as MetadataCache['resolvedLinks'],
       saveFileCache: vi.fn(),
-      saveMetaCache: vi.fn(),
-      unresolvedLinks: {} as MetadataCache['unresolvedLinks']
+      saveMetaCache: vi.fn()
     };
     return castTo<App>({
       metadataCache,
@@ -536,11 +528,13 @@ describe('CanvasComponent.initCanvasMetadataCache', () => {
     expect(getCanvasReferences).toHaveBeenCalledWith(app, file);
     expect(app.metadataCache.saveFileCache).toHaveBeenCalled();
     expect(app.metadataCache.saveMetaCache).toHaveBeenCalled();
+    expect(component.getCache('test.canvas')?.frontmatterLinks).toEqual([]);
   });
 
-  it('should index a file-node reference (unresolved)', async () => {
+  it('should expose a file-node reference via the synthetic getCache metadata', async () => {
     vi.mocked(isCanvasFile).mockReturnValue(true);
-    vi.mocked(getCanvasReferences).mockResolvedValue([fileReference('target.md')]);
+    const reference = fileReference('target.md');
+    vi.mocked(getCanvasReferences).mockResolvedValue([reference]);
 
     const app = createCanvasApp();
     const component = createComponentForApp(app);
@@ -554,10 +548,13 @@ describe('CanvasComponent.initCanvasMetadataCache', () => {
 
     expect(app.metadataCache.saveFileCache).toHaveBeenCalled();
     expect(app.metadataCache.saveMetaCache).toHaveBeenCalled();
-    expect(app.metadataCache.unresolvedLinks['test.canvas']?.['target.md']).toBe(1);
+    // Obsidian natively resolves canvas backlinks (Backlinks pane / graph /
+    // `getBacklinksForFile` / `resolvedLinks`) since 1.12.4. The plugin no longer mirrors into
+    // `resolvedLinks`/`unresolvedLinks`; it only fills the per-file `getCache` Obsidian leaves empty.
+    expect(component.getCache('test.canvas')?.frontmatterLinks).toEqual([reference]);
   });
 
-  it('should index a text-node reference (resolved)', async () => {
+  it('should expose a text-node reference via the synthetic getCache metadata', async () => {
     vi.mocked(isCanvasFile).mockReturnValue(true);
     const textReference: CanvasTextNodeReference = {
       isCanvas: true,
@@ -570,9 +567,7 @@ describe('CanvasComponent.initCanvasMetadataCache', () => {
     };
     vi.mocked(getCanvasReferences).mockResolvedValue([textReference]);
 
-    const app = createCanvasApp({
-      getFirstLinkpathDest: vi.fn().mockReturnValue(strictProxy<TFile>({ path: 'target.md' }))
-    });
+    const app = createCanvasApp();
     const component = createComponentForApp(app);
 
     const file = strictProxy<TFile>({
@@ -583,36 +578,13 @@ describe('CanvasComponent.initCanvasMetadataCache', () => {
     await castTo<CanvasInternals>(component).initCanvasMetadataCache(file);
 
     expect(app.metadataCache.saveMetaCache).toHaveBeenCalled();
-    expect(app.metadataCache.resolvedLinks['test.canvas']?.['target']).toBe(1);
+    expect(component.getCache('test.canvas')?.frontmatterLinks).toEqual([textReference]);
   });
 
-  it('should track resolved links', async () => {
+  it('should expose multiple canvas references via the synthetic getCache metadata', async () => {
     vi.mocked(isCanvasFile).mockReturnValue(true);
-    vi.mocked(getCanvasReferences).mockResolvedValue([fileReference('target.md')]);
-
-    const app = createCanvasApp({
-      getFirstLinkpathDest: vi.fn().mockReturnValue(strictProxy<TFile>({ path: 'target.md' }))
-    });
-    const component = createComponentForApp(app);
-
-    const file = strictProxy<TFile>({
-      path: 'test.canvas',
-      stat: { ctime: 0, mtime: 100, size: 50 }
-    });
-
-    await castTo<CanvasInternals>(component).initCanvasMetadataCache(file);
-
-    const resolvedLinks = app.metadataCache.resolvedLinks;
-    expect(resolvedLinks['test.canvas']).toBeDefined();
-    expect(resolvedLinks['test.canvas']?.['target.md']).toBe(1);
-  });
-
-  it('should handle multiple references to the same canvas (existing linksCache entry)', async () => {
-    vi.mocked(isCanvasFile).mockReturnValue(true);
-    vi.mocked(getCanvasReferences).mockResolvedValue([
-      fileReference('target1.md', 0),
-      fileReference('target2.md', 1)
-    ]);
+    const references = [fileReference('target1.md', 0), fileReference('target2.md', 1)];
+    vi.mocked(getCanvasReferences).mockResolvedValue(references);
 
     const app = createCanvasApp();
     const component = createComponentForApp(app);
@@ -624,9 +596,6 @@ describe('CanvasComponent.initCanvasMetadataCache', () => {
 
     await castTo<CanvasInternals>(component).initCanvasMetadataCache(file);
 
-    const unresolvedLinks = app.metadataCache.unresolvedLinks;
-    expect(unresolvedLinks['test.canvas']).toBeDefined();
-    expect(unresolvedLinks['test.canvas']?.['target1.md']).toBe(1);
-    expect(unresolvedLinks['test.canvas']?.['target2.md']).toBe(1);
+    expect(component.getCache('test.canvas')?.frontmatterLinks).toEqual(references);
   });
 });

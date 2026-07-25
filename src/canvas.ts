@@ -5,7 +5,6 @@ import type {
 } from 'obsidian';
 import type { AbortSignalComponent } from 'obsidian-dev-utils/obsidian/components/abort-signal-component';
 import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
-import type { CanvasReference } from 'obsidian-dev-utils/obsidian/reference';
 
 import { InternalPluginName } from '@obsidian-typings/obsidian-public-latest/implementations';
 import { TFile } from 'obsidian';
@@ -13,7 +12,6 @@ import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { getCanvasReferences } from 'obsidian-dev-utils/obsidian/canvas';
 import { ComponentEx } from 'obsidian-dev-utils/obsidian/components/component-ex';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
-import { splitSubpath } from 'obsidian-dev-utils/obsidian/link';
 import { loop } from 'obsidian-dev-utils/obsidian/loop';
 
 import type { BacklinkCacheComponent } from './backlink-cache-component.ts';
@@ -29,13 +27,6 @@ export function isCanvasPluginEnabled(app: App): boolean {
 }
 
 const canvasMetadataCacheMap = new Map<string, CachedMetadata>();
-
-interface AddCanvasMetadataParams {
-  readonly app: App;
-  readonly cachedMetadata: CachedMetadata;
-  readonly canvasPath: string;
-  readonly reference: CanvasReference;
-}
 
 interface CanvasComponentConstructorParams {
   readonly abortSignalComponent: AbortSignalComponent;
@@ -160,8 +151,13 @@ export class CanvasComponent extends ComponentEx {
       frontmatterLinks: []
     };
 
+    // Store the canvas references in a synthetic per-file metadata cache so that
+    // `metadataCache.getCache(canvasPath)` exposes them.
+    // Obsidian natively resolves canvas backlinks (Backlinks pane, graph, `getBacklinksForFile`,
+    // `resolvedLinks`) as of 1.12.4, but still leaves the per-file `getCache` empty for canvas
+    // Files — the one canvas surface the plugin still fills.
     for (const reference of references) {
-      addCanvasMetadata({ app: this.app, cachedMetadata, canvasPath: file.path, reference });
+      cachedMetadata.frontmatterLinks?.push(reference);
     }
 
     canvasMetadataCacheMap.set(file.path, cachedMetadata);
@@ -200,23 +196,6 @@ export class CanvasComponent extends ComponentEx {
       this.backlinkCacheComponent.triggerRemove(file.path);
     }
   }
-}
-
-function addCanvasMetadata(params: AddCanvasMetadataParams): void {
-  const { app, cachedMetadata, canvasPath, reference } = params;
-  cachedMetadata.frontmatterLinks?.push(reference);
-
-  const linkPath = splitSubpath(reference.link).linkPath;
-
-  const resolvedFile = app.metadataCache.getFirstLinkpathDest(linkPath, canvasPath);
-
-  const linksCache = resolvedFile ? app.metadataCache.resolvedLinks : app.metadataCache.unresolvedLinks;
-  linksCache[canvasPath] ??= {};
-  /* v8 ignore start -- canvasPath is always set by the preceding ??= assignment. */
-  const canvasLinksCache = linksCache[canvasPath] ?? {};
-  /* v8 ignore stop */
-  canvasLinksCache[linkPath] ??= 0;
-  canvasLinksCache[linkPath]++;
 }
 
 function arrayBufferToHexString(buffer: ArrayBuffer): string {
