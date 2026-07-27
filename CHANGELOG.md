@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 2.15.0
+
+- feat: re #13
+- refactor(canvas): consume ODU getCanvasReferences, drop duplicated extraction
+- chore: update libs
+- chore: update libs
+- docs: drop stale CLAUDE.md "Known Issues" pointers from perf test comments
+- test(perf): isolate bulk-delete harness from native system-trash cost
+
 ## 2.14.5
 
 - chore: update libs
