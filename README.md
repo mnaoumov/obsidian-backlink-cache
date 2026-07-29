@@ -74,7 +74,7 @@ key: "[title](path/to/link.md)"
 A demo vault with usage examples ships with every release. You can access it via any of the following:
 
 1. Running the **Backlink Cache: Open demo vault** command.
-2. Downloading `backlink-cache.demo-vault.zip` from the [Releases](https://github.com/mnaoumov/obsidian-backlink-cache/releases).
+2. Downloading `backlink-cache-demo-vault-<version>.zip` (`<version>` is the release version) from the [Releases](https://github.com/mnaoumov/obsidian-backlink-cache/releases).
 3. Browsing its source in [`demo-vault/`](./demo-vault/README.md) in this repository.
 
 ## Installation
