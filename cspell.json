@@ -17,6 +17,7 @@
     "creatordate",
     "Debouncer",
     "frontmatter",
+    "GHSA",
     "hotreload",
     "lezer",
     "Linkpath",
