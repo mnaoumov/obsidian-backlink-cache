@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## 2.16.0
+
+- refactor(settings): move the settings tab onto the declarative settings API
+- chore: align the brace-expansion pin check with the rest of the workspace
+- chore: update libs and clear the npm audit
+- docs: fix the demo vault download instructions
+
 ## 2.15.0
 
 - feat: re #13
