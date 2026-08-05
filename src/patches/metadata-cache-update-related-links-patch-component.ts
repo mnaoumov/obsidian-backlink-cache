@@ -21,10 +21,10 @@ export class MetadataCacheUpdateRelatedLinksPatchComponent extends MonkeyAroundC
 
   public override onload(): void {
     this.registerMethodPatch({
+      $object: this.metadataCache,
       methodName: 'updateRelatedLinks',
-      obj: this.metadataCache,
       patchHandler: ({
-        originalArgs: [fileNames]
+        originalArguments: [fileNames]
       }) => {
         this.backlinkCacheComponent.updateRelatedLinks(fileNames);
       }

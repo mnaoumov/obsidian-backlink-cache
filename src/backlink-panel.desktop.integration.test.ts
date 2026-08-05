@@ -24,13 +24,14 @@ const TARGET_BASENAME = 'backlink-panel-target';
 const TARGET_PATH = `${TARGET_BASENAME}.md`;
 const LINKER_PREFIX = 'backlink-panel-link';
 const INDEX_WAIT_IN_MS = 60_000;
-const INDEX_POLL_IN_MS = 1_000;
-const PANEL_SETTLE_IN_MS = 5_000;
+const INDEX_POLL_IN_MS = 1000;
+const PANEL_SETTLE_IN_MS = 5000;
 const SCENARIO_TIMEOUT_IN_MS = 150_000;
 
 describe('backlink panel renders backlinks via the plugin index', () => {
   it('shows the correct match count for the target after recompute', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: {
         INDEX_POLL_IN_MS,
         INDEX_WAIT_IN_MS,
@@ -40,6 +41,7 @@ describe('backlink panel renders backlinks via the plugin index', () => {
         TARGET_BASENAME,
         TARGET_PATH
       },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({
         app,
         INDEX_POLL_IN_MS: pollMs,

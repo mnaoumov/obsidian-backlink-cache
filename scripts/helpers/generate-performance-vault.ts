@@ -51,7 +51,7 @@ const FILES_PER_FOLDER = 30;
  * How many notes each bulk-delete folder holds. Close to the ~943-file cascade
  * measured in the real freeze; overridable via `BC_PERF_DELETE_COUNT` for quick runs.
  */
-const DEFAULT_PERFORMANCE_VAULT_DELETE_COUNT = 1_000;
+const DEFAULT_PERFORMANCE_VAULT_DELETE_COUNT = 1000;
 export const PERFORMANCE_VAULT_DELETE_COUNT = Number(process.env['BC_PERF_DELETE_COUNT']) || DEFAULT_PERFORMANCE_VAULT_DELETE_COUNT;
 
 /**
@@ -72,9 +72,9 @@ export function generatePerformanceVault(): PopulateFilesParams {
     files[`${PERFORMANCE_VAULT_LINKER_FOLDER}/link-${String(linkerIndex)}.md`] = '[[target]]\n';
   }
 
-  for (const deleteFolder of [PERFORMANCE_VAULT_DELETE_FOLDER_A, PERFORMANCE_VAULT_DELETE_FOLDER_B]) {
-    for (let deleteIndex = 0; deleteIndex < PERFORMANCE_VAULT_DELETE_COUNT; deleteIndex++) {
-      files[`${deleteFolder}/del-${String(deleteIndex)}.md`] = '[[delete-target]]\n';
+  for (const deletionFolder of [PERFORMANCE_VAULT_DELETE_FOLDER_A, PERFORMANCE_VAULT_DELETE_FOLDER_B]) {
+    for (let deletionIndex = 0; deletionIndex < PERFORMANCE_VAULT_DELETE_COUNT; deletionIndex++) {
+      files[`${deletionFolder}/del-${String(deletionIndex)}.md`] = '[[delete-target]]\n';
     }
   }
 

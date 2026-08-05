@@ -4,19 +4,24 @@ type FileComparer = (a: TFile, b: TFile) => number;
 
 export function getFileComparer(sortOrder: string): FileComparer {
   switch (sortOrder) {
-    case 'alphabeticalReverse':
+    case 'alphabeticalReverse': {
       return alphabeticalReverseCompare;
-    case 'byCreatedTime':
+    }
+    case 'byCreatedTime': {
       return byCreatedTimeCompare;
-    case 'byCreatedTimeReverse':
+    }
+    case 'byCreatedTimeReverse': {
       return byCreatedTimeReverseCompare;
-    case 'byModifiedTime':
+    }
+    case 'byModifiedTime': {
       return byModifiedTimeCompare;
-    case 'byModifiedTimeReverse':
+    }
+    case 'byModifiedTimeReverse': {
       return byModifiedTimeReverseCompare;
-    case 'alphabetical':
-    default:
+    }
+    default: {
       return alphabeticalCompare;
+    }
   }
 }
 

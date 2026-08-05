@@ -173,7 +173,7 @@ export class CanvasComponent extends ComponentEx {
   private async processAllCanvasFiles(): Promise<void> {
     await loop({
       abortSignal: this.abortSignalComponent.abortSignal,
-      buildNoticeMessage: ({ item, iterationStr }) => `Processing backlinks ${iterationStr} - ${item.path}`,
+      buildNoticeMessage: ({ item, iterationString }) => `Processing backlinks ${iterationString} - ${item.path}`,
       items: this.app.vault.getFiles().filter((file) => isCanvasFile(file)),
       pluginNoticeComponent: this.pluginNoticeComponent,
       processItem: async (canvasFile) => {
@@ -204,9 +204,7 @@ function arrayBufferToHexString(buffer: ArrayBuffer): string {
 
   for (const byte of uint8Array) {
     // eslint-disable-next-line no-bitwise, no-magic-numbers -- Magic numbers are OK in this case.
-    hexArray.push((byte >>> 4).toString(16));
-    // eslint-disable-next-line no-bitwise, no-magic-numbers -- Magic numbers are OK in this case.
-    hexArray.push((byte & 0x0F).toString(16));
+    hexArray.push((byte >>> 4).toString(16), (byte & 0x0F).toString(16));
   }
 
   return hexArray.join('');

@@ -145,10 +145,10 @@ describe('BacklinksCorePluginComponent', () => {
 
   it('should patch onUserEnable on the plugin instance when disabled', () => {
     const onUserEnable = vi.fn();
-    const instanceProto = { onUserEnable };
+    const instancePrototype = { onUserEnable };
     const backlinksCorePlugin = {
       enabled: false,
-      instance: Object.create(instanceProto) as object
+      instance: Object.create(instancePrototype) as object
     };
 
     const app = strictProxy<App>({
@@ -163,7 +163,7 @@ describe('BacklinksCorePluginComponent', () => {
     const component = new BacklinksCorePluginComponent(app);
     component.load();
 
-    expect(instanceProto.onUserEnable).not.toBe(onUserEnable);
+    expect(instancePrototype.onUserEnable).not.toBe(onUserEnable);
   });
 
   it('should patch backlinks pane when plugin is already enabled', async () => {
@@ -173,11 +173,11 @@ describe('BacklinksCorePluginComponent', () => {
     };
 
     const recomputeBacklink = vi.fn();
-    const backlinkProto = { recomputeBacklink };
+    const backlinkPrototype = { recomputeBacklink };
     const backlinksLeaf = strictProxy<WorkspaceLeaf>({
       loadIfDeferred: vi.fn().mockResolvedValue(undefined),
       view: strictProxy<BacklinkView>({
-        backlink: Object.create(backlinkProto),
+        backlink: Object.create(backlinkPrototype),
         file: null
       })
     });
@@ -195,16 +195,16 @@ describe('BacklinksCorePluginComponent', () => {
     component.load();
 
     await vi.waitFor(() => {
-      expect(backlinkProto.recomputeBacklink).not.toBe(recomputeBacklink);
+      expect(backlinkPrototype.recomputeBacklink).not.toBe(recomputeBacklink);
     });
   });
 
   it('should invoke fallback and enable handler in patched onUserEnable', () => {
     const onUserEnable = vi.fn();
-    const instanceProto = { onUserEnable };
+    const instancePrototype = { onUserEnable };
     const backlinksCorePlugin = {
       enabled: false,
-      instance: Object.create(instanceProto) as object
+      instance: Object.create(instancePrototype) as object
     };
 
     const app = strictProxy<App>({
@@ -219,7 +219,7 @@ describe('BacklinksCorePluginComponent', () => {
     const component = new BacklinksCorePluginComponent(app);
     component.load();
 
-    instanceProto.onUserEnable();
+    instancePrototype.onUserEnable();
 
     expect(onUserEnable).toHaveBeenCalled();
   });
@@ -261,11 +261,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
     };
 
     const originalRecomputeBacklink = vi.fn();
-    const backlinkProto = { recomputeBacklink: originalRecomputeBacklink };
+    const backlinkPrototype = { recomputeBacklink: originalRecomputeBacklink };
     const backlinksLeaf = strictProxy<WorkspaceLeaf>({
       loadIfDeferred: vi.fn().mockResolvedValue(undefined),
       view: strictProxy<BacklinkView>({
-        backlink: Object.create(backlinkProto),
+        backlink: Object.create(backlinkPrototype),
         file: null
       })
     });
@@ -283,11 +283,11 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
     component.load();
 
     await vi.waitFor(() => {
-      expect(backlinkProto.recomputeBacklink).not.toBe(originalRecomputeBacklink);
+      expect(backlinkPrototype.recomputeBacklink).not.toBe(originalRecomputeBacklink);
     });
 
     return async (backlinkComponent: BacklinkComponent, file: null | TFile): Promise<void> => {
-      backlinkProto.recomputeBacklink.call(backlinkComponent, file);
+      backlinkPrototype.recomputeBacklink.call(backlinkComponent, file);
       // `recomputeBacklink` dispatches its work via the real `invokeAsyncSafely` as fire-and-forget;
       // Flush the microtask chain (mocked awaits resolve immediately) with a macrotask tick.
       await sleep(0);

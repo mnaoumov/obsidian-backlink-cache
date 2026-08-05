@@ -24,12 +24,13 @@ const TARGET_PATH = 'target.md';
 const CANVAS_PATH = 'diagram.canvas';
 const TARGET_LINK = 'target';
 const CACHE_WAIT_IN_MS = 60_000;
-const CACHE_POLL_IN_MS = 1_000;
+const CACHE_POLL_IN_MS = 1000;
 const SCENARIO_TIMEOUT_IN_MS = 120_000;
 
 describe('getCache exposes canvas node links', () => {
   it('returns a metadata cache whose links include the canvas text-node link', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: {
         CACHE_POLL_IN_MS,
         CACHE_WAIT_IN_MS,
@@ -37,6 +38,7 @@ describe('getCache exposes canvas node links', () => {
         TARGET_LINK,
         TARGET_PATH
       },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({
         app,
         CACHE_POLL_IN_MS: pollMs,
@@ -56,7 +58,7 @@ describe('getCache exposes canvas node links', () => {
         let cache = app.metadataCache.getCache(canvasPath);
         let resolved = app.metadataCache.resolvedLinks[canvasPath];
         while (
-          (!cache || (cache.frontmatterLinks?.length ?? 0) === 0 || !resolved || !(targetPath in resolved))
+          (!cache || (cache.frontmatterLinks?.length ?? 0) === 0 || !resolved || !Object.hasOwn(resolved, targetPath))
           && Date.now() < deadline
         ) {
           await sleep(pollMs);

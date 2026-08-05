@@ -22,8 +22,8 @@ export class CanvasPluginInstanceOnUserEnablePatchComponent extends MonkeyAround
 
   public override onload(): void {
     this.registerMethodPatch({
+      $object: getPrototypeOf(this.canvasPluginInstance),
       methodName: 'onUserEnable',
-      obj: getPrototypeOf(this.canvasPluginInstance),
       patchHandler: () => {
         this.canvasComponent.onCanvasCorePluginEnable();
       }
