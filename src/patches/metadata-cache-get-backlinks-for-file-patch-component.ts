@@ -5,7 +5,7 @@ import { MonkeyAroundComponent } from 'obsidian-dev-utils/obsidian/components/mo
 
 import type { BacklinkCacheComponent } from '../backlink-cache-component.ts';
 
-type GetBacklinksForFileFn = MetadataCache['getBacklinksForFile'];
+type GetBacklinksForFileFunction = MetadataCache['getBacklinksForFile'];
 
 interface MetadataCacheGetBacklinksForFilePatchComponentConstructorParams {
   readonly backlinkCacheComponent: BacklinkCacheComponent;
@@ -24,18 +24,19 @@ export class MetadataCacheGetBacklinksForFilePatchComponent extends MonkeyAround
 
   public override onload(): void {
     this.registerMethodPatch({
+      $object: this.metadataCache,
       methodName: 'getBacklinksForFile',
-      obj: this.metadataCache,
       patchHandler: ({
-        originalArgs: [file]
+        originalArguments: [file]
       }) => {
         return this.backlinkCacheComponent.getBacklinksForFile(file);
       },
       postPatchHandler: ({
         originalMethod,
         patchedMethod
-      }): GetBacklinksForFileFn & GetBacklinksForFileSafeWrapper => {
+      }): GetBacklinksForFileFunction & GetBacklinksForFileSafeWrapper => {
         return Object.assign(patchedMethod, {
+          // eslint-disable-next-line unicorn/name-replacements -- `originalFn` is this plugin's documented public API - the README tells users to call it.
           originalFn: originalMethod.bind(this.metadataCache),
           safe: this.backlinkCacheComponent.getBacklinksForFileSafe.bind(this.backlinkCacheComponent)
         });

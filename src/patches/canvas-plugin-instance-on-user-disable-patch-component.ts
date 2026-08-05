@@ -22,8 +22,8 @@ export class CanvasPluginInstanceOnUserDisablePatchComponent extends MonkeyAroun
 
   public override onload(): void {
     this.registerMethodPatch({
+      $object: getPrototypeOf(this.canvasPluginInstance),
       methodName: 'onUserDisable',
-      obj: getPrototypeOf(this.canvasPluginInstance),
       patchHandler: () => {
         this.canvasComponent.onCanvasCorePluginDisable();
       }

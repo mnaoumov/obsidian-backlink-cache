@@ -23,7 +23,7 @@ import {
 
 const PLUGIN_ID = 'backlink-cache';
 const INDEX_WAIT_IN_MS = 180_000;
-const INDEX_POLL_IN_MS = 2_000;
+const INDEX_POLL_IN_MS = 2000;
 const SCENARIO_TIMEOUT_IN_MS = 300_000;
 const TIMED_ITERATIONS = 100;
 // Patched must be at least this many times faster than native to keep the patch worthwhile.
@@ -32,6 +32,7 @@ const REQUIRED_SPEEDUP = 2;
 describe('plugin on/off perf tripwire', () => {
   it('patched getBacklinksForFile and updateRelatedLinks are much faster than native', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: {
         INDEX_POLL_IN_MS,
         INDEX_WAIT_IN_MS,
@@ -40,6 +41,7 @@ describe('plugin on/off perf tripwire', () => {
         TARGET_BASENAME: PERFORMANCE_VAULT_TARGET,
         TIMED_ITERATIONS
       },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({
         app,
         INDEX_POLL_IN_MS: pollMs,

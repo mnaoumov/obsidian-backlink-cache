@@ -39,7 +39,7 @@ export class Plugin extends PluginBase {
       })
     );
 
-    this.commandHandlerComponent.registerCommandHandlers([
+    this.commandHandlerComponent.registerCommandHandlers(() => [
       new RefreshBacklinkPanelsCommandHandler(backlinkCacheComponent),
       new OpenDemoVaultCommandHandler({
         app: this.app,

@@ -22,8 +22,8 @@ export class BacklinkPluginInstanceOnUserEnablePatchComponent extends MonkeyArou
 
   public override onload(): void {
     this.registerMethodPatch({
+      $object: getPrototypeOf(this.backlinkPluginInstance),
       methodName: 'onUserEnable',
-      obj: getPrototypeOf(this.backlinkPluginInstance),
       patchHandler: ({
         fallback
       }) => {

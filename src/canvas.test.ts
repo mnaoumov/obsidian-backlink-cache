@@ -51,7 +51,7 @@ interface MutableAbortSignal {
 }
 
 interface RegisteredEventHandler {
-  callback(...args: unknown[]): void;
+  callback(...$arguments: unknown[]): void;
   event: string;
 }
 
@@ -77,13 +77,13 @@ vi.mock('./backlink-core-plugin.ts', () => ({
   reloadBacklinksView: vi.fn().mockResolvedValue(undefined)
 }));
 
-interface CanvasInstanceProto {
+interface CanvasInstancePrototype {
   onUserDisable(): void;
   onUserEnable(): void;
 }
 
 interface CreateCanvasCorePluginResult {
-  readonly instanceProto: CanvasInstanceProto;
+  readonly instancePrototype: CanvasInstancePrototype;
   readonly plugin: CanvasPlugin;
 }
 
@@ -99,16 +99,16 @@ interface CreateComponentResult {
   readonly component: CanvasComponent;
 }
 
-function createCanvasCorePlugin(enabled: boolean): CreateCanvasCorePluginResult {
-  const instanceProto: CanvasInstanceProto = {
+function createCanvasCorePlugin(isEnabled: boolean): CreateCanvasCorePluginResult {
+  const instancePrototype: CanvasInstancePrototype = {
     onUserDisable: vi.fn(),
     onUserEnable: vi.fn()
   };
   const plugin = strictProxy<CanvasPlugin>({
-    enabled,
-    instance: castTo<CanvasPluginInstance>(Object.create(instanceProto))
+    enabled: isEnabled,
+    instance: castTo<CanvasPluginInstance>(Object.create(instancePrototype))
   });
-  return { instanceProto, plugin };
+  return { instancePrototype, plugin };
 }
 
 function createComponent(overrides: CreateComponentOverrides = {}): CreateComponentResult {
@@ -139,13 +139,14 @@ function createMockApp(): App {
     metadataCache: {
       deletePath: vi.fn(),
       getCache: vi.fn(),
+      // eslint-disable-next-line unicorn/name-replacements -- `getFirstLinkpathDest` is an Obsidian `MetadataCache` method name.
       getFirstLinkpathDest: vi.fn().mockReturnValue(null),
       saveFileCache: vi.fn(),
       saveMetaCache: vi.fn()
     },
     vault: {
       getFiles: vi.fn().mockReturnValue([]),
-      on: vi.fn().mockImplementation((event: string, callback: (...args: unknown[]) => void) => {
+      on: vi.fn().mockImplementation((event: string, callback: (...$arguments: unknown[]) => void) => {
         registeredEventHandlers.push({ callback, event });
         return { id: event };
       }),
@@ -205,15 +206,15 @@ describe('CanvasComponent.onload', () => {
 
   it('should register canvas core plugin patches when canvas plugin exists', () => {
     const { app, component } = createComponent();
-    const { instanceProto, plugin } = createCanvasCorePlugin(false);
+    const { instancePrototype, plugin } = createCanvasCorePlugin(false);
     vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(plugin);
-    const originalOnUserEnable = instanceProto.onUserEnable;
-    const originalOnUserDisable = instanceProto.onUserDisable;
+    const originalOnUserEnable = instancePrototype.onUserEnable;
+    const originalOnUserDisable = instancePrototype.onUserDisable;
 
     component.load();
 
-    expect(instanceProto.onUserEnable).not.toBe(originalOnUserEnable);
-    expect(instanceProto.onUserDisable).not.toBe(originalOnUserDisable);
+    expect(instancePrototype.onUserEnable).not.toBe(originalOnUserEnable);
+    expect(instancePrototype.onUserDisable).not.toBe(originalOnUserDisable);
   });
 
   it('should process all canvas files when canvas plugin is already enabled', () => {
@@ -352,13 +353,13 @@ describe('CanvasComponent.onload', () => {
     Object.assign(mockCanvasFile, { path: 'test.canvas' });
 
     const { app, backlinkCacheComponent, component } = createComponent();
-    const { instanceProto, plugin } = createCanvasCorePlugin(false);
+    const { instancePrototype, plugin } = createCanvasCorePlugin(false);
     vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(plugin);
     vi.mocked(app.vault.getFiles).mockReturnValue(castTo<TFile[]>([mockCanvasFile]));
 
     component.load();
 
-    instanceProto.onUserDisable();
+    instancePrototype.onUserDisable();
 
     expect(app.metadataCache.deletePath).toHaveBeenCalledWith('test.canvas');
     expect(backlinkCacheComponent.triggerRemove).toHaveBeenCalledWith('test.canvas');
@@ -374,9 +375,9 @@ describe('CanvasComponent.onload', () => {
 
     vi.mocked(app.vault.getFiles).mockReturnValue(castTo<TFile[]>([mockCanvasFile]));
 
-    vi.mocked(loop).mockImplementation(async (opts) => {
-      opts.buildNoticeMessage({ item: mockCanvasFile, iterationStr: '1/1' });
-      await (opts.processItem as (item: TFile) => Promise<void>)(mockCanvasFile);
+    vi.mocked(loop).mockImplementation(async (options) => {
+      options.buildNoticeMessage({ item: mockCanvasFile, iterationString: '1/1' });
+      await (options.processItem as (item: TFile) => Promise<void>)(mockCanvasFile);
     });
 
     component.load();
@@ -406,13 +407,13 @@ describe('CanvasComponent.onload', () => {
     };
 
     const { app, component } = createComponent({ abortSignal });
-    const { instanceProto, plugin } = createCanvasCorePlugin(false);
+    const { instancePrototype, plugin } = createCanvasCorePlugin(false);
     vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(plugin);
     vi.mocked(app.vault.getFiles).mockReturnValue(castTo<TFile[]>([mockCanvasFile1, mockCanvasFile2]));
 
     component.load();
 
-    instanceProto.onUserDisable();
+    instancePrototype.onUserDisable();
 
     expect(app.metadataCache.deletePath).toHaveBeenCalledTimes(1);
     expect(app.metadataCache.deletePath).toHaveBeenCalledWith('a.canvas');
@@ -430,24 +431,24 @@ describe('CanvasComponent.onload', () => {
 
   it('should handle onUserEnable patch', () => {
     const { app, component } = createComponent();
-    const { instanceProto, plugin } = createCanvasCorePlugin(false);
+    const { instancePrototype, plugin } = createCanvasCorePlugin(false);
     vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(plugin);
 
     component.load();
 
-    instanceProto.onUserEnable();
+    instancePrototype.onUserEnable();
 
     expect(loop).toHaveBeenCalled();
   });
 
   it('should handle onUserDisable patch', () => {
     const { app, component } = createComponent();
-    const { instanceProto, plugin } = createCanvasCorePlugin(false);
+    const { instancePrototype, plugin } = createCanvasCorePlugin(false);
     vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(plugin);
 
     component.load();
 
-    instanceProto.onUserDisable();
+    instancePrototype.onUserDisable();
 
     expect(reloadBacklinksView).toHaveBeenCalled();
   });

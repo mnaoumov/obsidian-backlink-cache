@@ -106,9 +106,9 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
     const notePathLinksMap = this.backlinksMap.get(getPath(this.app, pathOrFile)) ?? new Map<string, Set<Reference>>();
     const dict = new CustomArrayDictImpl<Reference>();
 
-    for (const [notePath, links] of notePathLinksMap.entries()) {
+    for (const [notePath, links] of notePathLinksMap) {
       this.abortSignalComponent.abortSignal.throwIfAborted();
-      for (const link of sortReferences(Array.from(links))) {
+      for (const link of sortReferences([...links])) {
         this.abortSignalComponent.abortSignal.throwIfAborted();
         dict.add(notePath, link);
       }
@@ -260,7 +260,7 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
   private async processAllNotes(): Promise<void> {
     await loop({
       abortSignal: this.abortSignalComponent.abortSignal,
-      buildNoticeMessage: ({ item, iterationStr }) => `Processing backlinks ${iterationStr} - ${item.path}`,
+      buildNoticeMessage: ({ item, iterationString }) => `Processing backlinks ${iterationString} - ${item.path}`,
       items: getMarkdownFilesSorted(this.app),
       pluginNoticeComponent: this.pluginNoticeComponent,
       processItem: async (note) => {
@@ -273,7 +273,7 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
   }
 
   private async processPendingActions(): Promise<void> {
-    const pathActions = Array.from(this.pendingActions.entries());
+    const pathActions = [...this.pendingActions];
     this.pendingActions.clear();
 
     for (const [path, action] of pathActions) {
@@ -282,14 +282,17 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
       }
 
       switch (action) {
-        case Action.Refresh:
+        case Action.Refresh: {
           await this.refreshBacklinks(path);
           break;
-        case Action.Remove:
+        }
+        case Action.Remove: {
           this.removeBacklinks(path);
           break;
-        default:
+        }
+        default: {
           throw new Error('Unknown action');
+        }
       }
     }
 

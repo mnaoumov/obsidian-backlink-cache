@@ -58,6 +58,7 @@ interface BacklinksCallResult {
  */
 interface PatchedGetBacklinksForFile {
   (pathOrFile: string | TFile): CustomArrayDict<Reference>;
+  // eslint-disable-next-line unicorn/name-replacements -- `originalFn` is this plugin's documented public API - the README tells users to call it.
   originalFn(file: TFile): CustomArrayDict<Reference>;
   safe(pathOrFile: string | TFile): Promise<CustomArrayDict<Reference>>;
 }
@@ -79,6 +80,7 @@ export function registerReadmeCallsSuite(platform: string): void {
   describe(`README getBacklinksForFile calls (${platform})`, () => {
     beforeAll(async () => {
       const result = await evalInObsidian({
+        // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
         args: {
           maxAttempts: WARM_UP_MAX_ATTEMPTS,
           pollDelayInMilliseconds: WARM_UP_POLL_DELAY_IN_MILLISECONDS,
@@ -87,6 +89,7 @@ export function registerReadmeCallsSuite(platform: string): void {
           targetContent: TARGET_CONTENT,
           targetPath: TARGET_PATH
         },
+        // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
         async fn({ app, maxAttempts, pollDelayInMilliseconds, sourceContent, sourcePath, targetContent, targetPath }) {
           for (const path of [targetPath, sourcePath]) {
             const existing = app.vault.getAbstractFileByPath(path);
@@ -157,14 +160,16 @@ export function registerReadmeCallsSuite(platform: string): void {
  */
 async function callBacklinks(call: BacklinksCall): Promise<BacklinksCallResult> {
   return evalInObsidian({
+    // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
     args: {
       call,
       targetPath: TARGET_PATH
     },
+    // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
     async fn({ app, call: invoke, obsidianModule, targetPath }) {
       const targetFile = app.vault.getAbstractFileByPath(targetPath);
       if (!(targetFile instanceof obsidianModule.TFile)) {
-        throw new Error(`Target file not found: ${targetPath}`);
+        throw new TypeError(`Target file not found: ${targetPath}`);
       }
 
       const getBacklinksForFile = app.metadataCache.getBacklinksForFile as PatchedGetBacklinksForFile;

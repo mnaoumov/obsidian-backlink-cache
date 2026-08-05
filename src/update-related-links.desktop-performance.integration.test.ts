@@ -33,12 +33,13 @@ const LINKER_PREFIX = `${PERFORMANCE_VAULT_LINKER_FOLDER}/`;
  * reads an empty cache. Mirrors the poll in the bulk-delete / getCache-overhead harnesses.
  */
 const INDEX_WAIT_IN_MS = 240_000;
-const INDEX_POLL_IN_MS = 2_000;
+const INDEX_POLL_IN_MS = 2000;
 const SCENARIO_TIMEOUT_IN_MS = 300_000;
 
 describe('updateRelatedLinks avoids the vault scan', () => {
   it('queues only the linking files and never calls getCachedFiles', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: {
         EXPECTED_LINKER_COUNT: PERFORMANCE_VAULT_LINKER_COUNT,
         INDEX_POLL_IN_MS,
@@ -46,6 +47,7 @@ describe('updateRelatedLinks avoids the vault scan', () => {
         LINKER_PREFIX,
         TARGET_BASENAME: PERFORMANCE_VAULT_TARGET
       },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({
         app,
         EXPECTED_LINKER_COUNT: expectedLinkerCount,

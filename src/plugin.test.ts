@@ -69,8 +69,8 @@ interface SettingTabsHolder {
 
 function createApp(): AppOriginal {
   const appMock = App.createConfigured__();
-  appMock.workspace.onLayoutReady = vi.fn((cb: () => void) => {
-    cb();
+  appMock.workspace.onLayoutReady = vi.fn((callback: () => void) => {
+    callback();
   });
   return appMock.asOriginalType__();
 }

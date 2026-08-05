@@ -22,11 +22,11 @@ export class MetadataCacheGetCachePatchComponent extends MonkeyAroundComponent {
 
   public override onload(): void {
     this.registerMethodPatch({
+      $object: this.metadataCache,
       methodName: 'getCache',
-      obj: this.metadataCache,
       patchHandler: ({
         fallback,
-        originalArgs: [path]
+        originalArguments: [path]
       }) => {
         // Route canvas files by extension alone — O(1). `isCanvasFile` checks the `.canvas`
         // Extension string without resolving the path to a `TFile`.

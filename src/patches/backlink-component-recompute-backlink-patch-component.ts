@@ -45,10 +45,10 @@ export class BacklinkComponentRecomputeBacklinkPatchComponent extends MonkeyArou
 
   public override onload(): void {
     this.registerMethodPatch({
+      $object: getPrototypeOf(this.backlinkComponent),
       methodName: 'recomputeBacklink',
-      obj: getPrototypeOf(this.backlinkComponent),
       patchHandler: ({
-        originalArgs: [backlinkFile],
+        originalArguments: [backlinkFile],
         originalThis
       }) => {
         invokeAsyncSafely(async () => {
@@ -204,19 +204,17 @@ const FILE_PREFIX = 'file: ';
 function patchCanvasContent(canvasData: CanvasData): string {
   const patched: CanvasData = {
     edges: canvasData.edges,
-    nodes: []
+    nodes: canvasData.nodes.map((node) => {
+      if (node.type === 'file') {
+        return {
+          ...node,
+          text: `${FILE_PREFIX}${node.file}`,
+          type: 'text'
+        };
+      }
+
+      return node;
+    })
   };
-
-  patched.nodes = canvasData.nodes.map((node) => {
-    if (node.type === 'file') {
-      return {
-        ...node,
-        text: `${FILE_PREFIX}${node.file}`,
-        type: 'text'
-      };
-    }
-
-    return node;
-  });
   return JSON.stringify(patched);
 }

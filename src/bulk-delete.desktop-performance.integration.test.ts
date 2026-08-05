@@ -52,7 +52,7 @@ const DELETE_FOLDER_B_PREFIX = `${PERFORMANCE_VAULT_DELETE_FOLDER_B}/`;
  * a fixed settle time.
  */
 const INDEX_WAIT_IN_MS = 240_000;
-const INDEX_POLL_IN_MS = 2_000;
+const INDEX_POLL_IN_MS = 2000;
 /*
  * Mirror of the plugin's internal debounce interval (BacklinkCacheComponent
  * INTERVAL_IN_MILLISECONDS). The deferred reverse-index batch fires this long after
@@ -82,11 +82,12 @@ const MAX_SYNC_OVERHEAD_FACTOR = 3;
  * deleted file"; this bounds that batch's main-thread blocking and would fire if the
  * remove path ever stopped being a cheap incremental drop.
  */
-const MAX_DEFERRED_BLOCK_IN_MS = 2_000;
+const MAX_DEFERRED_BLOCK_IN_MS = 2000;
 
 describe('bulk-delete cascade cost breakdown', () => {
   it('localizes the per-deleted-file cost across the patched getCache, native getCache, and the deferred batch', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: {
         DEFERRED_MARGIN_IN_MS,
         DELETE_FOLDER_A_PREFIX,
@@ -98,6 +99,7 @@ describe('bulk-delete cascade cost breakdown', () => {
         PLUGIN_DEBOUNCE_IN_MS,
         PLUGIN_ID
       },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({
         app,
         DEFERRED_MARGIN_IN_MS: deferredMarginMs,

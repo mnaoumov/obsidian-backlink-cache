@@ -124,9 +124,10 @@ interface EventHandlers {
   rename(file: TAbstractFile, oldPath: string): void;
 }
 
-interface GetBacklinksForFileFn {
+interface GetBacklinksForFileFunction {
   (path: string): CustomArrayDict<Reference>;
-  originalFn(...args: unknown[]): unknown;
+  // eslint-disable-next-line unicorn/name-replacements -- `originalFn` is this plugin's documented public API - the README tells users to call it.
+  originalFn(...$arguments: unknown[]): unknown;
   safe(path: string): Promise<CustomArrayDict<Reference>>;
 }
 
@@ -221,8 +222,8 @@ function createTFile(path: string): TFile {
   });
 }
 
-function getBacklinksForFileFn(app: App): GetBacklinksForFileFn {
-  return castTo<GetBacklinksForFileFn>(app.metadataCache.getBacklinksForFile);
+function getBacklinksForFileFunction(app: App): GetBacklinksForFileFunction {
+  return castTo<GetBacklinksForFileFunction>(app.metadataCache.getBacklinksForFile);
 }
 
 function getBasename(path: string): string {
@@ -244,10 +245,10 @@ function oracleQueuedPaths(graph: LinkGraph, fileNames: string[], existingSource
   const queued = new Set<string>();
 
   for (const [source, links] of graph) {
-    const resolvedMatch = links.resolved.some((target) => loweredFileNames.includes(basenameLower(target)));
-    const unresolvedMatch = links.unresolved.some((linkText) => strippedFileNames.includes(basenameLower(splitSubpath(linkText).linkPath)));
+    const isResolvedMatch = links.resolved.some((target) => loweredFileNames.includes(basenameLower(target)));
+    const isUnresolvedMatch = links.unresolved.some((linkText) => strippedFileNames.includes(basenameLower(splitSubpath(linkText).linkPath)));
 
-    if ((resolvedMatch || unresolvedMatch) && existingSources.has(source)) {
+    if ((isResolvedMatch || isUnresolvedMatch) && existingSources.has(source)) {
       queued.add(source);
     }
   }
@@ -350,9 +351,9 @@ describe('BacklinkCacheComponent', () => {
       vi.mocked(getFileOrNull).mockReturnValue(mockFile);
       vi.mocked(getCacheSafe).mockResolvedValue(null);
 
-      vi.mocked(loop).mockImplementation(async (opts) => {
-        opts.buildNoticeMessage({ item: mockFile, iterationStr: '1/1' });
-        await (opts.processItem as (item: TFile) => Promise<void>)(mockFile);
+      vi.mocked(loop).mockImplementation(async (options) => {
+        options.buildNoticeMessage({ item: mockFile, iterationString: '1/1' });
+        await (options.processItem as (item: TFile) => Promise<void>)(mockFile);
       });
 
       await setupOnLayoutReady();
@@ -363,21 +364,21 @@ describe('BacklinkCacheComponent', () => {
     it('should return backlinks via getBacklinksForFile', async () => {
       await setupOnLayoutReady();
 
-      const result = getBacklinksForFileFn(context.app)('test.md');
+      const result = getBacklinksForFileFunction(context.app)('test.md');
       expect(result.keys()).toEqual([]);
     });
 
     it('should return backlinks via getBacklinksForFileSafe', async () => {
       await setupOnLayoutReady();
 
-      const result = await getBacklinksForFileFn(context.app).safe('test.md');
+      const result = await getBacklinksForFileFunction(context.app).safe('test.md');
       expect(result.keys()).toEqual([]);
     });
 
     it('should expose originalFn', async () => {
       await setupOnLayoutReady();
 
-      expect(getBacklinksForFileFn(context.app).originalFn).toBeDefined();
+      expect(getBacklinksForFileFunction(context.app).originalFn).toBeDefined();
     });
 
     it('should process refresh action via pending actions', async () => {
@@ -403,7 +404,7 @@ describe('BacklinkCacheComponent', () => {
       context.component.triggerRefresh('note.md');
       await processPendingActions();
 
-      const result = getBacklinksForFileFn(context.app)('target.md');
+      const result = getBacklinksForFileFunction(context.app)('target.md');
       expect(result.keys()).toContain('note.md');
     });
 
@@ -413,7 +414,7 @@ describe('BacklinkCacheComponent', () => {
       context.component.triggerRemove('test.md');
       await processPendingActions();
 
-      expect(getBacklinksForFileFn(context.app)('test.md').keys()).toEqual([]);
+      expect(getBacklinksForFileFunction(context.app)('test.md').keys()).toEqual([]);
     });
 
     it('should refresh backlink panels after actions when setting is enabled', async () => {
@@ -531,8 +532,8 @@ describe('BacklinkCacheComponent', () => {
       const pendingActions = asInternals(context.component).pendingActions;
       pendingActions.set('test.md', 999);
 
-      const processFn = asInternals(context.component).processPendingActions;
-      await expect(processFn.call(context.component)).rejects.toThrow('Unknown action');
+      const processFunction = asInternals(context.component).processPendingActions;
+      await expect(processFunction.call(context.component)).rejects.toThrow('Unknown action');
     });
 
     it('should stop refreshBacklinks when aborted during link iteration', async () => {
@@ -574,22 +575,21 @@ describe('BacklinkCacheComponent', () => {
       await setupOnLayoutReady();
 
       const backlinksMap = asInternals(context.component).backlinksMap;
-      const noteMap = new Map<string, Set<Reference>>();
-      noteMap.set(
+      const noteMap = new Map<string, Set<Reference>>([[
         'note.md',
         new Set([strictProxy<ReferenceCache>({
           link: 'target',
           original: '[[target]]',
           position: { end: { col: 10, line: 0, offset: 10 }, start: { col: 0, line: 0, offset: 0 } }
         })])
-      );
+      ]]);
       backlinksMap.set('target.md', noteMap);
 
       context.abortSignal.throwIfAborted.mockImplementation(() => {
         throw new Error('aborted');
       });
 
-      expect(() => getBacklinksForFileFn(context.app)('target.md')).toThrow('aborted');
+      expect(() => getBacklinksForFileFunction(context.app)('target.md')).toThrow('aborted');
     });
 
     it('should remove linked path entries and backlinks on remove', async () => {
@@ -598,24 +598,23 @@ describe('BacklinkCacheComponent', () => {
       const backlinksMap = asInternals(context.component).backlinksMap;
       const linksMap = asInternals(context.component).linksMap;
 
-      const noteMap = new Map<string, Set<Reference>>();
-      noteMap.set(
+      const noteMap = new Map<string, Set<Reference>>([[
         'note.md',
         new Set([strictProxy<ReferenceCache>({
           link: 'target',
           original: '[[target]]',
           position: { end: { col: 10, line: 0, offset: 10 }, start: { col: 0, line: 0, offset: 0 } }
         })])
-      );
+      ]]);
       backlinksMap.set('target.md', noteMap);
       linksMap.set('note.md', new Set(['target.md']));
 
-      expect(getBacklinksForFileFn(context.app)('target.md').keys()).toContain('note.md');
+      expect(getBacklinksForFileFunction(context.app)('target.md').keys()).toContain('note.md');
 
       context.component.triggerRemove('note.md');
       await processPendingActions();
 
-      expect(getBacklinksForFileFn(context.app)('target.md').keys()).toEqual([]);
+      expect(getBacklinksForFileFunction(context.app)('target.md').keys()).toEqual([]);
     });
   });
 
@@ -699,8 +698,7 @@ describe('BacklinkCacheComponent', () => {
       const backlinksMap = asInternals(context.component).backlinksMap;
       const linksMap = asInternals(context.component).linksMap;
 
-      const noteMap = new Map<string, Set<Reference>>();
-      noteMap.set('note.md', new Set());
+      const noteMap = new Map<string, Set<Reference>>([['note.md', new Set()]]);
       backlinksMap.set('target.md', noteMap);
       linksMap.set('note.md', new Set(['target.md']));
 
@@ -909,7 +907,7 @@ describe('BacklinkCacheComponent', () => {
    * checks cannot rule out. No real Obsidian and no wall-clock are involved.
    */
   describe('complexity scaling (deterministic, no real app)', () => {
-    const VAULT_SIZES = [100, 1_000, 10_000, 100_000];
+    const VAULT_SIZES = [100, 1000, 10_000, 100_000];
 
     function buildFiller(backlinksMap: Map<string, Map<string, Set<Reference>>>, size: number): void {
       const sharedEmpty = new Map<string, Set<Reference>>();

@@ -34,8 +34,8 @@ const WITH_CACHE_PATH = `${PERFORMANCE_VAULT_LINKER_FOLDER}/link-0.md`;
 const MISSING_PATH = `${PERFORMANCE_VAULT_FILLER_FOLDER}/does-not-exist.md`;
 
 const INDEX_WAIT_IN_MS = 240_000;
-const INDEX_POLL_IN_MS = 2_000;
-const ITERATIONS = 5_000;
+const INDEX_POLL_IN_MS = 2000;
+const ITERATIONS = 5000;
 const SCENARIO_TIMEOUT_IN_MS = 600_000;
 
 /*
@@ -47,6 +47,7 @@ const MAX_PATCHED_GET_CACHE_PER_CALL_IN_MS = 0.05;
 describe('getCache patch per-call overhead', () => {
   it('is O(1) and sub-millisecond in isolation, not scaling with vault size', async () => {
     const result = await evalInObsidian({
+      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
       args: {
         INDEX_POLL_IN_MS,
         INDEX_WAIT_IN_MS,
@@ -55,6 +56,7 @@ describe('getCache patch per-call overhead', () => {
         PLUGIN_ID,
         WITH_CACHE_PATH
       },
+      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
       async fn({
         app,
         INDEX_POLL_IN_MS: pollMs,
@@ -73,7 +75,7 @@ describe('getCache patch per-call overhead', () => {
         }
 
         const fileCount = app.vault.getFiles().length;
-        const cacheReady = !!metadataCache.getCache(withCachePath);
+        const isCacheReady = !!metadataCache.getCache(withCachePath);
 
         // ENABLED: patched getCache.
         const patchedWithCacheMs = measure(() => {
@@ -96,7 +98,7 @@ describe('getCache patch per-call overhead', () => {
         await app.plugins.enablePlugin(pluginId);
 
         return {
-          cacheReady,
+          cacheReady: isCacheReady,
           fileCount,
           nativeMissingPerCallMs: nativeMissingMs / iterations,
           nativeWithCachePerCallMs: nativeWithCacheMs / iterations,
