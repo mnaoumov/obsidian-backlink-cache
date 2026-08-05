@@ -342,7 +342,17 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
       });
       if (resolvedLinkFile) {
         this.addBacklink({ link, sourcePath: notePath, targetPath: resolvedLinkFile.path });
-        addToMapSet({ key: getBasenameLower(resolvedLinkFile.path), map: this.resolvedBasenameMap, value: notePath });
+
+        // A SELF-link is deliberately not indexed here. `resolvedBasenameMap` answers "when a file with
+        // This basename changes, which notes must be re-resolved?", and the answer never usefully
+        // Includes the changed note itself: whatever resolved it already resolved it. Indexing it would
+        // Make `updateRelatedLinks` queue the note for re-resolution in response to its own change,
+        // Which fires `changed`, which refreshes its backlinks, which queues it again — a feedback
+        // Cycle that stalls the editor for as long as it runs (issue #17). The self-backlink itself is
+        // Still recorded above, so the backlink panel is unaffected.
+        if (resolvedLinkFile.path !== notePath) {
+          addToMapSet({ key: getBasenameLower(resolvedLinkFile.path), map: this.resolvedBasenameMap, value: notePath });
+        }
         continue;
       }
 

@@ -769,6 +769,56 @@ describe('BacklinkCacheComponent', () => {
       expect(internals.backlinksMap.size).toBe(0);
     });
 
+    /*
+     * Issue #17. A note carrying self-links stalled the editor for 20-30 seconds on save. Indexing a
+     * self-link in `resolvedBasenameMap` makes `updateRelatedLinks` queue the note for re-resolution in
+     * response to the note's OWN change, which fires `changed`, which refreshes its backlinks, which
+     * queues it again. Each pass is linear in the self-link count (measured: 10/72/200/400 links produce
+     * exactly 10/72/200/400 `extractLinkFile` calls, so the cost is the number of PASSES, not a
+     * quadratic per pass) and each pass also recomputes every open backlink panel.
+     */
+    it('should record a self-link as a backlink but NOT index it as a re-resolution source', async () => {
+      const SELF_LINK_COUNT = 72;
+      const noteFile = createTFile('note.md');
+      vi.mocked(extractLinkFile).mockReturnValue(noteFile);
+
+      const selfLinks = Array.from({ length: SELF_LINK_COUNT }, (_unused, index) => createLink(`#slug-${String(index)}`));
+      await refreshNote('note.md', selfLinks);
+
+      const internals = asInternals(context.component);
+      // The panel still shows every self-backlink.
+      expect(internals.backlinksMap.get('note.md')?.get('note.md')?.size).toBe(SELF_LINK_COUNT);
+      // But the note is not registered as a source to re-resolve when its own name changes.
+      expect(internals.resolvedBasenameMap.size).toBe(0);
+    });
+
+    it('should not queue a self-linking note for re-resolution when its own name changes', async () => {
+      const noteFile = createTFile('note.md');
+      vi.mocked(extractLinkFile).mockReturnValue(noteFile);
+
+      await refreshNote('note.md', [createLink('#slug')]);
+
+      vi.mocked(context.app.vault.getFileByPath).mockImplementation((path) => createTFile(path));
+      vi.mocked(context.app.metadataCache.queueFileForLinkResolution).mockClear();
+
+      context.component.updateRelatedLinks(['note.md']);
+
+      // Before the fix this queued `note.md` itself, closing the feedback cycle.
+      expect(context.app.metadataCache.queueFileForLinkResolution).not.toHaveBeenCalled();
+    });
+
+    it('should still index a link that resolves to a DIFFERENT file with the same basename', async () => {
+      // Guards against over-correcting the self-link rule into a basename comparison: `a/note.md`
+      // Linking to `b/note.md` is not a self-link and must stay re-resolvable.
+      const otherFile = createTFile('b/note.md');
+      vi.mocked(extractLinkFile).mockImplementation((params) => params.shouldAllowNonExistingFile ? null : otherFile);
+
+      await refreshNote('a/note.md', [createLink('b/note')]);
+
+      const internals = asInternals(context.component);
+      expect(internals.resolvedBasenameMap.get('note.md')).toEqual(new Set(['a/note.md']));
+    });
+
     it('should clear resolved and unresolved basename entries when a source is removed', async () => {
       const linkFile = createTFile('target.md');
       vi.mocked(extractLinkFile).mockImplementation((params) => {
@@ -871,6 +921,42 @@ describe('BacklinkCacheComponent', () => {
       );
 
       expect(queuedPaths).toEqual(oracleQueuedPaths(graph, fileNames, existingSources));
+    });
+
+    /*
+     * The ONE documented departure from the original algorithm. The oracle above models the original
+     * faithfully, and for a self-link it queues the note itself — `graph` has `note.md` resolving to
+     * `note.md`, so `isResolvedMatch` holds. The plugin deliberately does NOT, because its
+     * `updateRelatedLinks` REPLACES Obsidian's (it does not call through) and the self-queue closes a
+     * feedback cycle that stalls the editor (issue #17).
+     *
+     * Queuing strictly LESS is safe here: re-resolving a note in response to its own change is
+     * redundant, since whatever produced that change already resolved it. This test exists so the parity
+     * claim above stays honest — it is "identical except for this case", not "identical".
+     */
+    it('should deliberately queue less than the original for a self-link', async () => {
+      const localContext = createTestContext();
+      const internals = asInternals(localContext.component);
+      const noteFile = createTFile('note.md');
+
+      vi.mocked(getFileOrNull).mockReturnValue(noteFile);
+      vi.mocked(isCanvasFile).mockReturnValue(false);
+      const selfLink = createLink('#slug');
+      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadataEx>({ links: [selfLink] }));
+      vi.mocked(getLinks).mockReturnValue([selfLink]);
+      vi.mocked(extractLinkFile).mockReturnValue(noteFile);
+
+      await internals.refreshBacklinks.call(localContext.component, 'note.md');
+
+      vi.mocked(localContext.app.vault.getFileByPath).mockImplementation((path) => createTFile(path));
+      vi.mocked(localContext.app.metadataCache.queueFileForLinkResolution).mockClear();
+
+      localContext.component.updateRelatedLinks(['note.md']);
+
+      const selfLinkGraph: LinkGraph = new Map([['note.md', { resolved: ['note.md'], unresolved: [] }]]);
+      // The original queues the note; the plugin queues nothing.
+      expect(oracleQueuedPaths(selfLinkGraph, ['note.md'], new Set(['note.md']))).toEqual(new Set(['note.md']));
+      expect(localContext.app.metadataCache.queueFileForLinkResolution).not.toHaveBeenCalled();
     });
   });
 
