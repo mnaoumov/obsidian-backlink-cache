@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2.16.1
+
+- chore: update libs
+- fix: re #17
+- refactor(test): collapse the shared integration suites per G47
+- chore: update libs
+- chore(vitest): adopt the shared Obsidian plugin vitest configuration
+
 ## 2.16.0
 
 - refactor(settings): move the settings tab onto the declarative settings API
