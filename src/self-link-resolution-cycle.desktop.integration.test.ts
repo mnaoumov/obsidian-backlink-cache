@@ -1,5 +1,5 @@
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -29,16 +29,7 @@ const SCENARIO_TIMEOUT_IN_MS = 120_000;
 describe('self-linking note does not trigger a re-resolution cycle (issue #17)', () => {
   it('should not queue the note for its own change, yet still record its self-backlinks', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: {
-        CACHE_POLL_IN_MS,
-        CACHE_WAIT_IN_MS,
-        NOTE_BASENAME,
-        NOTE_PATH,
-        SELF_LINK_COUNT
-      },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({
+      async callback({
         app,
         CACHE_POLL_IN_MS: pollMs,
         CACHE_WAIT_IN_MS: waitMs,
@@ -93,7 +84,14 @@ describe('self-linking note does not trigger a re-resolution cycle (issue #17)',
           selfBacklinkCount
         };
       },
-      vaultPath: getTempVault().path
+      input: {
+        CACHE_POLL_IN_MS,
+        CACHE_WAIT_IN_MS,
+        NOTE_BASENAME,
+        NOTE_PATH,
+        SELF_LINK_COUNT
+      },
+      vaultPath: getTemporaryVault().path
     });
 
     expect(result.error).toBeNull();

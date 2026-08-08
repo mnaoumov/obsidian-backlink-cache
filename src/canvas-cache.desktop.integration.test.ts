@@ -1,5 +1,5 @@
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -30,16 +30,7 @@ const SCENARIO_TIMEOUT_IN_MS = 120_000;
 describe('getCache exposes canvas node links', () => {
   it('returns a metadata cache whose links include the canvas text-node link', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: {
-        CACHE_POLL_IN_MS,
-        CACHE_WAIT_IN_MS,
-        CANVAS_PATH,
-        TARGET_LINK,
-        TARGET_PATH
-      },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({
+      async callback({
         app,
         CACHE_POLL_IN_MS: pollMs,
         CACHE_WAIT_IN_MS: waitMs,
@@ -75,7 +66,14 @@ describe('getCache exposes canvas node links', () => {
           resolvedTargetCount: resolved?.[targetPath] ?? null
         };
       },
-      vaultPath: getTempVault().path
+      input: {
+        CACHE_POLL_IN_MS,
+        CACHE_WAIT_IN_MS,
+        CANVAS_PATH,
+        TARGET_LINK,
+        TARGET_PATH
+      },
+      vaultPath: getTemporaryVault().path
     });
 
     expect(result.error).toBeNull();

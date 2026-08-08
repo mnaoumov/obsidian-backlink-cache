@@ -55,7 +55,7 @@ const DEFAULT_PERFORMANCE_VAULT_DELETE_COUNT = 1000;
 export const PERFORMANCE_VAULT_DELETE_COUNT = Number(process.env['BC_PERF_DELETE_COUNT']) || DEFAULT_PERFORMANCE_VAULT_DELETE_COUNT;
 
 /**
- * Builds the file map for a large vault, written to disk by `TempVault.populate()`
+ * Builds the file map for a large vault, written to disk by `TemporaryVault.populate()`
  * before Obsidian opens it (so its startup scan indexes it in one pass). The vault
  * contains one link {@link PERFORMANCE_VAULT_TARGET}, {@link PERFORMANCE_VAULT_LINKER_COUNT}
  * notes that resolve-link to it, and a large filler folder of unrelated notes.

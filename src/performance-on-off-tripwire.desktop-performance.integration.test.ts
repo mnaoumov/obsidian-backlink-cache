@@ -1,5 +1,5 @@
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -32,17 +32,7 @@ const REQUIRED_SPEEDUP = 2;
 describe('plugin on/off perf tripwire', () => {
   it('patched getBacklinksForFile and updateRelatedLinks are much faster than native', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: {
-        INDEX_POLL_IN_MS,
-        INDEX_WAIT_IN_MS,
-        LINKER_COUNT: PERFORMANCE_VAULT_LINKER_COUNT,
-        PLUGIN_ID,
-        TARGET_BASENAME: PERFORMANCE_VAULT_TARGET,
-        TIMED_ITERATIONS
-      },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({
+      async callback({
         app,
         INDEX_POLL_IN_MS: pollMs,
         INDEX_WAIT_IN_MS: waitMs,
@@ -106,7 +96,15 @@ describe('plugin on/off perf tripwire', () => {
           return performance.now() - start;
         }
       },
-      vaultPath: getTempVault().path
+      input: {
+        INDEX_POLL_IN_MS,
+        INDEX_WAIT_IN_MS,
+        LINKER_COUNT: PERFORMANCE_VAULT_LINKER_COUNT,
+        PLUGIN_ID,
+        TARGET_BASENAME: PERFORMANCE_VAULT_TARGET,
+        TIMED_ITERATIONS
+      },
+      vaultPath: getTemporaryVault().path
     });
 
     expect(result.error).toBeNull();

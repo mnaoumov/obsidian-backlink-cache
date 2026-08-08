@@ -19,7 +19,7 @@ import type {
 } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   beforeAll,
   describe,
@@ -67,17 +67,7 @@ const WARM_UP_POLL_DELAY_IN_MILLISECONDS = 200;
 describe('README getBacklinksForFile calls', () => {
   beforeAll(async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: {
-        maxAttempts: WARM_UP_MAX_ATTEMPTS,
-        pollDelayInMilliseconds: WARM_UP_POLL_DELAY_IN_MILLISECONDS,
-        sourceContent: SOURCE_CONTENT,
-        sourcePath: SOURCE_PATH,
-        targetContent: TARGET_CONTENT,
-        targetPath: TARGET_PATH
-      },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({ app, maxAttempts, pollDelayInMilliseconds, sourceContent, sourcePath, targetContent, targetPath }) {
+      async callback({ app, maxAttempts, pollDelayInMilliseconds, sourceContent, sourcePath, targetContent, targetPath }) {
         for (const path of [targetPath, sourcePath]) {
           const existing = app.vault.getAbstractFileByPath(path);
           if (existing) {
@@ -100,7 +90,15 @@ describe('README getBacklinksForFile calls', () => {
 
         return { found: false };
       },
-      vaultPath: getTempVault().path
+      input: {
+        maxAttempts: WARM_UP_MAX_ATTEMPTS,
+        pollDelayInMilliseconds: WARM_UP_POLL_DELAY_IN_MILLISECONDS,
+        sourceContent: SOURCE_CONTENT,
+        sourcePath: SOURCE_PATH,
+        targetContent: TARGET_CONTENT,
+        targetPath: TARGET_PATH
+      },
+      vaultPath: getTemporaryVault().path
     });
 
     expect(result.found).toBe(true);
@@ -146,13 +144,7 @@ describe('README getBacklinksForFile calls', () => {
  */
 async function callBacklinks(call: BacklinksCall): Promise<BacklinksCallResult> {
   return evalInObsidian({
-    // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-    args: {
-      call,
-      targetPath: TARGET_PATH
-    },
-    // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-    async fn({ app, call: invoke, obsidianModule, targetPath }) {
+    async callback({ app, call: invoke, obsidianModule, targetPath }) {
       const targetFile = app.vault.getAbstractFileByPath(targetPath);
       if (!(targetFile instanceof obsidianModule.TFile)) {
         throw new TypeError(`Target file not found: ${targetPath}`);
@@ -165,6 +157,10 @@ async function callBacklinks(call: BacklinksCall): Promise<BacklinksCallResult> 
         keys: dict.keys()
       };
     },
-    vaultPath: getTempVault().path
+    input: {
+      call,
+      targetPath: TARGET_PATH
+    },
+    vaultPath: getTemporaryVault().path
   });
 }

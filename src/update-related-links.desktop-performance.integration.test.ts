@@ -1,5 +1,5 @@
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -39,16 +39,7 @@ const SCENARIO_TIMEOUT_IN_MS = 300_000;
 describe('updateRelatedLinks avoids the vault scan', () => {
   it('queues only the linking files and never calls getCachedFiles', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: {
-        EXPECTED_LINKER_COUNT: PERFORMANCE_VAULT_LINKER_COUNT,
-        INDEX_POLL_IN_MS,
-        INDEX_WAIT_IN_MS,
-        LINKER_PREFIX,
-        TARGET_BASENAME: PERFORMANCE_VAULT_TARGET
-      },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({
+      async callback({
         app,
         EXPECTED_LINKER_COUNT: expectedLinkerCount,
         INDEX_POLL_IN_MS: pollMs,
@@ -103,7 +94,14 @@ describe('updateRelatedLinks avoids the vault scan', () => {
           queuedTotal: queuedPaths.length
         };
       },
-      vaultPath: getTempVault().path
+      input: {
+        EXPECTED_LINKER_COUNT: PERFORMANCE_VAULT_LINKER_COUNT,
+        INDEX_POLL_IN_MS,
+        INDEX_WAIT_IN_MS,
+        LINKER_PREFIX,
+        TARGET_BASENAME: PERFORMANCE_VAULT_TARGET
+      },
+      vaultPath: getTemporaryVault().path
     });
 
     expect(result.error).toBeNull();

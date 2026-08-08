@@ -12,7 +12,7 @@
  * is collected directly.
  */
 
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -21,7 +21,7 @@ import {
 
 describe('Smoke test', () => {
   it('should load the plugin', () => {
-    const vault = getTempVault();
+    const vault = getTemporaryVault();
     expect(vault.path).toBeTruthy();
   });
 });

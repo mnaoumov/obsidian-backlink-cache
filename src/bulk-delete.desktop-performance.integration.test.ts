@@ -1,7 +1,7 @@
 import type { CachedMetadata } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -87,20 +87,7 @@ const MAX_DEFERRED_BLOCK_IN_MS = 2000;
 describe('bulk-delete cascade cost breakdown', () => {
   it('localizes the per-deleted-file cost across the patched getCache, native getCache, and the deferred batch', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: {
-        DEFERRED_MARGIN_IN_MS,
-        DELETE_FOLDER_A_PREFIX,
-        DELETE_FOLDER_B_PREFIX,
-        DELETE_TARGET: PERFORMANCE_VAULT_DELETE_TARGET,
-        EXPECTED_DELETE_TARGET_BACKLINKS,
-        INDEX_POLL_IN_MS,
-        INDEX_WAIT_IN_MS,
-        PLUGIN_DEBOUNCE_IN_MS,
-        PLUGIN_ID
-      },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({
+      async callback({
         app,
         DEFERRED_MARGIN_IN_MS: deferredMarginMs,
         DELETE_FOLDER_A_PREFIX: folderAPrefix,
@@ -216,7 +203,18 @@ describe('bulk-delete cascade cost breakdown', () => {
           settleMs
         };
       },
-      vaultPath: getTempVault().path
+      input: {
+        DEFERRED_MARGIN_IN_MS,
+        DELETE_FOLDER_A_PREFIX,
+        DELETE_FOLDER_B_PREFIX,
+        DELETE_TARGET: PERFORMANCE_VAULT_DELETE_TARGET,
+        EXPECTED_DELETE_TARGET_BACKLINKS,
+        INDEX_POLL_IN_MS,
+        INDEX_WAIT_IN_MS,
+        PLUGIN_DEBOUNCE_IN_MS,
+        PLUGIN_ID
+      },
+      vaultPath: getTemporaryVault().path
     });
 
     expect(result.error).toBeNull();

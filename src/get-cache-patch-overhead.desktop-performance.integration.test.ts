@@ -1,5 +1,5 @@
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -47,17 +47,7 @@ const MAX_PATCHED_GET_CACHE_PER_CALL_IN_MS = 0.05;
 describe('getCache patch per-call overhead', () => {
   it('is O(1) and sub-millisecond in isolation, not scaling with vault size', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: {
-        INDEX_POLL_IN_MS,
-        INDEX_WAIT_IN_MS,
-        ITERATIONS,
-        MISSING_PATH,
-        PLUGIN_ID,
-        WITH_CACHE_PATH
-      },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({
+      async callback({
         app,
         INDEX_POLL_IN_MS: pollMs,
         INDEX_WAIT_IN_MS: waitMs,
@@ -114,7 +104,15 @@ describe('getCache patch per-call overhead', () => {
           return performance.now() - start;
         }
       },
-      vaultPath: getTempVault().path
+      input: {
+        INDEX_POLL_IN_MS,
+        INDEX_WAIT_IN_MS,
+        ITERATIONS,
+        MISSING_PATH,
+        PLUGIN_ID,
+        WITH_CACHE_PATH
+      },
+      vaultPath: getTemporaryVault().path
     });
 
     expect(result.cacheReady).toBe(true);

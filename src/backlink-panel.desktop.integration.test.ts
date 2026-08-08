@@ -1,7 +1,7 @@
 import type { BacklinkView } from '@obsidian-typings/obsidian-public-latest';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
-import { getTempVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
+import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
   expect,
@@ -31,18 +31,7 @@ const SCENARIO_TIMEOUT_IN_MS = 150_000;
 describe('backlink panel renders backlinks via the plugin index', () => {
   it('shows the correct match count for the target after recompute', async () => {
     const result = await evalInObsidian({
-      // eslint-disable-next-line unicorn/name-replacements -- `args` is an `obsidian-integration-testing` parameter name.
-      args: {
-        INDEX_POLL_IN_MS,
-        INDEX_WAIT_IN_MS,
-        LINKER_COUNT,
-        LINKER_PREFIX,
-        PANEL_SETTLE_IN_MS,
-        TARGET_BASENAME,
-        TARGET_PATH
-      },
-      // eslint-disable-next-line unicorn/name-replacements -- `fn` is an `obsidian-integration-testing` parameter name.
-      async fn({
+      async callback({
         app,
         INDEX_POLL_IN_MS: pollMs,
         INDEX_WAIT_IN_MS: waitMs,
@@ -90,7 +79,16 @@ describe('backlink panel renders backlinks via the plugin index', () => {
 
         return { error: null, matchCount: backlinkComponent.backlinkDom.getMatchCount(), openLeafTypes: [] as string[] };
       },
-      vaultPath: getTempVault().path
+      input: {
+        INDEX_POLL_IN_MS,
+        INDEX_WAIT_IN_MS,
+        LINKER_COUNT,
+        LINKER_PREFIX,
+        PANEL_SETTLE_IN_MS,
+        TARGET_BASENAME,
+        TARGET_PATH
+      },
+      vaultPath: getTemporaryVault().path
     });
 
     expect(result.error).toBeNull();
