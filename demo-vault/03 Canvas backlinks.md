@@ -1,14 +1,12 @@
-[Docs](https://github.com/mnaoumov/obsidian-backlink-cache/)
-
 # Canvas backlinks
 
 Backlink Cache includes **canvas** (`.canvas`) files in the backlink index, so a note referenced from a canvas card shows up in its backlinks just like a note referenced from Markdown.
 
-This vault ships [[Canvas map.canvas|Canvas map]] - a canvas whose cards reference [[Central topic]]: one **file card** that embeds the note and one **text card** that contains a `[[Central topic]]` link.
+This vault ships [Canvas map](<./Topics/Canvas map.canvas>) - a canvas whose cards reference [Central topic](<./Topics/Central topic.md>): one **file card** that embeds the note and one **text card** that contains a `[[Central topic]]` link.
 
 ## Try it
 
-The button asks the cache for the backlinks of [[Central topic]] and lists the ones that come from a canvas file.
+The button asks the cache for the backlinks of [Central topic](<./Topics/Central topic.md>) and lists the ones that come from a canvas file.
 
 ```code-button
 ---
@@ -20,7 +18,7 @@ const canvasSources = dict.keys().filter((path) => path.endsWith('.canvas'));
 new Notice(`Central topic has ${canvasSources.length.toString()} canvas backlink source(s):\n${canvasSources.join('\n')}`);
 ```
 
-Open the core **Backlinks** pane on [[Central topic]] and the canvas file appears in the list.
+Open the core **Backlinks** pane on [Central topic](<./Topics/Central topic.md>) and the canvas file appears in the list.
 
 > [!NOTE] getCache for canvas
 >
@@ -36,4 +34,4 @@ const links = cache?.frontmatterLinks ?? [];
 new Notice(`getCache('Topics/Canvas map.canvas') exposes ${links.length.toString()} link(s):\n${links.map((link) => link.link).join('\n')}`);
 ```
 
-See [[04 Settings]] for the options that control refresh behavior.
+See [04 Settings](<./04 Settings.md>) for the options that control refresh behavior.

@@ -1,3 +1,5 @@
+# Backlink Cache demo vault
+
 This is an [Obsidian](https://obsidian.md/) vault demonstrating features of the [Backlink Cache](https://github.com/mnaoumov/obsidian-backlink-cache) plugin.
 
 ## Opening this vault

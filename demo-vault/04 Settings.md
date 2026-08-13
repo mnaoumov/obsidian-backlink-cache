@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-backlink-cache/)
-
 # Settings
 
 Open **Settings -> Community plugins -> Backlink Cache** to configure the plugin. Each option below lists the setting key stored in the plugin's `data.json`.
