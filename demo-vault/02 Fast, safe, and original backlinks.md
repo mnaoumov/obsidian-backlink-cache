@@ -1,5 +1,3 @@
-[Docs](https://github.com/mnaoumov/obsidian-backlink-cache/)
-
 # Fast, safe, and original backlinks
 
 Backlink Cache extends `app.metadataCache.getBacklinksForFile` with three ways to call it. The fast and safe versions accept a `TFile` **or** a vault path string; the original accepts a `TFile`.
@@ -10,7 +8,7 @@ Backlink Cache extends `app.metadataCache.getBacklinksForFile` with three ways t
 
 ## Try it
 
-The button runs all three against [[Central topic]] and reports how many backlinks each one found. In this small, settled vault they agree - the difference is about *speed* and *freshness guarantees*, not the result.
+The button runs all three against [Central topic](<./Topics/Central topic.md>) and reports how many backlinks each one found. In this small, settled vault they agree - the difference is about *speed* and *freshness guarantees*, not the result.
 
 ```code-button
 ---
@@ -29,4 +27,4 @@ new Notice([
 ].join('\n'));
 ```
 
-See [[04 Settings]] for the options that control refresh behavior.
+See [04 Settings](<./04 Settings.md>) for the options that control refresh behavior.

@@ -1,7 +1,5 @@
-[Docs](https://github.com/mnaoumov/obsidian-backlink-cache/)
-
 # Reading list
 
-Reading that supports [[Central topic]].
+Reading that supports [Central topic](<./Central topic.md>).
 
-This note is one of the backlinks the cache returns for [[Central topic]].
+This note is one of the backlinks the cache returns for [Central topic](<./Central topic.md>).

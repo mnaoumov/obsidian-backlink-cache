@@ -1,7 +1,5 @@
-[Docs](https://github.com/mnaoumov/obsidian-backlink-cache/)
-
 # Meeting note
 
-Meeting notes about [[Central topic]], following up on the [[Research note]].
+Meeting notes about [Central topic](<./Central topic.md>), following up on the [Research note](<./Research note.md>).
 
-This note is one of the backlinks the cache returns for [[Central topic]].
+This note is one of the backlinks the cache returns for [Central topic](<./Central topic.md>).
