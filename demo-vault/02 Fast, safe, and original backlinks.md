@@ -2,9 +2,12 @@
 
 Backlink Cache extends `app.metadataCache.getBacklinksForFile` with three ways to call it. The fast and safe versions accept a `TFile` **or** a vault path string; the original accepts a `TFile`.
 
-- **Fast** - `getBacklinksForFile(pathOrFile)` reads straight from the cache. It is the fastest, and may be momentarily stale if a note changed a split second ago.
-- **Safe** - `await getBacklinksForFile.safe(pathOrFile)` waits for any pending changes to be processed first, so the result is guaranteed current.
-- **Original** - `getBacklinksForFile.originalFn(file)` calls Obsidian's built-in implementation, bypassing the cache (handy for comparison).
+- **Fast**
+  - `getBacklinksForFile(pathOrFile)` reads straight from the cache. It is the fastest, and may be momentarily stale if a note changed a split second ago.
+- **Safe**
+  - `await getBacklinksForFile.safe(pathOrFile)` waits for any pending changes to be processed first, so the result is guaranteed current.
+- **Original**
+  - `getBacklinksForFile.originalFn(file)` calls Obsidian's built-in implementation, bypassing the cache (handy for comparison).
 
 ## Try it
 
