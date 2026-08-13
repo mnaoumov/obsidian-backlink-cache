@@ -5,77 +5,60 @@
 [![GitHub downloads](https://img.shields.io/github/downloads/mnaoumov/obsidian-backlink-cache/total)](https://github.com/mnaoumov/obsidian-backlink-cache/releases)
 [![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/mnaoumov/obsidian-backlink-cache)
 
-This is a plugin for [Obsidian](https://obsidian.md/) that maintains backlink cache to speed up undocumented `app.metadataCache.getBacklinksForFile()` function.
+Asking [Obsidian](https://obsidian.md/) which notes link to this one means scanning every note in the
+vault. On a large vault that is slow enough to be felt — the Backlinks pane lags, and every plugin that
+needs backlinks pays the same cost, repeatedly.
 
-It's mostly useful for users with the large vaults. On smaller vaults the difference might be unnoticeable.
-
-It speeds up `Backlinks Pane` performance and plugins that deal with the backlinks.
-
-This plugin the most likely will be useful for other plugin developers that deal with the backlinks.
-
-Its idea came from the [forum](https://forum.obsidian.md/t/store-backlinks-in-metadatacache/67000).
-
-Also the plugin includes canvas (`.canvas`) files in the backlinks for the referenced notes, and exposes a canvas file's links through `app.metadataCache.getCache()`. See [Canvas backlinks](#canvas-backlinks).
-
-## Usage
-
-### Fast version
-
-The provided version is faster than the built-in version. Also the overload to accept `path` was added.
-
-```js
-const backlinks1 = app.metadataCache.getBacklinksForFile(file);
-const backlinks2 = app.metadataCache.getBacklinksForFile(path);
-```
-
-### Safe version
-
-If you want to ensure the all recent file changes are processed and the backlinks are 100% accurate.
-
-```js
-const backlinks1 = await app.metadataCache.getBacklinksForFile.safe(file);
-const backlinks2 = await app.metadataCache.getBacklinksForFile.safe(path);
-```
-
-### Original version
-
-You can access the original built-in version:
-
-```js
-const backlinks = app.metadataCache.getBacklinksForFile.originalFn(file);
-```
-
-### TypeScript typings
-
-If you want to use the updated functions from your plugin, you can copy [types.d.ts](./types.d.ts) into your code.
-
-### Canvas backlinks
-
-Obsidian resolves canvas backlinks natively since `v1.12.4`: links from canvas file/text cards appear in the `Backlinks` pane and graph, and in `app.metadataCache.getBacklinksForFile()` and `resolvedLinks` / `unresolvedLinks`.
-
-On top of that, the plugin keeps canvas files in its fast backlink index and additionally exposes each canvas file's links through `app.metadataCache.getCache()`, which Obsidian leaves empty for canvas files. This runs when the [`Canvas`](https://help.obsidian.md/plugins/canvas) core plugin is enabled.
-
-### Backlinks panel
-
-The plugin speeds up the Backlinks panel if [`Backlinks`](https://help.obsidian.md/plugins/backlinks) core plugin is enabled.
-
-### Frontmatter markdown links
-
-The plugin includes backlinks from the frontmatter markdown links if [`Frontmatter Markdown Links`](https://obsidian.md/plugins?id=frontmatter-markdown-links) community plugin is enabled. Example of such link:
-
-```md
----
-key: "[title](path/to/link.md)"
----
-```
+This plugin keeps a backlink index and answers from it instead. The Backlinks pane gets faster, and so
+does anything else that asks. On a small vault you will not notice; that is the point at which you do
+not need it.
 
 ## Demo vault
 
-A demo vault with usage examples ships with every release. You can access it via any of the following:
+**The documentation is an interactive demo vault.** Every feature has a note that explains what it does
+and why you would want it, with buttons that measure the difference for real.
+
+**[Start reading here](<./demo-vault/00 Start.md>)** — it is plain markdown, so it works on GitHub with
+nothing installed.
+
+A copy of the vault ships with every release. You can access it via any of the following:
 
 1. Running the **Backlink Cache: Open demo vault** command.
 2. Downloading `backlink-cache-demo-vault-<version>.zip` (`<version>` is the release version) from the [Releases](https://github.com/mnaoumov/obsidian-backlink-cache/releases).
 3. Browsing its source in [`demo-vault/`](./demo-vault/README.md) in this repository.
+
+## What it does
+
+- **A backlink index that keeps itself current**, so the Backlinks pane and every plugin that asks for
+  backlinks stop rescanning the vault.
+  [01 Backlink cache](<./demo-vault/01 Backlink cache.md>)
+- **Three ways to ask** — fast from the cache, safe after pending changes settle, or the original
+  built-in implementation for comparison.
+  [02 Fast, safe, and original backlinks](<./demo-vault/02 Fast, safe, and original backlinks.md>)
+- **Canvas files are indexed too**, and their links are exposed through `getCache()`, which Obsidian
+  leaves empty for canvases.
+  [03 Canvas backlinks](<./demo-vault/03 Canvas backlinks.md>)
+- **Frontmatter markdown links count as backlinks** when the
+  [`Frontmatter Markdown Links`](https://obsidian.md/plugins?id=frontmatter-markdown-links) plugin is
+  installed.
+  [03 Canvas backlinks](<./demo-vault/03 Canvas backlinks.md>)
+- **Refresh behavior is configurable.**
+  [04 Settings](<./demo-vault/04 Settings.md>)
+
+## For plugin developers
+
+This plugin replaces `app.metadataCache.getBacklinksForFile()` with a faster implementation, adds an
+overload accepting a vault `path` as well as a `TFile`, and keeps the original reachable:
+
+```js
+const fast = app.metadataCache.getBacklinksForFile(pathOrFile);
+const safe = await app.metadataCache.getBacklinksForFile.safe(pathOrFile);
+const original = app.metadataCache.getBacklinksForFile.originalFn(file);
+```
+
+To use the updated signatures from your own plugin, copy [types.d.ts](./types.d.ts) into your code.
+[02 Fast, safe, and original backlinks](<./demo-vault/02 Fast, safe, and original backlinks.md>) runs
+all three side by side.
 
 ## Installation
 
@@ -100,6 +83,14 @@ window.DEBUG.enable('backlink-cache');
 ```
 
 For more details, refer to the [documentation](https://mnaoumov.dev/obsidian-dev-utils/guides/debugging/).
+
+## Changelog
+
+All notable changes to this project will be documented in the [CHANGELOG](./CHANGELOG.md).
+
+## Contributing
+
+Contributions are welcome — see [CONTRIBUTING](./CONTRIBUTING.md) to get set up.
 
 ## Support
 
