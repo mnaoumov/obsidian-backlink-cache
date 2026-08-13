@@ -24,14 +24,9 @@ const hoisted = vi.hoisted(() => ({
   pluginSettingsTabConstructor: vi.fn()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/data-handler', () => ({
-  PluginDataHandler: vi.fn()
-}));
-
-vi.mock('obsidian-dev-utils/obsidian/plugin/plugin-event-source', () => ({
-  PluginEventSourceImpl: vi.fn()
-}));
-
+// `PluginDataHandler` and `PluginEventSourceImpl` are NOT stubbed: since obsidian-dev-utils 93.2 the base
+// Builds its own settings component out of them during `onload`, and that component really calls
+// `pluginEventSource.on`, so a bare `vi.fn()` double makes the base throw before `onloadImpl` runs (G49).
 vi.mock('./plugin-settings-component.ts', () => ({
   // Extends the real obsidian-test-mocks Component so the real addChild lifecycle can load it.
   PluginSettingsComponent: class extends Component {
@@ -63,6 +58,15 @@ vi.mock('./backlink-cache-component.ts', () => ({
 // eslint-disable-next-line import-x/first, import-x/imports-first -- vi.mock must precede imports.
 import { Plugin } from './plugin.ts';
 
+// The subset of `App` the dev-utils Notebook Navigator bridge reads on layout-ready.
+interface AppWithPlugins {
+  plugins: PluginRegistryLike;
+}
+
+interface PluginRegistryLike {
+  getPlugin(this: void, id: string): unknown;
+}
+
 interface SettingTabsHolder {
   settingTabs__: unknown[];
 }
@@ -72,6 +76,9 @@ function createApp(): AppOriginal {
   appMock.workspace.onLayoutReady = vi.fn((callback: () => void) => {
     callback();
   });
+  // Since obsidian-dev-utils 89.0.0 the base bridges its command handlers into Notebook Navigator's
+  // Menus, which looks the plugin up on layout-ready -- so `plugins` has to answer on the strict mock.
+  castTo<AppWithPlugins>(appMock).plugins = { getPlugin: vi.fn().mockReturnValue(null) };
   return appMock.asOriginalType__();
 }
 
