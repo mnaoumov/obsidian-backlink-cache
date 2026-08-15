@@ -24,6 +24,15 @@ new Notice(`Backlink Cache served ${paths.length.toString()} backlink(s):\n${pat
 
 Open the core **Backlinks** pane on [Central topic](<./Topics/Central topic.md>) and you will see the same list - Backlink Cache is what keeps that pane fast in a large vault.
 
+```code-button
+---
+caption: Open "Central topic" and show its Backlinks pane
+---
+await require('/demoSetup.ts').showCentralTopicBacklinks(app);
+```
+
+Manual equivalent: open that note and run **Backlinks: Show backlinks**.
+
 > [!NOTE] Honest expectations
 >
 > In this tiny vault the cached lookup and the built-in scan are both instant. The cache pays off in **large** vaults, where rescanning every link on each query gets slow.
