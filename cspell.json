@@ -31,7 +31,9 @@
     "rescanning",
     "subkey",
     "tsbuildinfo",
-    "undercounts"
+    "undercounts",
+    "unvalidated",
+    "wdio"
   ],
   "ignoreWords": [],
   "import": [],
