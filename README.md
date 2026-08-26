@@ -1,30 +1,25 @@
 # Backlink Cache
 
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/mnaoumov)
-[![GitHub release](https://img.shields.io/github/v/release/mnaoumov/obsidian-backlink-cache)](https://github.com/mnaoumov/obsidian-backlink-cache/releases)
-[![GitHub downloads](https://img.shields.io/github/downloads/mnaoumov/obsidian-backlink-cache/total)](https://github.com/mnaoumov/obsidian-backlink-cache/releases)
-[![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/mnaoumov/obsidian-backlink-cache)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/mnaoumov) [![GitHub release](https://img.shields.io/github/v/release/mnaoumov/obsidian-backlink-cache)](https://github.com/mnaoumov/obsidian-backlink-cache/releases) [![GitHub downloads](https://img.shields.io/github/downloads/mnaoumov/obsidian-backlink-cache/total)](https://github.com/mnaoumov/obsidian-backlink-cache/releases) [![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/mnaoumov/obsidian-backlink-cache)
 
-Asking [Obsidian](https://obsidian.md/) which notes link to this one means scanning every note in the
-vault. On a large vault that is slow enough to be felt — the Backlinks pane lags, and every plugin that
-needs backlinks pays the same cost, repeatedly.
+Asking [Obsidian](https://obsidian.md/) which notes link to this one means scanning every note in the vault. On a large vault that is slow enough to be felt — the Backlinks pane lags, and every plugin that needs backlinks pays the same cost, repeatedly.
 
-This plugin keeps a backlink index and answers from it instead. The Backlinks pane gets faster, and so
-does anything else that asks. On a small vault you will not notice; that is the point at which you do
-not need it.
+This plugin keeps a backlink index and answers from it instead. The Backlinks pane gets faster, and so does anything else that asks. On a small vault you will not notice; that is the point at which you do not need it.
 
 <!-- markdownlint-disable MD033 -->
 
-<a href="images/screenshots/screenshot-desktop-1.png"><img src="images/screenshots/screenshot-desktop-1.png" alt="All 120 backlinks, in a vault of thousands" width="600"></a>
+<a href="https://github.com/mnaoumov/obsidian-backlink-cache/blob/HEAD/images/screenshots/screenshot-desktop-1.png"><img src="images/screenshots/screenshot-desktop-1.png" alt="All 120 backlinks, in a vault of thousands" width="600"></a>
 
 <details>
 <summary>More screenshots</summary>
 
-<a href="images/screenshots/screenshot-desktop-2.png"><img src="images/screenshots/screenshot-desktop-2.png" alt="From an index, not a scan of every note" width="600"></a>
-<a href="images/screenshots/screenshot-desktop-3.png"><img src="images/screenshots/screenshot-desktop-3.png" alt="Same answer as Obsidian, arrived at faster" width="600"></a>
-<a href="images/screenshots/screenshot-mobile-1.png"><img src="images/screenshots/screenshot-mobile-1.png" alt="Every backlink of this note, in one list" width="270"></a>
-<a href="images/screenshots/screenshot-mobile-2.png"><img src="images/screenshots/screenshot-mobile-2.png" alt="From an index, not a scan of every note" width="270"></a>
-<a href="images/screenshots/screenshot-mobile-3.png"><img src="images/screenshots/screenshot-mobile-3.png" alt="Same answer as Obsidian, arrived at faster" width="270"></a>
+<div>
+<a href="https://github.com/mnaoumov/obsidian-backlink-cache/blob/HEAD/images/screenshots/screenshot-desktop-2.png"><img src="images/screenshots/screenshot-desktop-2.png" alt="From an index, not a scan of every note" width="600"></a>
+<a href="https://github.com/mnaoumov/obsidian-backlink-cache/blob/HEAD/images/screenshots/screenshot-desktop-3.png"><img src="images/screenshots/screenshot-desktop-3.png" alt="Same answer as Obsidian, arrived at faster" width="600"></a>
+<a href="https://github.com/mnaoumov/obsidian-backlink-cache/blob/HEAD/images/screenshots/screenshot-mobile-1.png"><img src="images/screenshots/screenshot-mobile-1.png" alt="Every backlink of this note, in one list" width="270"></a>
+<a href="https://github.com/mnaoumov/obsidian-backlink-cache/blob/HEAD/images/screenshots/screenshot-mobile-2.png"><img src="images/screenshots/screenshot-mobile-2.png" alt="From an index, not a scan of every note" width="270"></a>
+<a href="https://github.com/mnaoumov/obsidian-backlink-cache/blob/HEAD/images/screenshots/screenshot-mobile-3.png"><img src="images/screenshots/screenshot-mobile-3.png" alt="Same answer as Obsidian, arrived at faster" width="270"></a>
+</div>
 
 </details>
 
@@ -32,11 +27,9 @@ not need it.
 
 ## Demo vault
 
-**The documentation is an interactive demo vault.** Every feature has a note that explains what it does
-and why you would want it, with buttons that measure the difference for real.
+**The documentation is an interactive demo vault.** Every feature has a note that explains what it does and why you would want it, with buttons that measure the difference for real.
 
-**[Start reading here](<./demo-vault/00 Start.md>)** — it is plain markdown, so it works on GitHub with
-nothing installed.
+**[Start reading here](<./demo-vault/00 Start.md>)** — it is plain markdown, so it works on GitHub with nothing installed.
 
 A copy of the vault ships with every release. You can access it via any of the following:
 
@@ -46,26 +39,15 @@ A copy of the vault ships with every release. You can access it via any of the f
 
 ## What it does
 
-- **A backlink index that keeps itself current**, so the Backlinks pane and every plugin that asks for
-  backlinks stop rescanning the vault.
-  [01 Backlink cache](<./demo-vault/01 Backlink cache.md>)
-- **Three ways to ask** — fast from the cache, safe after pending changes settle, or the original
-  built-in implementation for comparison.
-  [02 Fast, safe, and original backlinks](<./demo-vault/02 Fast, safe, and original backlinks.md>)
-- **Canvas files are indexed too**, and their links are exposed through `getCache()`, which Obsidian
-  leaves empty for canvases.
-  [03 Canvas backlinks](<./demo-vault/03 Canvas backlinks.md>)
-- **Frontmatter markdown links count as backlinks** when the
-  [`Frontmatter Markdown Links`](https://obsidian.md/plugins?id=frontmatter-markdown-links) plugin is
-  installed.
-  [03 Canvas backlinks](<./demo-vault/03 Canvas backlinks.md>)
-- **Refresh behavior is configurable.**
-  [04 Settings](<./demo-vault/04 Settings.md>)
+- **A backlink index that keeps itself current**, so the Backlinks pane and every plugin that asks for backlinks stop rescanning the vault. [01 Backlink cache](<./demo-vault/01 Backlink cache.md>)
+- **Three ways to ask** — fast from the cache, safe after pending changes settle, or the original built-in implementation for comparison. [02 Fast, safe, and original backlinks](<./demo-vault/02 Fast, safe, and original backlinks.md>)
+- **Canvas files are indexed too**, and their links are exposed through `getCache()`, which Obsidian leaves empty for canvases. [03 Canvas backlinks](<./demo-vault/03 Canvas backlinks.md>)
+- **Frontmatter markdown links count as backlinks** when the [`Frontmatter Markdown Links`](https://obsidian.md/plugins?id=frontmatter-markdown-links) plugin is installed. [03 Canvas backlinks](<./demo-vault/03 Canvas backlinks.md>)
+- **Refresh behavior is configurable.** [04 Settings](<./demo-vault/04 Settings.md>)
 
 ## For plugin developers
 
-This plugin replaces `app.metadataCache.getBacklinksForFile()` with a faster implementation, adds an
-overload accepting a vault `path` as well as a `TFile`, and keeps the original reachable:
+This plugin replaces `app.metadataCache.getBacklinksForFile()` with a faster implementation, adds an overload accepting a vault `path` as well as a `TFile`, and keeps the original reachable:
 
 ```js
 const fast = app.metadataCache.getBacklinksForFile(pathOrFile);
@@ -73,9 +55,7 @@ const safe = await app.metadataCache.getBacklinksForFile.safe(pathOrFile);
 const original = app.metadataCache.getBacklinksForFile.originalFn(file);
 ```
 
-To use the updated signatures from your own plugin, copy [types.d.ts](./types.d.ts) into your code.
-[02 Fast, safe, and original backlinks](<./demo-vault/02 Fast, safe, and original backlinks.md>) runs
-all three side by side.
+To use the updated signatures from your own plugin, copy [types.d.ts](./types.d.ts) into your code. [02 Fast, safe, and original backlinks](<./demo-vault/02 Fast, safe, and original backlinks.md>) runs all three side by side.
 
 ## Installation
 
