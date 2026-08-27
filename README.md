@@ -42,7 +42,7 @@ A copy of the vault ships with every release. You can access it via any of the f
 - **A backlink index that keeps itself current**, so the Backlinks pane and every plugin that asks for backlinks stop rescanning the vault. [01 Backlink cache](<./demo-vault/01 Backlink cache.md>)
 - **Three ways to ask** — fast from the cache, safe after pending changes settle, or the original built-in implementation for comparison. [02 Fast, safe, and original backlinks](<./demo-vault/02 Fast, safe, and original backlinks.md>)
 - **Canvas files are indexed too**, and their links are exposed through `getCache()`, which Obsidian leaves empty for canvases. [03 Canvas backlinks](<./demo-vault/03 Canvas backlinks.md>)
-- **Frontmatter markdown links count as backlinks** when the [`Frontmatter Markdown Links`](https://obsidian.md/plugins?id=frontmatter-markdown-links) plugin is installed. [03 Canvas backlinks](<./demo-vault/03 Canvas backlinks.md>)
+- **Frontmatter markdown links count as backlinks** when the [`Frontmatter Markdown Links`](https://community.obsidian.md/plugins/frontmatter-markdown-links) plugin is installed. [03 Canvas backlinks](<./demo-vault/03 Canvas backlinks.md>)
 - **Refresh behavior is configurable.** [04 Settings](<./demo-vault/04 Settings.md>)
 
 ## For plugin developers
@@ -59,13 +59,13 @@ To use the updated signatures from your own plugin, copy [types.d.ts](./types.d.
 
 ## Installation
 
-The plugin is available in [the official Community Plugins repository](https://obsidian.md/plugins?id=backlink-cache).
+The plugin is available in [the official Community Plugins repository](https://community.obsidian.md/plugins/backlink-cache).
 
 ### Beta versions
 
-To install the latest beta release of this plugin (regardless if it is available in [the official Community Plugins repository](https://obsidian.md/plugins) or not), follow these steps:
+To install the latest beta release of this plugin (regardless if it is available in [the official Community Plugins repository](https://community.obsidian.md) or not), follow these steps:
 
-1. Ensure you have the [BRAT plugin](https://obsidian.md/plugins?id=obsidian42-brat) installed and enabled.
+1. Ensure you have the [BRAT plugin](https://community.obsidian.md/plugins/obsidian42-brat) installed and enabled.
 2. Click [Install via BRAT](https://intradeus.github.io/http-protocol-redirector?r=obsidian://brat?plugin=https://github.com/mnaoumov/obsidian-backlink-cache).
 3. An Obsidian pop-up window should appear. In the window, click the `Add plugin` button once and wait a few seconds for the plugin to install.
 
