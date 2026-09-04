@@ -460,6 +460,9 @@ describe('BacklinkCacheComponent', () => {
       Object.assign(mockFile, { path: 'note.md' });
 
       vi.mocked(getFileOrNull).mockReturnValue(mockFile);
+      // Set explicitly, as every sibling case does: the preceding canvas test leaves this `true`, and
+      // `restoreAllMocks` does not put a `vi.mock` factory's `mockReturnValue` back.
+      vi.mocked(isCanvasFile).mockReturnValue(false);
       vi.mocked(getCacheSafe).mockResolvedValue(null);
 
       await setupOnLayoutReady();
