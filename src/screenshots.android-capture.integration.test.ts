@@ -1,7 +1,7 @@
 /**
  * @file
  *
- * Produces the mobile screenshots the community-store listing needs (T461-P21),
+ * Produces the mobile screenshots the community-store listing needs,
  * driving Obsidian Mobile on a real Android emulator and writing
  * `images/screenshots/screenshot-mobile-N.png`.
  *

@@ -1,8 +1,8 @@
 /**
  * @file
  *
- * Produces the desktop screenshots the community-store listing needs
- * (T461-P21), driving a real Obsidian and writing
+ * Produces the desktop screenshots the community-store listing needs,
+ * driving a real Obsidian and writing
  * `images/screenshots/screenshot-desktop-N.png`.
  *
  * This plugin's payoff is SPEED, which a still frame cannot show by itself — and
