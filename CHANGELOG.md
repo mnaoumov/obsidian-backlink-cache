@@ -47,7 +47,7 @@
 ## 2.15.0
 
 - feat: re #13
-- refactor(canvas): consume ODU getCanvasReferences, drop duplicated extraction
+- refactor(canvas): consume obsidian-dev-utils getCanvasReferences, drop duplicated extraction
 - chore: update libs
 - chore: update libs
 - docs: drop stale CLAUDE.md "Known Issues" pointers from perf test comments
@@ -66,7 +66,7 @@
 ## 2.14.3
 
 - docs: standardize demo-vault README
-- docs: drop per-plugin demo-vault setup notes (bootstrap covered by ODU harness)
+- docs: drop per-plugin demo-vault setup notes (bootstrap covered by the obsidian-dev-utils harness)
 - docs: unnumber demo-vault setup notes
 - docs(demo-vault): create the Backlink Cache demo vault
 - docs: update
