@@ -3,7 +3,7 @@
  *
  * The plugin's own load check, on both platforms.
  *
- * Per G47 this is one `*.cross-platform.integration.test.ts` file rather than a
+ * This is one `*.cross-platform.integration.test.ts` file rather than a
  * `plugin.desktop` / `plugin.android` pair: the file name alone picks the projects, and the two entry
  * points previously differed only in the platform word in the test title — which the vitest project name
  * (`integration-tests:desktop` / `integration-tests:android`) already reports.

@@ -33,7 +33,7 @@
 
 - chore: update libs
 - fix: re #17
-- refactor(test): collapse the shared integration suites per G47
+- refactor(test): collapse the shared integration suites into one cross-platform file each
 - chore: update libs
 - chore(vitest): adopt the shared Obsidian plugin vitest configuration
 
