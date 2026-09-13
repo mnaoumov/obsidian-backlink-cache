@@ -8,7 +8,7 @@
  * - Safe version with a `TFile` and with a path string.
  * - Original (built-in) version.
  *
- * Named `*.cross-platform.integration.test.ts` (per G47), so the desktop AND android projects both
+ * Named `*.cross-platform.integration.test.ts`, so the desktop AND android projects both
  * collect it and the same flow is verified on each.
  */
 
