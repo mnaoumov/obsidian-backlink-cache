@@ -155,7 +155,7 @@ export class CanvasComponent extends ComponentEx {
     // `metadataCache.getCache(canvasPath)` exposes them.
     // Obsidian natively resolves canvas backlinks (Backlinks pane, graph, `getBacklinksForFile`,
     // `resolvedLinks`) as of 1.12.4, but still leaves the per-file `getCache` empty for canvas
-    // Files — the one canvas surface the plugin still fills.
+    // files — the one canvas surface the plugin still fills.
     for (const reference of references) {
       cachedMetadata.frontmatterLinks?.push(reference);
     }

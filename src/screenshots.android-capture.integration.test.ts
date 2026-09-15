@@ -145,7 +145,7 @@ beforeAll(async () => {
       });
 
       // The drawer foot shows the harness generated vault name, which belongs in
-      // No listing.
+      // no listing.
       const style = createEl('style');
       style.textContent = '.workspace-drawer-vault-switcher, .workspace-drawer-header-switcher { visibility: hidden; }';
       document.head.append(style);
@@ -167,8 +167,8 @@ beforeAll(async () => {
   });
 
   // Indexing thousands of notes takes Obsidian a while, and every frame below is
-  // Meaningless until it has finished — a Backlinks pane that is still filling in
-  // Photographs as a plugin that found nothing.
+  // meaningless until it has finished — a Backlinks pane that is still filling in
+  // photographs as a plugin that found nothing.
   await waitForIndex();
 });
 
@@ -176,8 +176,8 @@ describe('mobile store screenshots', () => {
   it('1 - the backlinks of a note in a big vault', async () => {
     const backlinkCount = await openBacklinksPane();
     // Not an exact count: pushing a few hundred notes onto the device drops the
-    // Odd one, and a frame is not worth failing over one journal entry. The
-    // Caption says no number for the same reason.
+    // odd one, and a frame is not worth failing over one journal entry. The
+    // caption says no number for the same reason.
     expect(backlinkCount).toBeGreaterThanOrEqual(LINKING_NOTE_COUNT - MISSING_NOTE_TOLERANCE);
     await shoot(1, 'Every backlink of this note, in one list');
   });
@@ -192,7 +192,7 @@ describe('mobile store screenshots', () => {
   it('3 - the same answer, either way', async () => {
     const counts = await compareBacklinkCounts();
     // Faster is only worth anything if it is also right. The two implementations
-    // Must agree exactly; what that agreed number is does not matter here.
+    // must agree exactly; what that agreed number is does not matter here.
     expect(counts.cached).toBe(counts.original);
     expect(counts.cached).toBeGreaterThanOrEqual(LINKING_NOTE_COUNT - MISSING_NOTE_TOLERANCE);
     await shoot(3, 'Same answer as Obsidian, arrived at faster');
@@ -225,9 +225,9 @@ function buildVault(): Record<string, string> {
   }
 
   // The filler notes LINK to each other. An empty note costs Obsidian's own
-  // Implementation nothing to walk, so a vault of empty notes would have measured
+  // implementation nothing to walk, so a vault of empty notes would have measured
   // A difference that no reader's vault would reproduce — real vaults are full of
-  // Links, and links are what that implementation re-reads on every question.
+  // links, and links are what that implementation re-reads on every question.
   for (let index = 0; index < FILLER_NOTE_COUNT; index++) {
     const folder = `Archive/${String(2010 + (index % 15))}`;
     const firstNeighbor = (index + 1) % FILLER_NOTE_COUNT;
@@ -257,8 +257,8 @@ async function compareBacklinkCounts(): Promise<BacklinkCounts> {
       await sleep(RESIZE_SETTLE_DELAY_IN_MILLISECONDS);
 
       // Shot 1 left a Backlinks tab and an expanded right dock behind. They would
-      // Sit in this frame reporting "No backlinks found" for the results note,
-      // Which is true and completely beside the point.
+      // sit in this frame reporting "No backlinks found" for the results note,
+      // which is true and completely beside the point.
       for (const backlinkLeaf of app.workspace.getLeavesOfType('backlink')) {
         backlinkLeaf.detach();
       }
@@ -330,8 +330,8 @@ async function measureBacklinkLookups(): Promise<BacklinkMeasurement> {
       await sleep(RESIZE_SETTLE_DELAY_IN_MILLISECONDS);
 
       // Shot 1 left a Backlinks tab and an expanded right dock behind. They would
-      // Sit in this frame reporting "No backlinks found" for the results note,
-      // Which is true and completely beside the point.
+      // sit in this frame reporting "No backlinks found" for the results note,
+      // which is true and completely beside the point.
       for (const backlinkLeaf of app.workspace.getLeavesOfType('backlink')) {
         backlinkLeaf.detach();
       }
@@ -425,7 +425,7 @@ async function openBacklinksPane(): Promise<number> {
 
       // ONE pane, in the right dock where Obsidian normally keeps it. The
       // `backlink:open-backlinks` command opens a second one as a tab in the main
-      // Area, and a frame showing the same list twice reads as a mistake.
+      // area, and a frame showing the same list twice reads as a mistake.
       for (const staleLeaf of app.workspace.getLeavesOfType('backlink')) {
         staleLeaf.detach();
       }
@@ -440,7 +440,7 @@ async function openBacklinksPane(): Promise<number> {
       await app.workspace.revealLeaf(backlinkLeaf);
 
       // The file explorer would otherwise take a third of the frame for folders
-      // Nobody is reading.
+      // nobody is reading.
       app.workspace.leftSplit.collapse();
 
       await waitUntil({
@@ -469,8 +469,8 @@ async function shoot(index: number, caption: string): Promise<void> {
   const captured = await captureObsidianScreenshot({ vaultPath: vaultPath() });
 
   // The AVD is 900x1600, so the device frame IS the store's size. Asserting it
-  // Here is what keeps that true: run this against any other AVD and it fails
-  // Loudly instead of quietly shipping an off-spec image.
+  // here is what keeps that true: run this against any other AVD and it fails
+  // loudly instead of quietly shipping an off-spec image.
   expect(readPngDimensions(captured)).toStrictEqual({
     heightInPixels: HEIGHT_IN_PIXELS,
     widthInPixels: WIDTH_IN_PIXELS

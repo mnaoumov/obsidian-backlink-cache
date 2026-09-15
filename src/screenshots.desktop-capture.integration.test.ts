@@ -137,8 +137,8 @@ beforeAll(async () => {
   });
 
   // Indexing thousands of notes takes Obsidian a while, and every frame below is
-  // Meaningless until it has finished — a Backlinks pane that is still filling in
-  // Photographs as a plugin that found nothing.
+  // meaningless until it has finished — a Backlinks pane that is still filling in
+  // photographs as a plugin that found nothing.
   await waitForIndex();
 });
 
@@ -191,9 +191,9 @@ function buildVault(): Record<string, string> {
   }
 
   // The filler notes LINK to each other. An empty note costs Obsidian's own
-  // Implementation nothing to walk, so a vault of empty notes would have measured
+  // implementation nothing to walk, so a vault of empty notes would have measured
   // A difference that no reader's vault would reproduce — real vaults are full of
-  // Links, and links are what that implementation re-reads on every question.
+  // links, and links are what that implementation re-reads on every question.
   for (let index = 0; index < FILLER_NOTE_COUNT; index++) {
     const folder = `Archive/${String(2010 + (index % 15))}`;
     const firstNeighbor = (index + 1) % FILLER_NOTE_COUNT;
@@ -223,8 +223,8 @@ async function compareBacklinkCounts(): Promise<BacklinkCounts> {
       await sleep(RESIZE_SETTLE_DELAY_IN_MILLISECONDS);
 
       // Shot 1 left a Backlinks tab and an expanded right dock behind. They would
-      // Sit in this frame reporting "No backlinks found" for the results note,
-      // Which is true and completely beside the point.
+      // sit in this frame reporting "No backlinks found" for the results note,
+      // which is true and completely beside the point.
       for (const backlinkLeaf of app.workspace.getLeavesOfType('backlink')) {
         backlinkLeaf.detach();
       }
@@ -296,8 +296,8 @@ async function measureBacklinkLookups(): Promise<BacklinkMeasurement> {
       await sleep(RESIZE_SETTLE_DELAY_IN_MILLISECONDS);
 
       // Shot 1 left a Backlinks tab and an expanded right dock behind. They would
-      // Sit in this frame reporting "No backlinks found" for the results note,
-      // Which is true and completely beside the point.
+      // sit in this frame reporting "No backlinks found" for the results note,
+      // which is true and completely beside the point.
       for (const backlinkLeaf of app.workspace.getLeavesOfType('backlink')) {
         backlinkLeaf.detach();
       }
@@ -391,7 +391,7 @@ async function openBacklinksPane(): Promise<number> {
 
       // ONE pane, in the right dock where Obsidian normally keeps it. The
       // `backlink:open-backlinks` command opens a second one as a tab in the main
-      // Area, and a frame showing the same list twice reads as a mistake.
+      // area, and a frame showing the same list twice reads as a mistake.
       for (const staleLeaf of app.workspace.getLeavesOfType('backlink')) {
         staleLeaf.detach();
       }
@@ -406,7 +406,7 @@ async function openBacklinksPane(): Promise<number> {
       await app.workspace.revealLeaf(backlinkLeaf);
 
       // The file explorer would otherwise take a third of the frame for folders
-      // Nobody is reading.
+      // nobody is reading.
       app.workspace.leftSplit.collapse();
 
       await waitUntil({

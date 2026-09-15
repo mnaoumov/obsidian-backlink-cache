@@ -82,7 +82,7 @@ describe('getCache exposes canvas node links', () => {
     // ...whose links include the canvas text node's link to the target.
     expect(result.hasTargetLink).toBe(true);
     // Obsidian owns resolvedLinks for canvas natively; the plugin no longer mirrors into it,
-    // So the single `[[target]]` reference must resolve to a count of 1, not 2 (double-counted).
+    // so the single `[[target]]` reference must resolve to a count of 1, not 2 (double-counted).
     expect(result.resolvedTargetCount).toBe(1);
   }, SCENARIO_TIMEOUT_IN_MS);
 });

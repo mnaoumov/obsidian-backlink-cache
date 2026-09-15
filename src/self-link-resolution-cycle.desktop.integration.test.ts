@@ -38,7 +38,7 @@ describe('self-linking note does not trigger a re-resolution cycle (issue #17)',
         SELF_LINK_COUNT: selfLinkCount
       }) {
         // The reporter's exact link shape: an angle-bracket-wrapped same-file heading link whose
-        // Display text is itself markdown. Each one gets a real heading so it resolves.
+        // display text is itself markdown. Each one gets a real heading so it resolves.
         const lines: string[] = [];
         for (let index = 0; index < selfLinkCount; index++) {
           lines.push(`## Section ${String(index)}`, `[**Jump ${String(index)}**](<#Section ${String(index)}>)`, '');
@@ -98,7 +98,7 @@ describe('self-linking note does not trigger a re-resolution cycle (issue #17)',
     // Every self-link is still a backlink — the fix must not cost the panel anything.
     expect(result.selfBacklinkCount).toBe(SELF_LINK_COUNT);
     // The note is NOT queued to re-resolve itself. This is the cycle's closing edge; before the fix it
-    // Was queued, and each pass cost one full refresh plus a recompute of every open backlink panel.
+    // was queued, and each pass cost one full refresh plus a recompute of every open backlink panel.
     expect(result.queuedSelf).toBe(false);
   }, SCENARIO_TIMEOUT_IN_MS);
 });
