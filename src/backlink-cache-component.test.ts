@@ -812,7 +812,7 @@ describe('BacklinkCacheComponent', () => {
 
     it('should still index a link that resolves to a DIFFERENT file with the same basename', async () => {
       // Guards against over-correcting the self-link rule into a basename comparison: `a/note.md`
-      // Linking to `b/note.md` is not a self-link and must stay re-resolvable.
+      // linking to `b/note.md` is not a self-link and must stay re-resolvable.
       const otherFile = createTFile('b/note.md');
       vi.mocked(extractLinkFile).mockImplementation((params) => params.shouldAllowNonExistingFile ? null : otherFile);
 

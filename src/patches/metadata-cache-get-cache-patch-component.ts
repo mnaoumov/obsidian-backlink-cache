@@ -29,7 +29,7 @@ export class MetadataCacheGetCachePatchComponent extends MonkeyAroundComponent {
         originalArguments: [path]
       }) => {
         // Route canvas files by extension alone — O(1). `isCanvasFile` checks the `.canvas`
-        // Extension string without resolving the path to a `TFile`.
+        // extension string without resolving the path to a `TFile`.
         // Resolving a miss (an already-removed path during a delete cascade) would trigger an
         // O(vault) scan, which this hot patch must never do.
         if (isCanvasFile(path)) {
