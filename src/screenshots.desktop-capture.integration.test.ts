@@ -113,6 +113,15 @@ beforeAll(async () => {
 
   await evalInObsidian({
     async callback({ app, hubNotePath, lib: { waitUntil }, linkingNoteCount }) {
+      /*
+       * Under the transport's ~30s per-closure cap, not at it.
+       * Read and deliberately left as it is. The ceiling below is the whole budget bar a 1_500 settle,
+       * and unlike most ceilings in these suites it is not generous over sub-second work: what it waits
+       * for is a vault of thousands of notes becoming readable, which is the slow step these shots exist
+       * to photograph.
+       * Tightening it would trade a failure that names the wait for one that photographs a half-indexed
+       * vault, and there is no margin to buy: the settle is the only other cost.
+       */
       const INDEX_TIMEOUT_IN_MILLISECONDS = 25_000;
       const SETTLE_DELAY_IN_MILLISECONDS = 1500;
 
@@ -379,6 +388,14 @@ async function measureBacklinkLookups(): Promise<BacklinkMeasurement> {
 async function openBacklinksPane(): Promise<number> {
   return await evalInObsidian({
     async callback({ app, hubNotePath, lib: { waitUntil } }) {
+      /*
+       * Under the transport's ~30s per-closure cap, not at it.
+       * Read and deliberately left as it is, for the same reason as the staging closure above: the
+       * ceiling waits for the Backlinks pane to fill from a vault of thousands of notes, which is the
+       * slow step rather than a generous margin over a quick one.
+       * A pane still filling in is what this frame must never show, so the budget stays and the 2_000
+       * settle after it is the only other cost.
+       */
       const RENDER_TIMEOUT_IN_MILLISECONDS = 25_000;
       const SETTLE_DELAY_IN_MILLISECONDS = 2000;
 
