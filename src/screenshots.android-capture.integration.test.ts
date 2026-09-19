@@ -133,6 +133,14 @@ beforeAll(async () => {
 
   await evalInObsidian({
     async callback({ app, fontSizeInPixels, hubNotePath, lib: { waitUntil }, linkingNoteCount }) {
+      /*
+       * Under the transport's ~30s per-closure cap, not at it.
+       * Read and deliberately left as it is; the desktop twin of this closure carries the same reasoning.
+       * The ceiling below is the whole budget bar a 1_500 settle, and it waits for a vault of thousands
+       * of notes to become readable - on a phone, which is the slowest place that happens.
+       * Tightening it would trade a failure that names the wait for one that photographs a half-indexed
+       * vault.
+       */
       const INDEX_TIMEOUT_IN_MILLISECONDS = 25_000;
       const SETTLE_DELAY_IN_MILLISECONDS = 1500;
 
@@ -413,6 +421,13 @@ async function measureBacklinkLookups(): Promise<BacklinkMeasurement> {
 async function openBacklinksPane(): Promise<number> {
   return await evalInObsidian({
     async callback({ app, hubNotePath, lib: { waitUntil } }) {
+      /*
+       * Under the transport's ~30s per-closure cap, not at it.
+       * Read and deliberately left as it is; the desktop twin of this closure carries the same reasoning.
+       * The ceiling waits for the Backlinks pane to fill from a vault of thousands of notes, which is the
+       * slow step rather than a generous margin over a quick one, and a pane still filling in is what
+       * this frame must never show.
+       */
       const RENDER_TIMEOUT_IN_MILLISECONDS = 25_000;
       const SETTLE_DELAY_IN_MILLISECONDS = 2000;
 
