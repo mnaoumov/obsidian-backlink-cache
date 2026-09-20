@@ -53,8 +53,8 @@ interface BacklinksCallResult {
 interface PatchedGetBacklinksForFile {
   (pathOrFile: string | TFile): CustomArrayDict<Reference>;
   // eslint-disable-next-line unicorn/name-replacements -- `originalFn` is this plugin's documented public API - the README tells users to call it.
-  originalFn(file: TFile): CustomArrayDict<Reference>;
-  safe(pathOrFile: string | TFile): Promise<CustomArrayDict<Reference>>;
+  originalFn: (file: TFile) => CustomArrayDict<Reference>;
+  safe: (pathOrFile: string | TFile) => Promise<CustomArrayDict<Reference>>;
 }
 
 const TARGET_PATH = 'readme-calls-target.md';

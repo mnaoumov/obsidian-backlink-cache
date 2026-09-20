@@ -99,11 +99,11 @@ vi.mock('./canvas.ts', () => ({
 interface ComponentInternals {
   backlinksMap: Map<string, Map<string, Set<Reference>>>;
   linksMap: Map<string, Set<string>>;
-  onLayoutReady(): Promise<void>;
+  onLayoutReady: () => Promise<void>;
   pendingActions: Map<string, number>;
-  processPendingActions(): Promise<void>;
-  refreshBacklinks(path: string): Promise<void>;
-  removeLinkedPathEntries(path: string): void;
+  processPendingActions: () => Promise<void>;
+  refreshBacklinks: (path: string) => Promise<void>;
+  removeLinkedPathEntries: (path: string) => void;
   resolvedBasenameMap: Map<string, Set<string>>;
   unresolvedBasenameMap: Map<string, Set<string>>;
   unresolvedLinksMap: Map<string, Set<string>>;
@@ -117,18 +117,18 @@ interface DifferentialCase {
 }
 
 interface EventHandlers {
-  changed(file: TFile): void;
-  create(file: TAbstractFile): void;
-  delete(file: TAbstractFile): void;
-  modify(file: TAbstractFile): void;
-  rename(file: TAbstractFile, oldPath: string): void;
+  changed: (file: TFile) => void;
+  create: (file: TAbstractFile) => void;
+  delete: (file: TAbstractFile) => void;
+  modify: (file: TAbstractFile) => void;
+  rename: (file: TAbstractFile, oldPath: string) => void;
 }
 
 interface GetBacklinksForFileFunction {
   (path: string): CustomArrayDict<Reference>;
   // eslint-disable-next-line unicorn/name-replacements -- `originalFn` is this plugin's documented public API - the README tells users to call it.
-  originalFn(...$arguments: unknown[]): unknown;
-  safe(path: string): Promise<CustomArrayDict<Reference>>;
+  originalFn: (...$arguments: unknown[]) => unknown;
+  safe: (path: string) => Promise<CustomArrayDict<Reference>>;
 }
 
 type LinkGraph = Map<string, SourceLinks>;

@@ -42,7 +42,7 @@ import {
  * The dictionary either implementation answers with, reduced to its keys.
  */
 interface BacklinkDictionary {
-  keys(this: void): string[];
+  keys: (this: void) => string[];
 }
 
 /**
@@ -50,7 +50,7 @@ interface BacklinkDictionary {
  * declare. Setting the config alone changes nothing on screen.
  */
 interface InlineTitleApp {
-  updateInlineTitleDisplay(this: void): void;
+  updateInlineTitleDisplay: (this: void) => void;
 }
 
 /**
@@ -61,7 +61,7 @@ interface InlineTitleApp {
 interface PatchedGetBacklinksForFile {
   (this: void, file: unknown): BacklinkDictionary;
   // eslint-disable-next-line unicorn/name-replacements -- `originalFn` is the plugin's own public property name, not ours to rename.
-  originalFn(this: void, file: unknown): BacklinkDictionary;
+  originalFn: (this: void, file: unknown) => BacklinkDictionary;
 }
 
 const WIDTH_IN_PIXELS = 1200;
