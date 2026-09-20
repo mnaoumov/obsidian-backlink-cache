@@ -1,6 +1,9 @@
 import type { BacklinkView } from '@obsidian-typings/obsidian-public-latest';
 
-import { evalInObsidian } from 'obsidian-integration-testing';
+import {
+  evalInObsidian,
+  pollInObsidian
+} from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
@@ -30,14 +33,34 @@ const SCENARIO_TIMEOUT_IN_MS = 150_000;
 
 describe('backlink panel renders backlinks via the plugin index', () => {
   it('shows the correct match count for the target after recompute', async () => {
-    const result = await evalInObsidian({
-      async callback({
+    const vaultPath = getTemporaryVault().path;
+
+    /*
+     * Creating the graph and waiting for the plugin's index to see it is done from NODE, one short read
+     * per attempt, rather than as a deadline loop inside a single `evalInObsidian`. A closure is one
+     * transport call, capped at ~30s on this project (`integration-tests:desktop` keeps the default
+     * `commandTimeoutInMilliseconds`; only `desktopPerformance` raises it), so a loop declaring 60s could
+     * never reach its own ceiling: the call died first and reported a bare `WebDriverError: script
+     * timeout` naming only the transport, rather than saying the backlink count never arrived.
+     */
+    await pollInObsidian({
+      input: {
+        LINKER_COUNT,
+        LINKER_PREFIX,
+        TARGET_BASENAME,
+        TARGET_PATH
+      },
+      intervalInMilliseconds: INDEX_POLL_IN_MS,
+
+      poll({ app, TARGET_PATH: targetPath }) {
+        const targetFile = app.vault.getFileByPath(targetPath);
+        return { backlinkCount: targetFile ? app.metadataCache.getBacklinksForFile(targetFile).keys().length : -1 };
+      },
+
+      async start({
         app,
-        INDEX_POLL_IN_MS: pollMs,
-        INDEX_WAIT_IN_MS: waitMs,
         LINKER_COUNT: linkerCount,
         LINKER_PREFIX: linkerPrefix,
-        PANEL_SETTLE_IN_MS: settleMs,
         TARGET_BASENAME: targetBasename,
         TARGET_PATH: targetPath
       }) {
@@ -45,17 +68,27 @@ describe('backlink panel renders backlinks via the plugin index', () => {
         for (let index = 0; index < linkerCount; index++) {
           await app.vault.create(`${linkerPrefix}-${String(index)}.md`, `[[${targetBasename}]]\n`);
         }
+      },
 
+      timeoutInMilliseconds: INDEX_WAIT_IN_MS,
+      timeoutMessage: `${TARGET_PATH} never reached ${String(LINKER_COUNT)} backlinks in the plugin index`,
+      until: (status) => status.backlinkCount >= LINKER_COUNT,
+      vaultPath
+    });
+
+    /*
+     * The panel half declares only the two settles, 10 000 ms in total, so it sits comfortably inside the
+     * cap however long the index wait above took.
+     */
+    const result = await evalInObsidian({
+      async callback({
+        app,
+        PANEL_SETTLE_IN_MS: settleMs,
+        TARGET_PATH: targetPath
+      }) {
         const targetFile = app.vault.getFileByPath(targetPath);
         if (!targetFile) {
           return { error: 'Target note not found', matchCount: -1, openLeafTypes: [] as string[] };
-        }
-
-        const deadline = Date.now() + waitMs;
-        let backlinkCount = app.metadataCache.getBacklinksForFile(targetFile).keys().length;
-        while (backlinkCount < linkerCount && Date.now() < deadline) {
-          await sleep(pollMs);
-          backlinkCount = app.metadataCache.getBacklinksForFile(targetFile).keys().length;
         }
 
         const leaf = app.workspace.getLeaf(false);
@@ -80,15 +113,10 @@ describe('backlink panel renders backlinks via the plugin index', () => {
         return { error: null, matchCount: backlinkComponent.backlinkDom.getMatchCount(), openLeafTypes: [] as string[] };
       },
       input: {
-        INDEX_POLL_IN_MS,
-        INDEX_WAIT_IN_MS,
-        LINKER_COUNT,
-        LINKER_PREFIX,
         PANEL_SETTLE_IN_MS,
-        TARGET_BASENAME,
         TARGET_PATH
       },
-      vaultPath: getTemporaryVault().path
+      vaultPath
     });
 
     expect(result.error).toBeNull();
