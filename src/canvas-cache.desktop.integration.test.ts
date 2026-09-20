@@ -1,4 +1,4 @@
-import { evalInObsidian } from 'obsidian-integration-testing';
+import { pollInObsidian } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
@@ -29,11 +29,42 @@ const SCENARIO_TIMEOUT_IN_MS = 120_000;
 
 describe('getCache exposes canvas node links', () => {
   it('returns a metadata cache whose links include the canvas text-node link', async () => {
-    const result = await evalInObsidian({
-      async callback({
+    /*
+     * The wait for the cache to populate is done from NODE, one short read per attempt, rather than as a
+     * deadline loop inside a single `evalInObsidian`. A closure is one transport call, capped at ~30s on
+     * this project (`integration-tests:desktop` keeps the default `commandTimeoutInMilliseconds`; only
+     * `desktopPerformance` raises it), so a loop declaring 60s could never reach its own ceiling: the call
+     * died first and reported a bare `WebDriverError: script timeout` naming only the transport, hiding
+     * the condition that actually failed. Here the budget lives in Node and the failure names itself.
+     */
+    const result = await pollInObsidian({
+      input: {
+        CANVAS_PATH,
+        TARGET_LINK,
+        TARGET_PATH
+      },
+      intervalInMilliseconds: CACHE_POLL_IN_MS,
+
+      poll({
         app,
-        CACHE_POLL_IN_MS: pollMs,
-        CACHE_WAIT_IN_MS: waitMs,
+        CANVAS_PATH: canvasPath,
+        TARGET_LINK: targetLink,
+        TARGET_PATH: targetPath
+      }) {
+        const cache = app.metadataCache.getCache(canvasPath);
+        const resolved = app.metadataCache.resolvedLinks[canvasPath];
+        const links = cache?.frontmatterLinks ?? [];
+        return {
+          hasCache: !!cache,
+          hasResolvedTarget: !!resolved && Object.hasOwn(resolved, targetPath),
+          hasTargetLink: links.some((link) => link.link === targetLink),
+          linkCount: links.length,
+          resolvedTargetCount: resolved?.[targetPath] ?? null
+        };
+      },
+
+      async start({
+        app,
         CANVAS_PATH: canvasPath,
         TARGET_LINK: targetLink,
         TARGET_PATH: targetPath
@@ -44,39 +75,14 @@ describe('getCache exposes canvas node links', () => {
           nodes: [{ height: 100, id: 'node-1', text: `[[${targetLink}]]`, type: 'text', width: 200, x: 0, y: 0 }]
         });
         await app.vault.create(canvasPath, canvasContent);
-
-        const deadline = Date.now() + waitMs;
-        let cache = app.metadataCache.getCache(canvasPath);
-        let resolved = app.metadataCache.resolvedLinks[canvasPath];
-        while (
-          (!cache || (cache.frontmatterLinks?.length ?? 0) === 0 || !resolved || !Object.hasOwn(resolved, targetPath))
-          && Date.now() < deadline
-        ) {
-          await sleep(pollMs);
-          cache = app.metadataCache.getCache(canvasPath);
-          resolved = app.metadataCache.resolvedLinks[canvasPath];
-        }
-
-        const links = cache?.frontmatterLinks ?? [];
-        return {
-          error: null,
-          hasCache: !!cache,
-          hasTargetLink: links.some((link) => link.link === targetLink),
-          linkCount: links.length,
-          resolvedTargetCount: resolved?.[targetPath] ?? null
-        };
       },
-      input: {
-        CACHE_POLL_IN_MS,
-        CACHE_WAIT_IN_MS,
-        CANVAS_PATH,
-        TARGET_LINK,
-        TARGET_PATH
-      },
+
+      timeoutInMilliseconds: CACHE_WAIT_IN_MS,
+      timeoutMessage: `the canvas ${CANVAS_PATH} never gained a metadata cache linking to ${TARGET_PATH}`,
+      until: (status) => status.hasCache && status.linkCount > 0 && status.hasResolvedTarget,
       vaultPath: getTemporaryVault().path
     });
 
-    expect(result.error).toBeNull();
     // The patch built a metadata cache for the canvas file...
     expect(result.hasCache).toBe(true);
     // ...whose links include the canvas text node's link to the target.

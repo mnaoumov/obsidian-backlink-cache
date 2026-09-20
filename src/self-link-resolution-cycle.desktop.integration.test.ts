@@ -1,4 +1,7 @@
-import { evalInObsidian } from 'obsidian-integration-testing';
+import {
+  evalInObsidian,
+  pollInObsidian
+} from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
 import {
   describe,
@@ -28,12 +31,32 @@ const SCENARIO_TIMEOUT_IN_MS = 120_000;
 
 describe('self-linking note does not trigger a re-resolution cycle (issue #17)', () => {
   it('should not queue the note for its own change, yet still record its self-backlinks', async () => {
-    const result = await evalInObsidian({
-      async callback({
+    const vaultPath = getTemporaryVault().path;
+
+    /*
+     * Writing the note and waiting for the plugin's index to see every self-link is done from NODE, one
+     * short read per attempt, rather than as a deadline loop inside a single `evalInObsidian`. A closure
+     * is one transport call, capped at ~30s on this project (`integration-tests:desktop` keeps the default
+     * `commandTimeoutInMilliseconds`; only `desktopPerformance` raises it), so a loop declaring 60s could
+     * never reach its own ceiling: the call died first and reported a bare `WebDriverError: script
+     * timeout` naming only the transport, hiding the condition that actually failed.
+     */
+    await pollInObsidian({
+      input: {
+        NOTE_PATH,
+        SELF_LINK_COUNT
+      },
+      intervalInMilliseconds: CACHE_POLL_IN_MS,
+
+      poll({ app, NOTE_PATH: notePath }) {
+        const noteFile = app.vault.getFileByPath(notePath);
+        return {
+          selfBacklinkCount: noteFile ? app.metadataCache.getBacklinksForFile(noteFile).get(notePath)?.length ?? 0 : -1
+        };
+      },
+
+      async start({
         app,
-        CACHE_POLL_IN_MS: pollMs,
-        CACHE_WAIT_IN_MS: waitMs,
-        NOTE_BASENAME: noteBasename,
         NOTE_PATH: notePath,
         SELF_LINK_COUNT: selfLinkCount
       }) {
@@ -46,20 +69,30 @@ describe('self-linking note does not trigger a re-resolution cycle (issue #17)',
         // Idempotent, so a re-run against a reused vault behaves the same as a fresh one.
         const content = lines.join('\n');
         const existing = app.vault.getFileByPath(notePath);
-        let noteFile;
         if (existing) {
           await app.vault.modify(existing, content);
-          noteFile = existing;
         } else {
-          noteFile = await app.vault.create(notePath, content);
+          await app.vault.create(notePath, content);
         }
+      },
 
-        // Wait for the plugin's index to see every self-link.
-        const deadline = Date.now() + waitMs;
-        let selfBacklinkCount = app.metadataCache.getBacklinksForFile(noteFile).get(notePath)?.length ?? 0;
-        while (selfBacklinkCount < selfLinkCount && Date.now() < deadline) {
-          await sleep(pollMs);
-          selfBacklinkCount = app.metadataCache.getBacklinksForFile(noteFile).get(notePath)?.length ?? 0;
+      timeoutInMilliseconds: CACHE_WAIT_IN_MS,
+      timeoutMessage: `${NOTE_PATH} never reached ${String(SELF_LINK_COUNT)} self-backlinks`,
+      until: (status) => status.selfBacklinkCount >= SELF_LINK_COUNT,
+      vaultPath
+    });
+
+    // Nothing below declares a wait at all: it patches, calls the patched `updateRelatedLinks` once and
+    // reads the result back, so it cannot approach the cap however slow the index was to get here.
+    const result = await evalInObsidian({
+      callback({
+        app,
+        NOTE_BASENAME: noteBasename,
+        NOTE_PATH: notePath
+      }) {
+        const noteFile = app.vault.getFileByPath(notePath);
+        if (!noteFile) {
+          throw new Error(`${notePath} disappeared between the index wait and the assertion`);
         }
 
         // Record what the PATCHED updateRelatedLinks queues for the note's own name.
@@ -79,22 +112,17 @@ describe('self-linking note does not trigger a re-resolution cycle (issue #17)',
         }
 
         return {
-          error: null,
           queuedSelf: queuedPaths.includes(notePath),
-          selfBacklinkCount
+          selfBacklinkCount: app.metadataCache.getBacklinksForFile(noteFile).get(notePath)?.length ?? 0
         };
       },
       input: {
-        CACHE_POLL_IN_MS,
-        CACHE_WAIT_IN_MS,
         NOTE_BASENAME,
-        NOTE_PATH,
-        SELF_LINK_COUNT
+        NOTE_PATH
       },
-      vaultPath: getTemporaryVault().path
+      vaultPath
     });
 
-    expect(result.error).toBeNull();
     // Every self-link is still a backlink — the fix must not cost the panel anything.
     expect(result.selfBacklinkCount).toBe(SELF_LINK_COUNT);
     // The note is NOT queued to re-resolve itself. This is the cycle's closing edge; before the fix it
