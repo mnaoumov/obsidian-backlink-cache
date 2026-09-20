@@ -112,5 +112,28 @@ export const config = defineObsidianPluginVitestConfig({
         }
       }
     ];
+  },
+  editContext(context: ObsidianPluginVitestConfigContext): void {
+    context.desktopPerformance.environmentOptions = {
+      /*
+       * The performance closure holds a single `Runtime.evaluate` open for the whole index-wait +
+       * settle + benchmark run, which far exceeds the transport's default 30s per-command timeout, so
+       * raise it to the performance test budget. That is what makes each suite's own index wait
+       * (180_000 - 240_000 ms, declared at the top of the file) legal rather than a bare
+       * `WebDriverError: script timeout` naming only the transport.
+       */
+      obsidianTransport: {
+        commandTimeoutInMilliseconds: context.performanceTimeoutInMilliseconds,
+        type: 'obsidian-cdp'
+      }
+    };
+
+    /*
+     * The performance vault is pre-populated with a large note tree before open, which the shared
+     * global setup knows nothing about. Without this the project opens an EMPTY vault and every suite
+     * fails with a domain-shaped assertion ("Target note not found", "expected +0 to be 1000") that
+     * reads as a plugin regression rather than as missing wiring.
+     */
+    context.desktopPerformance.globalSetup = ['./scripts/vitest-global-setup-performance.ts'];
   }
 });
