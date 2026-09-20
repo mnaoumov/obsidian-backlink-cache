@@ -43,7 +43,7 @@ import {
 import { PluginSettings } from './plugin-settings.ts';
 
 interface CanvasInternals {
-  initCanvasMetadataCache(file: TFile): Promise<void>;
+  initCanvasMetadataCache: (file: TFile) => Promise<void>;
 }
 interface MutableAbortSignal {
   aborted: boolean;
@@ -51,7 +51,7 @@ interface MutableAbortSignal {
 }
 
 interface RegisteredEventHandler {
-  callback(...$arguments: unknown[]): void;
+  callback: (...$arguments: unknown[]) => void;
   event: string;
 }
 
@@ -78,8 +78,8 @@ vi.mock('./backlink-core-plugin.ts', () => ({
 }));
 
 interface CanvasInstancePrototype {
-  onUserDisable(): void;
-  onUserEnable(): void;
+  onUserDisable: () => void;
+  onUserEnable: () => void;
 }
 
 interface CreateCanvasCorePluginResult {
