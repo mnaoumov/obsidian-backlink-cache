@@ -45,6 +45,7 @@ import {
 
 interface BacklinksCorePluginComponentInternals {
   onBacklinksCorePluginEnable: () => void;
+  patchBacklinksPane: () => Promise<void>;
 }
 
 interface BacklinksCorePluginStub {
@@ -253,6 +254,42 @@ describe('BacklinksCorePluginComponent', () => {
     await vi.waitFor(() => {
       expect(backlinkPrototype.recomputeBacklink).not.toBe(recomputeBacklink);
     });
+  });
+
+  it('should patch the backlinks pane only once across repeated patch calls', async () => {
+    const backlinkPrototype = { recomputeBacklink: vi.fn() };
+    const backlinksLeaf = strictProxy<WorkspaceLeaf>({
+      loadIfDeferred: vi.fn().mockResolvedValue(undefined),
+      view: strictProxy<BacklinkView>({
+        backlink: Object.create(backlinkPrototype),
+        file: null
+      })
+    });
+    const getLeavesOfType = vi.fn().mockReturnValue([]);
+    const app = strictProxy<App>({
+      internalPlugins: {
+        getPluginById: vi.fn().mockReturnValue({ enabled: false }),
+        on: vi.fn().mockReturnValue({})
+      },
+      workspace: {
+        getLeavesOfType
+      }
+    });
+    const component = new BacklinksCorePluginComponent(app);
+    component.load();
+    const addChildSpy = vi.spyOn(component, 'addChild');
+
+    await internals(component).patchBacklinksPane();
+    expect(addChildSpy).not.toHaveBeenCalled();
+
+    getLeavesOfType.mockReturnValue([backlinksLeaf]);
+    await Promise.all([
+      internals(component).patchBacklinksPane(),
+      internals(component).patchBacklinksPane()
+    ]);
+    await internals(component).patchBacklinksPane();
+
+    expect(addChildSpy).toHaveBeenCalledOnce();
   });
 
   function loadBacklinksCorePluginComponent(isEnabled: boolean): LoadedBacklinksCorePluginComponent {

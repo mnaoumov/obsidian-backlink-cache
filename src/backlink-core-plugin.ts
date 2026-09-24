@@ -18,6 +18,8 @@ export interface CanvasDomResult extends Record<`canvas-${string}`, [from: numbe
 }
 
 export class BacklinksCorePluginComponent extends ComponentEx {
+  private isBacklinksPanePatched = false;
+
   public constructor(private readonly app: App) {
     super();
   }
@@ -57,10 +59,20 @@ export class BacklinksCorePluginComponent extends ComponentEx {
 
   private async patchBacklinksPane(): Promise<void> {
     const backlinkView = await getBacklinkView(this.app);
-    if (!backlinkView) {
+
+    /*
+     * Install the patch once. It sits on the `BacklinkComponent` prototype, which outlives the pane: disabling
+     * the core Backlinks plugin leaves it in place and re-enabling it reuses the same class, so patching on every
+     * enable only stacks another wrapper that the outermost one never calls through to. The enable path still
+     * matters for the one case it covers alone - the core plugin was disabled when this component loaded, so
+     * there was no pane to reach. Checked after the `await`, so a load-time call and an enable racing it cannot
+     * both install.
+     */
+    if (!backlinkView || this.isBacklinksPanePatched) {
       return;
     }
 
+    this.isBacklinksPanePatched = true;
     this.addChild(
       new BacklinkComponentRecomputeBacklinkPatchComponent({
         backlinkComponent: backlinkView.backlink
