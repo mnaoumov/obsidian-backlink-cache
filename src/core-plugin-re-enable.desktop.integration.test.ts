@@ -11,13 +11,16 @@ import {
 /*
  * Guards the signal this plugin learns "the core Backlinks plugin came back" from. It used to be a monkey
  * patch of `onUserEnable` on the `BacklinkPluginInstance` prototype; it is now a subscription to the
- * `change` event Obsidian raises on `app.internalPlugins`. Either way the contract is the same: after the
- * user switches the core plugin off and on again, the reopened backlinks pane must be patched again, or
- * the pane renders from Obsidian's own reference walk instead of this plugin's index.
+ * `change` event Obsidian raises on `app.internalPlugins`. What this asserts is that the signal still
+ * arrives in a real Obsidian and still reaches `patchBacklinksPane` - the whole reason either mechanism
+ * exists - measured across a real disable/enable of the core plugin rather than against a mock.
  *
  * The observable is the identity of `recomputeBacklink` on the `BacklinkComponent` prototype, which
  * `BacklinkComponentRecomputeBacklinkPatchComponent` replaces. Opening the pane by hand does not patch it -
- * only the enable path does - so the reference has to CHANGE across the toggle.
+ * only the enable path does - so the reference has to CHANGE across the toggle. It deliberately claims
+ * nothing about what the pane would render without the re-patch: the patch sits on a prototype the whole
+ * vault shares and is never removed on disable, so the previous wrapper may well still be doing the work.
+ * Falsified 2026-09-23: with the subscription removed the reference is unchanged and this fails.
  */
 
 const NOTE_PATH = 'core-plugin-re-enable-target.md';
