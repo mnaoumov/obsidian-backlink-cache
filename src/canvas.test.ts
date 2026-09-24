@@ -75,8 +75,18 @@ vi.mock('./backlink-core-plugin.ts', () => ({
   reloadBacklinksView: vi.fn().mockResolvedValue(undefined)
 }));
 
+interface CanvasCorePluginInstanceStub {
+  readonly index: CanvasIndexStub;
+}
+
 interface CanvasCorePluginStub {
   enabled: boolean;
+  readonly instance: CanvasCorePluginInstanceStub;
+}
+
+interface CanvasIndexStub {
+  _loaded: boolean;
+  readonly load: ReturnType<typeof vi.fn>;
 }
 
 interface CreateComponentOverrides {
@@ -151,7 +161,12 @@ function createMockApp(): App {
  * the way Obsidian does: move `enabled`, then raise `change` on `app.internalPlugins`.
  */
 function loadWithCanvasCorePlugin(created: CreateComponentResult, isEnabled: boolean): CanvasCorePluginStub {
-  const canvasCorePlugin: CanvasCorePluginStub = { enabled: isEnabled };
+  const canvasCorePlugin: CanvasCorePluginStub = {
+    enabled: isEnabled,
+    instance: {
+      index: { _loaded: true, load: vi.fn() }
+    }
+  };
   vi.mocked(created.app.internalPlugins.getPluginById).mockReturnValue(castTo<CanvasPlugin>(canvasCorePlugin));
   created.component.load();
   return canvasCorePlugin;
@@ -456,6 +471,27 @@ describe('CanvasComponent.onload', () => {
     triggerInternalPluginsChange();
 
     expect(loop).toHaveBeenCalledOnce();
+  });
+
+  it('should load the canvas index Obsidian left unloaded when the core plugin is enabled', () => {
+    const created = createComponent();
+    const canvasCorePlugin = loadWithCanvasCorePlugin(created, false);
+    canvasCorePlugin.instance.index._loaded = false;
+
+    canvasCorePlugin.enabled = true;
+    triggerInternalPluginsChange();
+
+    expect(canvasCorePlugin.instance.index.load).toHaveBeenCalledOnce();
+  });
+
+  it('should leave a loaded canvas index alone when the core plugin is enabled', () => {
+    const created = createComponent();
+    const canvasCorePlugin = loadWithCanvasCorePlugin(created, false);
+
+    canvasCorePlugin.enabled = true;
+    triggerInternalPluginsChange();
+
+    expect(canvasCorePlugin.instance.index.load).not.toHaveBeenCalled();
   });
 
   it('should ignore a change that left the canvas plugin as it was', () => {
