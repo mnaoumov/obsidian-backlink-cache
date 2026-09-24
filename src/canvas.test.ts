@@ -1,7 +1,4 @@
-import type {
-  CanvasPlugin,
-  CanvasPluginInstance
-} from '@obsidian-typings/obsidian-public-latest';
+import type { CanvasPlugin } from '@obsidian-typings/obsidian-public-latest';
 import type {
   App,
   CachedMetadata,
@@ -56,6 +53,7 @@ interface RegisteredEventHandler {
 }
 
 const registeredEventHandlers: RegisteredEventHandler[] = [];
+const registeredInternalPluginsChangeHandlers: (() => void)[] = [];
 
 vi.mock('obsidian-dev-utils/obsidian/file-system', async (importOriginal) => {
   const original = await importOriginal<typeof FileSystemModule>();
@@ -77,14 +75,8 @@ vi.mock('./backlink-core-plugin.ts', () => ({
   reloadBacklinksView: vi.fn().mockResolvedValue(undefined)
 }));
 
-interface CanvasInstancePrototype {
-  onUserDisable: () => void;
-  onUserEnable: () => void;
-}
-
-interface CreateCanvasCorePluginResult {
-  readonly instancePrototype: CanvasInstancePrototype;
-  readonly plugin: CanvasPlugin;
+interface CanvasCorePluginStub {
+  enabled: boolean;
 }
 
 interface CreateComponentOverrides {
@@ -97,18 +89,6 @@ interface CreateComponentResult {
   readonly app: App;
   readonly backlinkCacheComponent: BacklinkCacheComponent;
   readonly component: CanvasComponent;
-}
-
-function createCanvasCorePlugin(isEnabled: boolean): CreateCanvasCorePluginResult {
-  const instancePrototype: CanvasInstancePrototype = {
-    onUserDisable: vi.fn(),
-    onUserEnable: vi.fn()
-  };
-  const plugin = strictProxy<CanvasPlugin>({
-    enabled: isEnabled,
-    instance: castTo<CanvasPluginInstance>(Object.create(instancePrototype))
-  });
-  return { instancePrototype, plugin };
 }
 
 function createComponent(overrides: CreateComponentOverrides = {}): CreateComponentResult {
@@ -134,7 +114,13 @@ function createMockApp(): App {
   const app = strictProxy<App>({
     internalPlugins: {
       getEnabledPluginById: vi.fn().mockReturnValue(null),
-      getPluginById: vi.fn().mockReturnValue(null)
+      getPluginById: vi.fn().mockReturnValue(null),
+      on: vi.fn().mockImplementation((event: string, callback: () => void) => {
+        if (event === 'change') {
+          registeredInternalPluginsChangeHandlers.push(callback);
+        }
+        return { id: event };
+      })
     },
     metadataCache: {
       deletePath: vi.fn(),
@@ -160,8 +146,26 @@ function createMockApp(): App {
   return app;
 }
 
+/**
+ * Loads the component against a canvas core plugin stub and hands the stub back, so a test drives a toggle
+ * the way Obsidian does: move `enabled`, then raise `change` on `app.internalPlugins`.
+ */
+function loadWithCanvasCorePlugin(created: CreateComponentResult, isEnabled: boolean): CanvasCorePluginStub {
+  const canvasCorePlugin: CanvasCorePluginStub = { enabled: isEnabled };
+  vi.mocked(created.app.internalPlugins.getPluginById).mockReturnValue(castTo<CanvasPlugin>(canvasCorePlugin));
+  created.component.load();
+  return canvasCorePlugin;
+}
+
+function triggerInternalPluginsChange(): void {
+  for (const handler of registeredInternalPluginsChangeHandlers) {
+    handler();
+  }
+}
+
 beforeEach(() => {
   registeredEventHandlers.length = 0;
+  registeredInternalPluginsChangeHandlers.length = 0;
   vi.mocked(getCanvasReferences).mockReset();
   vi.mocked(getCanvasReferences).mockResolvedValue([]);
 });
@@ -204,24 +208,18 @@ describe('CanvasComponent.onload', () => {
     expect(registeredEventHandlers.map((h) => h.event)).toEqual(['create', 'modify', 'delete', 'rename']);
   });
 
-  it('should register canvas core plugin patches when canvas plugin exists', () => {
-    const { app, component } = createComponent();
-    const { instancePrototype, plugin } = createCanvasCorePlugin(false);
-    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(plugin);
-    const originalOnUserEnable = instancePrototype.onUserEnable;
-    const originalOnUserDisable = instancePrototype.onUserDisable;
+  it('should subscribe to the internal plugins change signal when canvas plugin exists', () => {
+    const created = createComponent();
 
-    component.load();
+    loadWithCanvasCorePlugin(created, false);
 
-    expect(instancePrototype.onUserEnable).not.toBe(originalOnUserEnable);
-    expect(instancePrototype.onUserDisable).not.toBe(originalOnUserDisable);
+    expect(created.app.internalPlugins.on).toHaveBeenCalledWith('change', expect.any(Function));
   });
 
   it('should process all canvas files when canvas plugin is already enabled', () => {
-    const { app, component } = createComponent();
-    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(createCanvasCorePlugin(true).plugin);
+    const created = createComponent();
 
-    component.load();
+    loadWithCanvasCorePlugin(created, true);
 
     expect(loop).toHaveBeenCalled();
   });
@@ -352,22 +350,22 @@ describe('CanvasComponent.onload', () => {
     const mockCanvasFile = Object.create(TFile.prototype);
     Object.assign(mockCanvasFile, { path: 'test.canvas' });
 
-    const { app, backlinkCacheComponent, component } = createComponent();
-    const { instancePrototype, plugin } = createCanvasCorePlugin(false);
-    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(plugin);
+    const created = createComponent();
+    const { app, backlinkCacheComponent } = created;
     vi.mocked(app.vault.getFiles).mockReturnValue(castTo<TFile[]>([mockCanvasFile]));
 
-    component.load();
+    const canvasCorePlugin = loadWithCanvasCorePlugin(created, true);
 
-    instancePrototype.onUserDisable();
+    canvasCorePlugin.enabled = false;
+    triggerInternalPluginsChange();
 
     expect(app.metadataCache.deletePath).toHaveBeenCalledWith('test.canvas');
     expect(backlinkCacheComponent.triggerRemove).toHaveBeenCalledWith('test.canvas');
   });
 
   it('should invoke processItem callback in processAllCanvasFiles via loop', async () => {
-    const { app, backlinkCacheComponent, component } = createComponent();
-    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(createCanvasCorePlugin(true).plugin);
+    const created = createComponent();
+    const { app, backlinkCacheComponent } = created;
     vi.mocked(isCanvasFile).mockReturnValue(true);
 
     const mockCanvasFile = Object.create(TFile.prototype);
@@ -380,7 +378,7 @@ describe('CanvasComponent.onload', () => {
       await (options.processItem as (item: TFile) => Promise<void>)(mockCanvasFile);
     });
 
-    component.load();
+    loadWithCanvasCorePlugin(created, true);
 
     await vi.waitFor(() => {
       expect(backlinkCacheComponent.triggerRefresh).toHaveBeenCalledWith('test.canvas');
@@ -406,51 +404,68 @@ describe('CanvasComponent.onload', () => {
       throwIfAborted: vi.fn()
     };
 
-    const { app, component } = createComponent({ abortSignal });
-    const { instancePrototype, plugin } = createCanvasCorePlugin(false);
-    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(plugin);
+    const created = createComponent({ abortSignal });
+    const { app } = created;
     vi.mocked(app.vault.getFiles).mockReturnValue(castTo<TFile[]>([mockCanvasFile1, mockCanvasFile2]));
 
-    component.load();
+    const canvasCorePlugin = loadWithCanvasCorePlugin(created, true);
 
-    instancePrototype.onUserDisable();
+    canvasCorePlugin.enabled = false;
+    triggerInternalPluginsChange();
 
     expect(app.metadataCache.deletePath).toHaveBeenCalledTimes(1);
     expect(app.metadataCache.deletePath).toHaveBeenCalledWith('a.canvas');
   });
 
   it('should reload backlinks view on cleanup', () => {
-    const { app, component } = createComponent();
-    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(createCanvasCorePlugin(false).plugin);
+    const created = createComponent();
 
-    component.load();
-    component.unload();
+    loadWithCanvasCorePlugin(created, false);
+    created.component.unload();
 
     expect(reloadBacklinksView).toHaveBeenCalled();
   });
 
-  it('should handle onUserEnable patch', () => {
-    const { app, component } = createComponent();
-    const { instancePrototype, plugin } = createCanvasCorePlugin(false);
-    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(plugin);
+  it('should process canvas files when the core plugin is enabled through the change signal', () => {
+    const created = createComponent();
+    const canvasCorePlugin = loadWithCanvasCorePlugin(created, false);
 
-    component.load();
-
-    instancePrototype.onUserEnable();
+    canvasCorePlugin.enabled = true;
+    triggerInternalPluginsChange();
 
     expect(loop).toHaveBeenCalled();
   });
 
-  it('should handle onUserDisable patch', () => {
-    const { app, component } = createComponent();
-    const { instancePrototype, plugin } = createCanvasCorePlugin(false);
-    vi.mocked(app.internalPlugins.getPluginById).mockReturnValue(plugin);
+  it('should reload backlinks view when the core plugin is disabled through the change signal', () => {
+    const created = createComponent();
+    const canvasCorePlugin = loadWithCanvasCorePlugin(created, true);
+    vi.mocked(reloadBacklinksView).mockClear();
 
-    component.load();
-
-    instancePrototype.onUserDisable();
+    canvasCorePlugin.enabled = false;
+    triggerInternalPluginsChange();
 
     expect(reloadBacklinksView).toHaveBeenCalled();
+  });
+
+  it('should act once per transition, not on every change', () => {
+    const created = createComponent();
+    const canvasCorePlugin = loadWithCanvasCorePlugin(created, false);
+
+    canvasCorePlugin.enabled = true;
+    triggerInternalPluginsChange();
+    triggerInternalPluginsChange();
+
+    expect(loop).toHaveBeenCalledOnce();
+  });
+
+  it('should ignore a change that left the canvas plugin as it was', () => {
+    const created = createComponent();
+    loadWithCanvasCorePlugin(created, false);
+
+    triggerInternalPluginsChange();
+
+    expect(loop).not.toHaveBeenCalled();
+    expect(created.app.metadataCache.deletePath).not.toHaveBeenCalled();
   });
 
   it('should return cached metadata for canvas files via getCache patch', () => {
