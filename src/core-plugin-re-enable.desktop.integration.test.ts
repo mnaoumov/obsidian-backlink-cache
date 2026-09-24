@@ -1,4 +1,5 @@
 import type { BacklinkView } from '@obsidian-typings/obsidian-public-latest';
+import type { App } from 'obsidian';
 
 import { evalInObsidian } from 'obsidian-integration-testing';
 import { getTemporaryVault } from 'obsidian-integration-testing/vitest-global-setup-plugin';
@@ -9,80 +10,146 @@ import {
 } from 'vitest';
 
 /*
- * Guards the signal this plugin learns "the core Backlinks plugin came back" from. It used to be a monkey
- * patch of `onUserEnable` on the `BacklinkPluginInstance` prototype; it is now a subscription to the
- * `change` event Obsidian raises on `app.internalPlugins`. What this asserts is that the signal still
- * arrives in a real Obsidian and still reaches `patchBacklinksPane` - the whole reason either mechanism
- * exists - measured across a real disable/enable of the core plugin rather than against a mock.
+ * Guards how this plugin answers the core Backlinks plugin being disabled and enabled again. The pane patch
+ * replaces `recomputeBacklink` on the `BacklinkComponent` prototype, which outlives the pane: a disable leaves it
+ * installed and an enable reuses the same class. So an enable must install the patch only when it is not already
+ * installed - measured in a real Obsidian, patching on every enable stacked one more wrapper per toggle - and must
+ * still install it when the core plugin was disabled while this plugin loaded, because then there was no pane to
+ * patch until now. Each case fails when its half of the behavior is removed.
  *
- * The observable is the identity of `recomputeBacklink` on the `BacklinkComponent` prototype, which
- * `BacklinkComponentRecomputeBacklinkPatchComponent` replaces. Opening the pane by hand does not patch it -
- * only the enable path does - so the reference has to CHANGE across the toggle. It deliberately claims
- * nothing about what the pane would render without the re-patch: the patch sits on a prototype the whole
- * vault shares and is never removed on disable, so the previous wrapper may well still be doing the work.
- * Falsified 2026-09-23: with the subscription removed the reference is unchanged and this fails.
+ * Each step is its own `evalInObsidian`, because the settle sleeps would otherwise share one per-eval budget.
+ * The prototype is kept on `window` between steps: while the core plugin is disabled there is no pane to reach
+ * it through.
  */
 
+const PLUGIN_ID = 'backlink-cache';
 const NOTE_PATH = 'core-plugin-re-enable-target.md';
 const SETTLE_IN_MS = 3000;
 const SCENARIO_TIMEOUT_IN_MS = 120_000;
 
-describe('core Backlinks plugin re-enable', () => {
-  it('patches the reopened backlinks pane again', async () => {
-    const vaultPath = getTemporaryVault().path;
+interface BacklinkComponentPrototypeState {
+  readonly prototype: Record<string, unknown>;
+  recomputeBacklink?: unknown;
+}
 
-    const result = await evalInObsidian({
-      async callback({
-        app,
-        NOTE_PATH: notePath,
-        SETTLE_IN_MS: settleInMs
-      }) {
-        async function readRecomputeBacklink(): Promise<unknown> {
-          const backlinkLeaf = app.workspace.getLeavesOfType('backlink')[0];
-          if (!backlinkLeaf) {
-            return null;
+type Step = 'disableCorePlugin' | 'enableCorePlugin' | 'reloadPlugin' | 'setUp';
+
+interface StepResult {
+  readonly isRecomputeBacklinkSameAsRecorded: boolean;
+}
+
+async function runStep(step: Step): Promise<StepResult> {
+  return await evalInObsidian({
+    async callback({
+      app,
+      NOTE_PATH: notePath,
+      PLUGIN_ID: pluginId,
+      SETTLE_IN_MS: settleInMs,
+      STEP: currentStep
+    }): Promise<StepResult> {
+      const stateKey = 'coreBacklinksReEnableBacklinkComponentPrototypeState';
+      function readState(): BacklinkComponentPrototypeState | undefined {
+        return Reflect.get(window, stateKey) as BacklinkComponentPrototypeState | undefined;
+      }
+
+      const corePlugin = app.internalPlugins.getPluginById('backlink');
+      if (!corePlugin) {
+        throw new Error('The core Backlinks plugin is missing.');
+      }
+
+      async function getBacklinkView(obsidianApp: App): Promise<BacklinkView | null> {
+        const backlinkLeaf = obsidianApp.workspace.getLeavesOfType('backlink')[0];
+        if (!backlinkLeaf) {
+          return null;
+        }
+        await backlinkLeaf.loadIfDeferred();
+        return backlinkLeaf.view as BacklinkView;
+      }
+
+      function readCurrentRecomputeBacklink(): unknown {
+        return readState()?.prototype['recomputeBacklink'];
+      }
+
+      switch (currentStep) {
+        case 'disableCorePlugin': {
+          // `true` is the `isEnabledByUser` argument the Core plugins settings toggle passes.
+          corePlugin.disable(true);
+          await sleep(settleInMs);
+          break;
+        }
+        case 'enableCorePlugin': {
+          await corePlugin.enable(true);
+          await sleep(settleInMs);
+          break;
+        }
+        case 'reloadPlugin': {
+          await app.plugins.disablePlugin(pluginId);
+          await app.plugins.enablePlugin(pluginId);
+          await sleep(settleInMs);
+          break;
+        }
+        case 'setUp': {
+          const file = app.vault.getFileByPath(notePath) ?? await app.vault.create(notePath, '');
+          await app.workspace.getLeaf(false).openFile(file);
+          corePlugin.instance.openBacklinksForActiveFile(true);
+          await sleep(settleInMs);
+          const backlinkView = await getBacklinkView(app);
+          if (!backlinkView) {
+            throw new Error('The backlinks pane did not open.');
           }
-
-          await backlinkLeaf.loadIfDeferred();
-          const backlinkComponent = (backlinkLeaf.view as BacklinkView).backlink;
-          const backlinkComponentPrototype = Object.getPrototypeOf(backlinkComponent) as Record<string, unknown>;
-          return backlinkComponentPrototype['recomputeBacklink'] ?? null;
+          const newState: BacklinkComponentPrototypeState = {
+            prototype: Object.getPrototypeOf(backlinkView.backlink) as Record<string, unknown>
+          };
+          Reflect.set(window, stateKey, newState);
+          break;
         }
-
-        const file = app.vault.getFileByPath(notePath) ?? await app.vault.create(notePath, '');
-        await app.workspace.getLeaf(false).openFile(file);
-
-        const corePlugin = app.internalPlugins.getPluginById('backlink');
-        if (!corePlugin) {
-          return { hasAfter: false, hasBefore: false, isChanged: false };
+        default: {
+          break;
         }
+      }
 
-        corePlugin.instance.openBacklinksForActiveFile(true);
-        await sleep(settleInMs);
-        const before = await readRecomputeBacklink();
+      const state = readState();
+      const isRecomputeBacklinkSameAsRecorded = state?.recomputeBacklink === readCurrentRecomputeBacklink();
+      if (state) {
+        state.recomputeBacklink = readCurrentRecomputeBacklink();
+      }
 
-        // `true` is the `isEnabledByUser` argument the Core plugins settings toggle passes.
-        corePlugin.disable(true);
-        await sleep(settleInMs);
-        await corePlugin.enable(true);
-        await sleep(settleInMs);
-        const after = await readRecomputeBacklink();
+      return {
+        isRecomputeBacklinkSameAsRecorded
+      };
+    },
+    input: {
+      NOTE_PATH,
+      PLUGIN_ID,
+      SETTLE_IN_MS,
+      STEP: step
+    },
+    vaultPath: getTemporaryVault().path
+  });
+}
 
-        return {
-          hasAfter: after !== null,
-          hasBefore: before !== null,
-          isChanged: before !== after
-        };
-      },
-      input: {
-        NOTE_PATH,
-        SETTLE_IN_MS
-      },
-      vaultPath
-    });
+describe('core Backlinks plugin re-enable', () => {
+  it('does not stack another patch on the backlink prototype on every enable', async () => {
+    await runStep('setUp');
 
-    expect(result.hasBefore).toBe(true);
-    expect(result.hasAfter).toBe(true);
-    expect(result.isChanged).toBe(true);
+    await runStep('disableCorePlugin');
+    const afterFirstToggle = await runStep('enableCorePlugin');
+    await runStep('disableCorePlugin');
+    const afterSecondToggle = await runStep('enableCorePlugin');
+
+    expect(afterFirstToggle.isRecomputeBacklinkSameAsRecorded).toBe(true);
+    expect(afterSecondToggle.isRecomputeBacklinkSameAsRecorded).toBe(true);
+  }, SCENARIO_TIMEOUT_IN_MS);
+
+  it('patches the pane when the core plugin is enabled after this plugin loaded without it', async () => {
+    await runStep('setUp');
+
+    await runStep('disableCorePlugin');
+    const afterReloadWithoutCorePlugin = await runStep('reloadPlugin');
+    const afterEnable = await runStep('enableCorePlugin');
+
+    // Reloading unloads the patch, so the method changes back to the bare one; the enable must patch it again.
+    expect(afterReloadWithoutCorePlugin.isRecomputeBacklinkSameAsRecorded).toBe(false);
+    expect(afterEnable.isRecomputeBacklinkSameAsRecorded).toBe(false);
   }, SCENARIO_TIMEOUT_IN_MS);
 });
