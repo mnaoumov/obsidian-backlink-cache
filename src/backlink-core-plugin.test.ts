@@ -17,9 +17,13 @@ import type { CanvasData } from 'obsidian/canvas.d.ts';
 import {
   InternalPluginName,
   isFrontmatterLinkCache,
-  isReferenceCache
+  isReferenceCache,
+  ViewType
 } from '@obsidian-typings/obsidian-public-latest/implementations';
-import { debounce } from 'obsidian';
+import {
+  debounce,
+  MarkdownView
+} from 'obsidian';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
 import { isFrontmatterLinkCacheWithOffsets } from 'obsidian-dev-utils/obsidian/frontmatter-link-cache-with-offsets';
@@ -45,7 +49,8 @@ import {
 
 interface BacklinksCorePluginComponentInternals {
   onBacklinksCorePluginEnable: () => void;
-  patchBacklinksPane: () => Promise<void>;
+  patchBacklinksPane: () => Promise<boolean>;
+  patchLateBacklinks: () => Promise<void>;
 }
 
 interface BacklinksCorePluginStub {
@@ -55,8 +60,11 @@ interface BacklinksCorePluginStub {
 interface LoadedBacklinksCorePluginComponent {
   readonly backlinksCorePlugin: BacklinksCorePluginStub;
   readonly component: BacklinksCorePluginComponent;
+  readonly getLeavesOfType: ReturnType<typeof vi.fn>;
   readonly on: ReturnType<typeof vi.fn>;
   readonly triggerChange: () => void;
+  readonly triggerLayoutChange: () => void;
+  readonly workspaceOn: ReturnType<typeof vi.fn>;
 }
 
 vi.mock('obsidian-dev-utils/obsidian/file-system', () => ({
@@ -244,7 +252,8 @@ describe('BacklinksCorePluginComponent', () => {
         on: vi.fn().mockReturnValue({})
       },
       workspace: {
-        getLeavesOfType: vi.fn().mockReturnValue([backlinksLeaf])
+        getLeavesOfType: vi.fn().mockReturnValue([backlinksLeaf]),
+        on: vi.fn().mockReturnValue({})
       }
     });
 
@@ -272,7 +281,8 @@ describe('BacklinksCorePluginComponent', () => {
         on: vi.fn().mockReturnValue({})
       },
       workspace: {
-        getLeavesOfType
+        getLeavesOfType,
+        on: vi.fn().mockReturnValue({})
       }
     });
     const component = new BacklinksCorePluginComponent(app);
@@ -292,9 +302,71 @@ describe('BacklinksCorePluginComponent', () => {
     expect(addChildSpy).toHaveBeenCalledOnce();
   });
 
+  it('should retry the patch on a layout change while the core plugin is enabled and nothing is patched', () => {
+    const loaded = loadBacklinksCorePluginComponent(true);
+    const patchLateSpy = vi.spyOn(internals(loaded.component), 'patchLateBacklinks').mockResolvedValue(undefined);
+
+    loaded.triggerLayoutChange();
+
+    expect(loaded.workspaceOn).toHaveBeenCalledWith('layout-change', expect.any(Function));
+    expect(patchLateSpy).toHaveBeenCalledOnce();
+  });
+
+  it('should not retry the patch on a layout change while the core plugin is disabled', () => {
+    const loaded = loadBacklinksCorePluginComponent(false);
+    const patchLateSpy = vi.spyOn(internals(loaded.component), 'patchLateBacklinks').mockResolvedValue(undefined);
+
+    loaded.triggerLayoutChange();
+
+    expect(patchLateSpy).not.toHaveBeenCalled();
+  });
+
+  it('should not retry the patch on a layout change once it is installed', async () => {
+    const loaded = loadBacklinksCorePluginComponent(false);
+    loaded.getLeavesOfType.mockImplementation((type: string) => type === ViewType.Markdown ? [createMarkdownLeaf(createPatchableBacklinkComponent())] : []);
+    await internals(loaded.component).patchBacklinksPane();
+    loaded.backlinksCorePlugin.enabled = true;
+    const patchLateSpy = vi.spyOn(internals(loaded.component), 'patchLateBacklinks').mockResolvedValue(undefined);
+
+    loaded.triggerLayoutChange();
+
+    expect(patchLateSpy).not.toHaveBeenCalled();
+  });
+
+  it('should patch through in-document backlinks and recompute every backlinks component when patched late', async () => {
+    const loaded = loadBacklinksCorePluginComponent(false);
+    const firstBacklinks = createPatchableBacklinkComponent();
+    const secondBacklinks = createPatchableBacklinkComponent();
+    loaded.getLeavesOfType.mockImplementation((type: string) =>
+      type === ViewType.Markdown
+        ? [castTo<WorkspaceLeaf>({ view: {} }), createMarkdownLeaf(null), createMarkdownLeaf(firstBacklinks), createMarkdownLeaf(secondBacklinks)]
+        : []
+    );
+    // Installing the patch is covered above; skipped here so the recompute reaches the stub rather than the cache.
+    const addChildSpy = vi.spyOn(loaded.component, 'addChild').mockImplementation((child) => child);
+
+    await internals(loaded.component).patchLateBacklinks();
+
+    expect(addChildSpy).toHaveBeenCalledOnce();
+    expect(firstBacklinks.recomputeBacklink).toHaveBeenCalledWith(null);
+    expect(secondBacklinks.recomputeBacklink).toHaveBeenCalledWith(null);
+  });
+
+  it('should not recompute anything when a late patch finds nothing to patch', async () => {
+    const loaded = loadBacklinksCorePluginComponent(false);
+    const addChildSpy = vi.spyOn(loaded.component, 'addChild');
+
+    await internals(loaded.component).patchLateBacklinks();
+
+    expect(addChildSpy).not.toHaveBeenCalled();
+    expect(loaded.getLeavesOfType).toHaveBeenCalledTimes(2);
+  });
+
   function loadBacklinksCorePluginComponent(isEnabled: boolean): LoadedBacklinksCorePluginComponent {
     const backlinksCorePlugin: BacklinksCorePluginStub = { enabled: isEnabled };
     const on = vi.fn().mockReturnValue({});
+    const workspaceOn = vi.fn().mockReturnValue({});
+    const getLeavesOfType = vi.fn().mockReturnValue([]);
 
     const app = strictProxy<App>({
       internalPlugins: {
@@ -302,7 +374,8 @@ describe('BacklinksCorePluginComponent', () => {
         on
       },
       workspace: {
-        getLeavesOfType: vi.fn().mockReturnValue([])
+        getLeavesOfType,
+        on: workspaceOn
       }
     });
 
@@ -312,11 +385,26 @@ describe('BacklinksCorePluginComponent', () => {
     return {
       backlinksCorePlugin,
       component,
+      getLeavesOfType,
       on,
       triggerChange: (): void => {
         castTo<() => void>(on.mock.calls[0]?.[1])();
-      }
+      },
+      triggerLayoutChange: (): void => {
+        castTo<() => void>(workspaceOn.mock.calls.find(([name]) => name === 'layout-change')?.[1])();
+      },
+      workspaceOn
     };
+  }
+
+  function createPatchableBacklinkComponent(): BacklinkComponent {
+    return castTo<BacklinkComponent>(Object.assign(Object.create({ recomputeBacklink: vi.fn() }), { file: null }));
+  }
+
+  function createMarkdownLeaf(backlinks: BacklinkComponent | null): WorkspaceLeaf {
+    return castTo<WorkspaceLeaf>({
+      view: Object.assign(Object.create(MarkdownView.prototype), { backlinks })
+    });
   }
 });
 
@@ -368,7 +456,8 @@ describe('recomputeBacklinkAsync (via patched recomputeBacklink)', () => {
         on: vi.fn().mockReturnValue({})
       },
       workspace: {
-        getLeavesOfType: vi.fn().mockReturnValue([backlinksLeaf])
+        getLeavesOfType: vi.fn().mockReturnValue([backlinksLeaf]),
+        on: vi.fn().mockReturnValue({})
       }
     });
 
