@@ -18,8 +18,6 @@ import type { BacklinkCacheComponent } from './backlink-cache-component.ts';
 import type { PluginSettingsComponent } from './plugin-settings-component.ts';
 
 import { reloadBacklinksView } from './backlink-core-plugin.ts';
-import { CanvasPluginInstanceOnUserDisablePatchComponent } from './patches/canvas-plugin-instance-on-user-disable-patch-component.ts';
-import { CanvasPluginInstanceOnUserEnablePatchComponent } from './patches/canvas-plugin-instance-on-user-enable-patch-component.ts';
 import { MetadataCacheGetCachePatchComponent } from './patches/metadata-cache-get-cache-patch-component.ts';
 
 export function isCanvasPluginEnabled(app: App): boolean {
@@ -57,20 +55,6 @@ export class CanvasComponent extends ComponentEx {
     return canvasMetadataCacheMap.get(path) ?? null;
   }
 
-  public onCanvasCorePluginDisable(): void {
-    this.removeCanvasMetadataCache();
-    invokeAsyncSafely(async () => {
-      await reloadBacklinksView(this.app);
-    });
-  }
-
-  public onCanvasCorePluginEnable(): void {
-    invokeAsyncSafely(async () => {
-      await this.processAllCanvasFiles();
-      await reloadBacklinksView(this.app);
-    });
-  }
-
   public override onload(): void {
     this.addChild(
       new MetadataCacheGetCachePatchComponent({
@@ -89,19 +73,28 @@ export class CanvasComponent extends ComponentEx {
       return;
     }
 
-    this.addChild(
-      new CanvasPluginInstanceOnUserDisablePatchComponent({
-        canvasComponent: this,
-        canvasPluginInstance: canvasCorePlugin.instance
-      })
-    );
+    /*
+     * Obsidian publishes this itself: `InternalPlugin.enable()` sets `enabled` as its first statement and
+     * raises `change` on the manager as its last, and `disable()` mirrors that, so the flag read inside the
+     * handler is always the post-transition one. Obsidian's own Core plugins settings tab listens to the same
+     * signal. Diffing it replaces a monkey patch of both `onUserEnable` and `onUserDisable` on the
+     * `CanvasPluginInstance` prototype, which every vault shares - and it also catches a toggle that was not
+     * driven by the user, which neither `onUser*` hook ever fired for.
+     */
+    let wasCanvasCorePluginEnabled = canvasCorePlugin.enabled;
+    this.registerEvent(this.app.internalPlugins.on('change', () => {
+      const isCanvasCorePluginEnabled = canvasCorePlugin.enabled;
+      if (isCanvasCorePluginEnabled === wasCanvasCorePluginEnabled) {
+        return;
+      }
+      wasCanvasCorePluginEnabled = isCanvasCorePluginEnabled;
 
-    this.addChild(
-      new CanvasPluginInstanceOnUserEnablePatchComponent({
-        canvasComponent: this,
-        canvasPluginInstance: canvasCorePlugin.instance
-      })
-    );
+      if (isCanvasCorePluginEnabled) {
+        this.onCanvasCorePluginEnable();
+      } else {
+        this.onCanvasCorePluginDisable();
+      }
+    }));
 
     if (canvasCorePlugin.enabled) {
       this.onCanvasCorePluginEnable();
@@ -168,6 +161,20 @@ export class CanvasComponent extends ComponentEx {
       size: file.stat.size
     });
     this.app.metadataCache.saveMetaCache(hash, cachedMetadata);
+  }
+
+  private onCanvasCorePluginDisable(): void {
+    this.removeCanvasMetadataCache();
+    invokeAsyncSafely(async () => {
+      await reloadBacklinksView(this.app);
+    });
+  }
+
+  private onCanvasCorePluginEnable(): void {
+    invokeAsyncSafely(async () => {
+      await this.processAllCanvasFiles();
+      await reloadBacklinksView(this.app);
+    });
   }
 
   private async processAllCanvasFiles(): Promise<void> {
