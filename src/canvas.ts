@@ -171,6 +171,7 @@ export class CanvasComponent extends ComponentEx {
   }
 
   private onCanvasCorePluginEnable(): void {
+    this.repairCanvasIndex();
     invokeAsyncSafely(async () => {
       await this.processAllCanvasFiles();
       await reloadBacklinksView(this.app);
@@ -201,6 +202,20 @@ export class CanvasComponent extends ComponentEx {
       }
       this.app.metadataCache.deletePath(file.path);
       this.backlinkCacheComponent.triggerRemove(file.path);
+    }
+  }
+
+  /*
+   * Works around Obsidian's own defect, measured in 1.14.2 with this plugin disabled: disabling the core Canvas
+   * plugin unloads its canvas index, and enabling it again never loads that same object back. The index registers
+   * the vault handlers in its `onload`, so every canvas created after the toggle gets no `resolvedLinks` until a
+   * restart - and this plugin leaves canvas `resolvedLinks` to Obsidian rather than mirroring into them. A loaded
+   * index is left alone, so this is a no-op whenever Obsidian behaves.
+   */
+  private repairCanvasIndex(): void {
+    const canvasIndex = this.app.internalPlugins.getPluginById(InternalPluginName.Canvas)?.instance.index;
+    if (canvasIndex && !canvasIndex._loaded) {
+      canvasIndex.load();
     }
   }
 }
