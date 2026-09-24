@@ -79,6 +79,17 @@ describe('core Canvas plugin toggle', () => {
         await sleep(settleInMs);
         const isLinkedAfterEnable = await hasCanvasBacklink();
 
+        /*
+         * Obsidian's own defect, measured in 1.14.2 with this plugin disabled: the disable unloads the canvas
+         * index, the enable never loads it again, so no canvas created afterwards gets `resolvedLinks`. The
+         * suites share one vault, and `canvas-cache` relies on that native resolution, so it failed whenever it
+         * happened to run after this one. Put the index back rather than leave the app broken for the next suite.
+         */
+        const canvasIndex = corePlugin.instance.index;
+        if (!canvasIndex._loaded) {
+          canvasIndex.load();
+        }
+
         return {
           isLinkedAfterDisable,
           isLinkedAfterEnable,
