@@ -32,7 +32,7 @@ import {
 } from 'obsidian-dev-utils/obsidian/link';
 import { loop } from 'obsidian-dev-utils/obsidian/loop';
 import {
-  getCacheSafe,
+  ensureMetadataCacheReady,
   getLinks
 } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { sortReferences } from 'obsidian-dev-utils/obsidian/reference';
@@ -186,12 +186,16 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
         pluginSettingsComponent: this.pluginSettingsComponent
       })
     );
-    await this.processAllNotes();
+    // The listeners go in BEFORE the initial walk. The walk reads the cache Obsidian already holds, so a
+    // note Obsidian parses while the walk is running must reach the index through its `changed` event,
+    // which is only heard if something is listening by then.
     this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
     this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
     this.registerEvent(this.app.vault.on('create', this.handleFileCreate.bind(this)));
     this.registerEvent(this.app.vault.on('modify', this.handleFileModify.bind(this)));
     this.registerEvent(this.app.metadataCache.on('changed', this.handleMetadataChanged.bind(this)));
+    await ensureMetadataCacheReady(this.app);
+    await this.processAllNotes();
   }
 
   private addBacklink(params: BacklinkCacheComponentAddBacklinkParams): void {
@@ -263,8 +267,8 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
       buildNoticeMessage: ({ item, iterationString }) => `Processing backlinks ${iterationString} - ${item.path}`,
       items: getMarkdownFilesSorted(this.app),
       pluginNoticeComponent: this.pluginNoticeComponent,
-      processItem: async (note) => {
-        await this.refreshBacklinks(note.path);
+      processItem: (note) => {
+        this.refreshBacklinks(note.path);
       },
       progressBarTitle: 'Backlink Cache: Initializing...',
       shouldContinueOnError: true,
@@ -283,7 +287,7 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
 
       switch (action) {
         case Action.Refresh: {
-          await this.refreshBacklinks(path);
+          this.refreshBacklinks(path);
           break;
         }
         case Action.Remove: {
@@ -301,7 +305,7 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
     }
   }
 
-  private async refreshBacklinks(notePath: string): Promise<void> {
+  private refreshBacklinks(notePath: string): void {
     this.consoleDebugComponent.consoleDebug(`Refreshing backlinks for ${notePath}`);
     this.removeLinkedPathEntries(notePath);
 
@@ -324,7 +328,13 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
       this.linksMap.set(notePath, new Set<string>());
     }
 
-    const cache = await getCacheSafe(this.app, noteFile);
+    // The cache Obsidian ALREADY holds, and deliberately not `getCacheSafe`: that saves any dirty open view
+    // of the note first, and every caller here runs on an automatic trigger — a `modify`, a `changed`, a
+    // backlinks-pane recompute — so it forced a second save of whatever the user or another plugin had
+    // just put into the editor. A `modify` read can see the pre-edit cache; the `changed` Obsidian fires
+    // once it has re-parsed the note queues a second refresh, which sees the new one. `getFileCache`
+    // goes through `getCache`, so a canvas still reaches the canvas patch.
+    const cache = this.app.metadataCache.getFileCache(noteFile);
 
     if (!cache) {
       return;

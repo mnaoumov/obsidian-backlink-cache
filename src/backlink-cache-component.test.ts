@@ -4,6 +4,7 @@ import type {
 } from '@obsidian-typings/obsidian-public-latest';
 import type {
   App,
+  CachedMetadata,
   LinkCache,
   Reference,
   ReferenceCache,
@@ -16,7 +17,6 @@ import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/componen
 import type * as FileSystemModule from 'obsidian-dev-utils/obsidian/file-system';
 // eslint-disable-next-line import-x/no-namespace -- Type-only namespace alias used for vitest's importOriginal<T>() without dynamic import() in type position.
 import type * as LinkModule from 'obsidian-dev-utils/obsidian/link';
-import type { CachedMetadataEx } from 'obsidian-dev-utils/obsidian/metadata-cache';
 
 import {
   Component,
@@ -35,7 +35,7 @@ import {
 } from 'obsidian-dev-utils/obsidian/link';
 import { loop } from 'obsidian-dev-utils/obsidian/loop';
 import {
-  getCacheSafe,
+  ensureMetadataCacheReady,
   getLinks
 } from 'obsidian-dev-utils/obsidian/metadata-cache';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
@@ -74,7 +74,7 @@ vi.mock('obsidian-dev-utils/obsidian/loop', () => ({
 }));
 
 vi.mock('obsidian-dev-utils/obsidian/metadata-cache', () => ({
-  getCacheSafe: vi.fn(),
+  ensureMetadataCacheReady: vi.fn().mockResolvedValue(undefined),
   getLinks: vi.fn().mockReturnValue([])
 }));
 
@@ -102,7 +102,7 @@ interface ComponentInternals {
   onLayoutReady: () => Promise<void>;
   pendingActions: Map<string, number>;
   processPendingActions: () => Promise<void>;
-  refreshBacklinks: (path: string) => Promise<void>;
+  refreshBacklinks: (path: string) => void;
   removeLinkedPathEntries: (path: string) => void;
   resolvedBasenameMap: Map<string, Set<string>>;
   unresolvedBasenameMap: Map<string, Set<string>>;
@@ -182,6 +182,7 @@ function createMockApp(): App {
     metadataCache: {
       getBacklinksForFile: vi.fn(),
       getCachedFiles: vi.fn().mockReturnValue([]),
+      getFileCache: vi.fn().mockReturnValue(null),
       on: vi.fn().mockReturnValue({ id: 'event' }),
       queueFileForLinkResolution: vi.fn(),
       updateRelatedLinks: vi.fn()
@@ -344,21 +345,42 @@ describe('BacklinkCacheComponent', () => {
       expect(loop).toHaveBeenCalled();
     });
 
+    it('should listen for changed and wait for a clean metadata cache before the initial walk', async () => {
+      await setupOnLayoutReady();
+
+      const changedCallOrder = vi.mocked(context.app.metadataCache.on).mock.invocationCallOrder[0] ?? Infinity;
+      const readyCallOrder = vi.mocked(ensureMetadataCacheReady).mock.invocationCallOrder.at(-1) ?? Infinity;
+      const walkCallOrder = vi.mocked(loop).mock.invocationCallOrder.at(-1) ?? -Infinity;
+
+      expect(changedCallOrder).toBeLessThan(walkCallOrder);
+      expect(readyCallOrder).toBeLessThan(walkCallOrder);
+    });
+
+    it('should read the cache Obsidian holds rather than a flushed one', () => {
+      const noteFile = createTFile('note.md');
+      vi.mocked(getFileOrNull).mockReturnValue(noteFile);
+      vi.mocked(isCanvasFile).mockReturnValue(false);
+
+      asInternals(context.component).refreshBacklinks.call(context.component, 'note.md');
+
+      expect(context.app.metadataCache.getFileCache).toHaveBeenCalledWith(noteFile);
+    });
+
     it('should invoke processItem and buildNoticeMessage callbacks via loop in processAllNotes', async () => {
       const mockFile = Object.create(TFile.prototype);
       Object.assign(mockFile, { path: 'note.md' });
 
       vi.mocked(getFileOrNull).mockReturnValue(mockFile);
-      vi.mocked(getCacheSafe).mockResolvedValue(null);
+      vi.mocked(context.app.metadataCache.getFileCache).mockReturnValue(null);
 
       vi.mocked(loop).mockImplementation(async (options) => {
         options.buildNoticeMessage({ item: mockFile, iterationString: '1/1' });
-        await (options.processItem as (item: TFile) => Promise<void>)(mockFile);
+        await options.processItem(mockFile);
       });
 
       await setupOnLayoutReady();
 
-      expect(getCacheSafe).toHaveBeenCalled();
+      expect(context.app.metadataCache.getFileCache).toHaveBeenCalled();
     });
 
     it('should return backlinks via getBacklinksForFile', async () => {
@@ -395,7 +417,7 @@ describe('BacklinkCacheComponent', () => {
       });
 
       vi.mocked(getFileOrNull).mockReturnValue(mockFile);
-      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadataEx>({ links: [link] }));
+      vi.mocked(context.app.metadataCache.getFileCache).mockReturnValue(strictProxy<CachedMetadata>({ links: [link] }));
       vi.mocked(getLinks).mockReturnValue([link]);
       vi.mocked(extractLinkFile).mockReturnValue(linkFile);
 
@@ -463,16 +485,16 @@ describe('BacklinkCacheComponent', () => {
       // Set explicitly, as every sibling case does: the preceding canvas test leaves this `true`, and
       // `restoreAllMocks` does not put a `vi.mock` factory's `mockReturnValue` back.
       vi.mocked(isCanvasFile).mockReturnValue(false);
-      vi.mocked(getCacheSafe).mockResolvedValue(null);
+      vi.mocked(context.app.metadataCache.getFileCache).mockReturnValue(null);
 
       await setupOnLayoutReady();
 
-      await asInternals(context.component).refreshBacklinks.call(context.component, 'note.md');
+      asInternals(context.component).refreshBacklinks.call(context.component, 'note.md');
 
-      expect(getCacheSafe).toHaveBeenCalled();
+      expect(context.app.metadataCache.getFileCache).toHaveBeenCalled();
     });
 
-    it('should skip links with no link file in refreshBacklinks', async () => {
+    it('should skip links with no link file in refreshBacklinks', () => {
       const mockFile = Object.create(TFile.prototype);
       Object.assign(mockFile, { path: 'note.md' });
 
@@ -484,11 +506,11 @@ describe('BacklinkCacheComponent', () => {
 
       vi.mocked(getFileOrNull).mockReturnValue(mockFile);
       vi.mocked(isCanvasFile).mockReturnValue(false);
-      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadataEx>({ links: [mockLink] }));
+      vi.mocked(context.app.metadataCache.getFileCache).mockReturnValue(strictProxy<CachedMetadata>({ links: [mockLink] }));
       vi.mocked(getLinks).mockReturnValue([mockLink]);
       vi.mocked(extractLinkFile).mockReturnValue(null);
 
-      await asInternals(context.component).refreshBacklinks.call(context.component, 'note.md');
+      asInternals(context.component).refreshBacklinks.call(context.component, 'note.md');
 
       expect(extractLinkFile).toHaveBeenCalledWith({
         app: context.app,
@@ -498,7 +520,7 @@ describe('BacklinkCacheComponent', () => {
       });
     });
 
-    it('should reuse existing linkSet for multiple links to same target', async () => {
+    it('should reuse existing linkSet for multiple links to same target', () => {
       const mockFile = Object.create(TFile.prototype);
       Object.assign(mockFile, { path: 'note.md' });
 
@@ -518,11 +540,11 @@ describe('BacklinkCacheComponent', () => {
 
       vi.mocked(getFileOrNull).mockReturnValue(mockFile);
       vi.mocked(isCanvasFile).mockReturnValue(false);
-      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadataEx>({ links: [link1, link2] }));
+      vi.mocked(context.app.metadataCache.getFileCache).mockReturnValue(strictProxy<CachedMetadata>({ links: [link1, link2] }));
       vi.mocked(getLinks).mockReturnValue([link1, link2]);
       vi.mocked(extractLinkFile).mockReturnValue(linkFile);
 
-      await asInternals(context.component).refreshBacklinks.call(context.component, 'note.md');
+      asInternals(context.component).refreshBacklinks.call(context.component, 'note.md');
 
       const backlinksMap = asInternals(context.component).backlinksMap;
       const noteLinks = backlinksMap.get('target.md')?.get('note.md');
@@ -539,7 +561,7 @@ describe('BacklinkCacheComponent', () => {
       await expect(processFunction.call(context.component)).rejects.toThrow('Unknown action');
     });
 
-    it('should stop refreshBacklinks when aborted during link iteration', async () => {
+    it('should stop refreshBacklinks when aborted during link iteration', () => {
       const mockFile = Object.create(TFile.prototype);
       Object.assign(mockFile, { path: 'note.md' });
 
@@ -551,12 +573,12 @@ describe('BacklinkCacheComponent', () => {
 
       vi.mocked(getFileOrNull).mockReturnValue(mockFile);
       vi.mocked(isCanvasFile).mockReturnValue(false);
-      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadataEx>({ links: [link] }));
+      vi.mocked(context.app.metadataCache.getFileCache).mockReturnValue(strictProxy<CachedMetadata>({ links: [link] }));
       vi.mocked(getLinks).mockReturnValue([link]);
 
       context.abortSignal.aborted = true;
 
-      await asInternals(context.component).refreshBacklinks.call(context.component, 'note.md');
+      asInternals(context.component).refreshBacklinks.call(context.component, 'note.md');
 
       const backlinksMap = asInternals(context.component).backlinksMap;
       expect(backlinksMap.has('target.md')).toBe(false);
@@ -727,20 +749,20 @@ describe('BacklinkCacheComponent', () => {
   });
 
   describe('updateRelatedLinks index population', () => {
-    async function refreshNote(notePath: string, links: ReferenceCache[]): Promise<void> {
+    function refreshNote(notePath: string, links: ReferenceCache[]): void {
       const noteFile = createTFile(notePath);
       vi.mocked(getFileOrNull).mockReturnValue(noteFile);
       vi.mocked(isCanvasFile).mockReturnValue(false);
-      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadataEx>({ links }));
+      vi.mocked(context.app.metadataCache.getFileCache).mockReturnValue(strictProxy<CachedMetadata>({ links }));
       vi.mocked(getLinks).mockReturnValue(links);
-      await asInternals(context.component).refreshBacklinks.call(context.component, notePath);
+      asInternals(context.component).refreshBacklinks.call(context.component, notePath);
     }
 
-    it('should index a resolved link by target basename and add a backlink', async () => {
+    it('should index a resolved link by target basename and add a backlink', () => {
       const linkFile = createTFile('folder/target.md');
       vi.mocked(extractLinkFile).mockImplementation((params) => params.shouldAllowNonExistingFile ? null : linkFile);
 
-      await refreshNote('note.md', [createLink('target')]);
+      refreshNote('note.md', [createLink('target')]);
 
       const internals = asInternals(context.component);
       expect(internals.resolvedBasenameMap.get('target.md')).toEqual(new Set(['note.md']));
@@ -748,11 +770,11 @@ describe('BacklinkCacheComponent', () => {
       expect(internals.backlinksMap.get('folder/target.md')?.has('note.md')).toBe(true);
     });
 
-    it('should index an unresolved link to a non-existing file as a backlink and an unresolved basename', async () => {
+    it('should index an unresolved link to a non-existing file as a backlink and an unresolved basename', () => {
       const nonExistingLinkFile = createTFile('folder/ghost.md');
       vi.mocked(extractLinkFile).mockImplementation((params) => params.shouldAllowNonExistingFile ? nonExistingLinkFile : null);
 
-      await refreshNote('note.md', [createLink('ghost')]);
+      refreshNote('note.md', [createLink('ghost')]);
 
       const internals = asInternals(context.component);
       expect(internals.unresolvedBasenameMap.get('ghost')).toEqual(new Set(['note.md']));
@@ -761,10 +783,10 @@ describe('BacklinkCacheComponent', () => {
       expect(internals.backlinksMap.get('folder/ghost.md')?.has('note.md')).toBe(true);
     });
 
-    it('should index an unresolved link with no resolvable file by its basename only', async () => {
+    it('should index an unresolved link with no resolvable file by its basename only', () => {
       vi.mocked(extractLinkFile).mockReturnValue(null);
 
-      await refreshNote('sub/note.md', [createLink('../outside#section')]);
+      refreshNote('sub/note.md', [createLink('../outside#section')]);
 
       const internals = asInternals(context.component);
       expect(internals.unresolvedBasenameMap.get('outside')).toEqual(new Set(['sub/note.md']));
@@ -780,13 +802,13 @@ describe('BacklinkCacheComponent', () => {
      * exactly 10/72/200/400 `extractLinkFile` calls, so the cost is the number of PASSES, not a
      * quadratic per pass) and each pass also recomputes every open backlink panel.
      */
-    it('should record a self-link as a backlink but NOT index it as a re-resolution source', async () => {
+    it('should record a self-link as a backlink but NOT index it as a re-resolution source', () => {
       const SELF_LINK_COUNT = 72;
       const noteFile = createTFile('note.md');
       vi.mocked(extractLinkFile).mockReturnValue(noteFile);
 
       const selfLinks = Array.from({ length: SELF_LINK_COUNT }, (_unused, index) => createLink(`#slug-${String(index)}`));
-      await refreshNote('note.md', selfLinks);
+      refreshNote('note.md', selfLinks);
 
       const internals = asInternals(context.component);
       // The panel still shows every self-backlink.
@@ -795,11 +817,11 @@ describe('BacklinkCacheComponent', () => {
       expect(internals.resolvedBasenameMap.size).toBe(0);
     });
 
-    it('should not queue a self-linking note for re-resolution when its own name changes', async () => {
+    it('should not queue a self-linking note for re-resolution when its own name changes', () => {
       const noteFile = createTFile('note.md');
       vi.mocked(extractLinkFile).mockReturnValue(noteFile);
 
-      await refreshNote('note.md', [createLink('#slug')]);
+      refreshNote('note.md', [createLink('#slug')]);
 
       vi.mocked(context.app.vault.getFileByPath).mockImplementation((path) => createTFile(path));
       vi.mocked(context.app.metadataCache.queueFileForLinkResolution).mockClear();
@@ -810,19 +832,19 @@ describe('BacklinkCacheComponent', () => {
       expect(context.app.metadataCache.queueFileForLinkResolution).not.toHaveBeenCalled();
     });
 
-    it('should still index a link that resolves to a DIFFERENT file with the same basename', async () => {
+    it('should still index a link that resolves to a DIFFERENT file with the same basename', () => {
       // Guards against over-correcting the self-link rule into a basename comparison: `a/note.md`
       // linking to `b/note.md` is not a self-link and must stay re-resolvable.
       const otherFile = createTFile('b/note.md');
       vi.mocked(extractLinkFile).mockImplementation((params) => params.shouldAllowNonExistingFile ? null : otherFile);
 
-      await refreshNote('a/note.md', [createLink('b/note')]);
+      refreshNote('a/note.md', [createLink('b/note')]);
 
       const internals = asInternals(context.component);
       expect(internals.resolvedBasenameMap.get('note.md')).toEqual(new Set(['a/note.md']));
     });
 
-    it('should clear resolved and unresolved basename entries when a source is removed', async () => {
+    it('should clear resolved and unresolved basename entries when a source is removed', () => {
       const linkFile = createTFile('target.md');
       vi.mocked(extractLinkFile).mockImplementation((params) => {
         if (params.shouldAllowNonExistingFile) {
@@ -831,7 +853,7 @@ describe('BacklinkCacheComponent', () => {
         return params.link.link === 'target' ? linkFile : null;
       });
 
-      await refreshNote('note.md', [createLink('target'), createLink('ghost')]);
+      refreshNote('note.md', [createLink('target'), createLink('ghost')]);
 
       const internals = asInternals(context.component);
       expect(internals.resolvedBasenameMap.get('target.md')).toEqual(new Set(['note.md']));
@@ -937,7 +959,7 @@ describe('BacklinkCacheComponent', () => {
      * redundant, since whatever produced that change already resolved it. This test exists so the parity
      * claim above stays honest — it is "identical except for this case", not "identical".
      */
-    it('should deliberately queue less than the original for a self-link', async () => {
+    it('should deliberately queue less than the original for a self-link', () => {
       const localContext = createTestContext();
       const internals = asInternals(localContext.component);
       const noteFile = createTFile('note.md');
@@ -945,11 +967,11 @@ describe('BacklinkCacheComponent', () => {
       vi.mocked(getFileOrNull).mockReturnValue(noteFile);
       vi.mocked(isCanvasFile).mockReturnValue(false);
       const selfLink = createLink('#slug');
-      vi.mocked(getCacheSafe).mockResolvedValue(strictProxy<CachedMetadataEx>({ links: [selfLink] }));
+      vi.mocked(localContext.app.metadataCache.getFileCache).mockReturnValue(strictProxy<CachedMetadata>({ links: [selfLink] }));
       vi.mocked(getLinks).mockReturnValue([selfLink]);
       vi.mocked(extractLinkFile).mockReturnValue(noteFile);
 
-      await internals.refreshBacklinks.call(localContext.component, 'note.md');
+      internals.refreshBacklinks.call(localContext.component, 'note.md');
 
       vi.mocked(localContext.app.vault.getFileByPath).mockImplementation((path) => createTFile(path));
       vi.mocked(localContext.app.metadataCache.queueFileForLinkResolution).mockClear();
