@@ -32,11 +32,7 @@ export class MetadataCacheGetCachePatchComponent extends MonkeyAroundComponent {
         // extension string without resolving the path to a `TFile`.
         // Resolving a miss (an already-removed path during a delete cascade) would trigger an
         // O(vault) scan, which this hot patch must never do.
-        if (isCanvasFile(path)) {
-          return this.canvasComponent.getCache(path);
-        }
-
-        return fallback();
+        return isCanvasFile(path) ? this.canvasComponent.getCache(path) : fallback();
       }
     });
   }
