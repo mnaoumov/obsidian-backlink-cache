@@ -131,11 +131,7 @@ export class BacklinkCacheComponent extends LayoutReadyComponent {
         return;
       }
 
-      if (!(leaf.view instanceof MarkdownView)) {
-        continue;
-      }
-
-      if (!leaf.view.backlinks) {
+      if (!(leaf.view instanceof MarkdownView) || !leaf.view.backlinks) {
         continue;
       }
 
