@@ -65,6 +65,15 @@ interface PatchedGetBacklinksForFile {
   originalFn: (this: void, file: unknown) => BacklinkDictionary;
 }
 
+/**
+ * The adapter's reconcile entry points, which `obsidian-typings` declares on `DataAdapterEx` rather
+ * than on the `DataAdapter` that `app.vault.adapter` is typed as.
+ */
+interface ReconcilingAdapter {
+  reconcileFile: (this: void, normalizedPath: string, normalizedNewPath: string, shouldSkipDeletionTimeout: boolean) => Promise<void>;
+  reconcileFolderCreation: (this: void, normalizedPath: string, normalizedNewPath: string) => Promise<void>;
+}
+
 const WIDTH_IN_PIXELS = 1200;
 const HEIGHT_IN_PIXELS = 800;
 
@@ -88,10 +97,34 @@ const LINKING_NOTE_COUNT = 120;
 const FILLER_NOTE_COUNT = 4000;
 
 /**
+ * How many notes are WRITTEN into the vault: the hub, the notes linking to it,
+ * and the filler.
+ *
+ * The notes are written into a vault that is already open, so left to itself
+ * Obsidian learns about them only through the platform's directory-change
+ * watcher, which has a bounded buffer and silently drops events when thousands
+ * of files land at once. Measured here: 3,312 of 4,121 seen on one run, and one
+ * capture in three that never reached all 120 backlinks, because a linking note
+ * was among the dropped.
+ *
+ * So the watcher is not relied on: `reconcileStagedVault` hands Obsidian every
+ * staged path itself, and the wait holds out for ALL of them. The backlink count
+ * is no use as a settle signal on its own: it can reach its total while the
+ * filler is still arriving.
+ */
+const STAGED_NOTE_COUNT = 1 + LINKING_NOTE_COUNT + FILLER_NOTE_COUNT;
+
+/**
+ * How many staged paths one `reconcileStagedVault` closure hands Obsidian, which
+ * keeps each closure well under the transport's per-call cap.
+ */
+const RECONCILE_BATCH_SIZE = 500;
+
+/**
  * How many notes the measured vault has at least, which the frame prints in
- * place of the live count. The vault is staged at 4,121 notes, and a desktop
- * capture has been seen to index as few as 3,312 of them, so the live count
- * would change the frame from run to run just as the timings did.
+ * place of the live count. Since `waitForIndex` accepts nothing short of
+ * `STAGED_NOTE_COUNT`, the live count no longer varies, but the frame keeps the
+ * floor it was shot with.
  */
 const VAULT_SIZE_FLOOR = 2000;
 
@@ -123,8 +156,9 @@ let measurement: BacklinkMeasurement | null = null;
 
 beforeAll(async () => {
   const vault = getTemporaryVault();
+  const stagedFiles = buildVault();
 
-  vault.populate(buildVault());
+  vault.populate(stagedFiles);
   await vault.syncToDevice();
 
   await evalInObsidian({
@@ -160,6 +194,8 @@ beforeAll(async () => {
     input: { hubNotePath: HUB_NOTE_PATH, linkingNoteCount: LINKING_NOTE_COUNT },
     vaultPath: vaultPath()
   });
+
+  await reconcileStagedVault(Object.keys(stagedFiles));
 
   // Indexing thousands of notes takes Obsidian a while, and every frame below is
   // meaningless until it has finished — a Backlinks pane that is still filling in
@@ -473,6 +509,75 @@ async function openBacklinksPane(): Promise<number> {
 }
 
 /**
+ * Asks how far the staging has got.
+ *
+ * Polled from the Node side: staging thousands of notes outlasts the transport's
+ * per-call cap, so the wait cannot live inside one closure.
+ *
+ * @returns How much of the vault Obsidian has read, and how many of the hub's
+ * backlinks the plugin has found.
+ */
+async function readStagingProgress(): Promise<StagingProgress> {
+  return await evalInObsidian({
+    callback({ app, hubNotePath }) {
+      const file = app.vault.getFileByPath(hubNotePath);
+      return {
+        backlinkCount: file ? app.metadataCache.getBacklinksForFile(file).keys().length : 0,
+        markdownFileCount: app.vault.getMarkdownFiles().length
+      };
+    },
+    input: { hubNotePath: HUB_NOTE_PATH },
+    vaultPath: vaultPath()
+  });
+}
+
+/**
+ * Hands Obsidian every staged note directly, instead of trusting the file watcher
+ * to report them.
+ *
+ * The notes land on disk while the vault is open, and the watcher drops events
+ * under a burst of thousands (see `STAGED_NOTE_COUNT`). `reconcileFile` is the
+ * adapter's own entry point for "this path changed on disk", and it is a no-op
+ * for a note the watcher did deliver. Folders go first, shallowest first, so
+ * every note's parent is already in the tree.
+ *
+ * @param stagedPaths - The vault-relative paths of every staged note.
+ */
+async function reconcileStagedVault(stagedPaths: readonly string[]): Promise<void> {
+  const folderPaths = new Set<string>();
+  for (const stagedPath of stagedPaths) {
+    const segments = stagedPath.split('/');
+    for (let depth = 1; depth < segments.length; depth++) {
+      folderPaths.add(segments.slice(0, depth).join('/'));
+    }
+  }
+
+  await evalInObsidian({
+    async callback({ app, paths }) {
+      const adapter: unknown = app.vault.adapter;
+      for (const path of paths) {
+        await (adapter as ReconcilingAdapter).reconcileFolderCreation(path, path);
+      }
+    },
+    input: { paths: [...folderPaths].sort((left, right) => left.split('/').length - right.split('/').length) },
+    vaultPath: vaultPath()
+  });
+
+  for (let start = 0; start < stagedPaths.length; start += RECONCILE_BATCH_SIZE) {
+    await evalInObsidian({
+      async callback({ app, paths }) {
+        const adapter: unknown = app.vault.adapter;
+        for (const path of paths) {
+          await (adapter as ReconcilingAdapter).reconcileFile(path, path, false);
+        }
+      },
+      input: { paths: stagedPaths.slice(start, start + RECONCILE_BATCH_SIZE) },
+      vaultPath: vaultPath()
+    });
+  }
+}
+
+/**
  * Captures the window, captions it, and writes it as
  * `images/screenshots/screenshot-desktop-<index>.png`.
  *
@@ -502,33 +607,34 @@ function vaultPath(): string {
 }
 
 /**
- * Waits for the plugin's index to hold every linking note.
+ * Waits for Obsidian to have read the whole staged vault, and for the plugin's
+ * index to hold every linking note.
  *
- * Polled from the Node side: indexing thousands of notes outlasts the transport's
- * per-call cap, and a frame taken before it settles shows a half-built pane.
+ * Both halves, because they finish at different times: a frame taken before the
+ * pane settles shows a half-built list, and a measurement taken before the vault
+ * settles times a smaller vault than the frame claims. `reconcileStagedVault` has
+ * already handed Obsidian every staged note, so anything short of all of them is
+ * a failure, and the failure says how far it got.
  */
 async function waitForIndex(): Promise<void> {
   const ATTEMPTS = 60;
   const INTERVAL_IN_MILLISECONDS = 3000;
 
-  for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
-    const count = await evalInObsidian({
-      callback({ app, hubNotePath }) {
-        const file = app.vault.getFileByPath(hubNotePath);
-        return file ? app.metadataCache.getBacklinksForFile(file).keys().length : 0;
-      },
-      input: { hubNotePath: HUB_NOTE_PATH },
-      vaultPath: vaultPath()
-    });
+  let progress: StagingProgress = { backlinkCount: 0, markdownFileCount: 0 };
 
-    if (count >= LINKING_NOTE_COUNT) {
+  for (let attempt = 0; attempt < ATTEMPTS; attempt++) {
+    progress = await readStagingProgress();
+
+    if (progress.markdownFileCount >= STAGED_NOTE_COUNT && progress.backlinkCount >= LINKING_NOTE_COUNT) {
       return;
     }
 
     await sleepInNode({ milliseconds: INTERVAL_IN_MILLISECONDS });
   }
 
-  throw new Error('The vault never finished indexing.');
+  throw new Error(
+    `The vault never finished indexing. Last seen: ${String(progress.markdownFileCount)} of ${String(STAGED_NOTE_COUNT)} notes, ${String(progress.backlinkCount)} of ${String(LINKING_NOTE_COUNT)} backlinks.`
+  );
 }
 
 /**
@@ -552,4 +658,12 @@ interface BacklinkMeasurement {
   readonly cachedInMilliseconds: number;
   readonly noteCount: number;
   readonly originalInMilliseconds: number;
+}
+
+/**
+ * How far Obsidian has got through the staged vault.
+ */
+interface StagingProgress {
+  readonly backlinkCount: number;
+  readonly markdownFileCount: number;
 }
