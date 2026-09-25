@@ -10,11 +10,12 @@
  * capture builds the condition the plugin is for: a vault of several thousand
  * notes, generated here rather than staged, with one note everything points at.
  *
- * The numbers in frame are measured in that vault, in the same run, on the same
+ * The speedup in frame is measured in that vault, in the same run, on the same
  * note: the patched lookup, then Obsidian's own implementation reached through
- * `getBacklinksForFile.originalFn`. Nothing is quoted from a benchmark elsewhere,
- * and the assertion requires the patched path to actually be faster before the
- * frame claiming so is written.
+ * `getBacklinksForFile.originalFn`. Nothing is quoted from a benchmark elsewhere.
+ * The frame prints a fixed floor rather than the two timings, which change on
+ * every run, and the assertion requires the measured speedup to clear that floor
+ * before the frame claiming it is written.
  */
 
 import {
@@ -87,9 +88,24 @@ const LINKING_NOTE_COUNT = 120;
 const FILLER_NOTE_COUNT = 4000;
 
 /**
- * How much faster the cached lookup has to be before a frame may say so.
+ * How many notes the measured vault has at least, which the frame prints in
+ * place of the live count. The vault is staged at 4,121 notes, and a desktop
+ * capture has been seen to index as few as 3,312 of them, so the live count
+ * would change the frame from run to run just as the timings did.
  */
-const REQUIRED_SPEEDUP = 2;
+const VAULT_SIZE_FLOOR = 2000;
+
+/**
+ * How much faster the cached lookup has to be before a frame may say so, which
+ * is also the speedup the frame prints.
+ *
+ * The frame used to print the two timings themselves, and they differ on every
+ * run, so the frame could never be re-shot to the same bytes. What every run
+ * does have in common is this floor, because the capture fails below it. It is
+ * set well under what this platform measures, so an ordinary run clears it
+ * without the frame understating the result by an order of magnitude.
+ */
+const REQUIRED_SPEEDUP = 10;
 
 /**
  * Where the measured numbers are written so they can be photographed. A `Notice`
@@ -162,6 +178,7 @@ describe('desktop store screenshots', () => {
     measurement = await measureBacklinkLookups();
     // The frame reports numbers; this is what stops it reporting a lie.
     expect(measurement.cachedInMilliseconds).toBeLessThan(measurement.originalInMilliseconds / REQUIRED_SPEEDUP);
+    expect(measurement.noteCount).toBeGreaterThan(VAULT_SIZE_FLOOR);
     await shoot(2, 'From an index, not a scan of every note');
   });
 
@@ -298,7 +315,7 @@ async function compareBacklinkCounts(): Promise<BacklinkCounts> {
  */
 async function measureBacklinkLookups(): Promise<BacklinkMeasurement> {
   return await evalInObsidian({
-    async callback({ app, hubNotePath, iterations, resultNotePath }) {
+    async callback({ app, hubNotePath, iterations, requiredSpeedup, resultNotePath, vaultSizeFloor }) {
       const SETTLE_DELAY_IN_MILLISECONDS = 1500;
       const RESIZE_SETTLE_DELAY_IN_MILLISECONDS = 2000;
 
@@ -360,22 +377,36 @@ async function measureBacklinkLookups(): Promise<BacklinkMeasurement> {
         getBacklinksForFile.originalFn(file);
       });
 
+      const noteCount = app.vault.getMarkdownFiles().length;
+
+      // The live timings and note count are not printed: they change on every
+      // run, and a frame that prints them can never be re-shot to the same bytes.
+      // The floors are printed instead, and the test asserts both against these
+      // live numbers.
       await writeResultNote([
         `# Backlinks for ${file.basename}`,
         '',
-        `Averaged over ${String(iterations)} calls, in a vault of ${String(app.vault.getMarkdownFiles().length)} notes.`,
+        `Timed over ${String(iterations)} calls each, in a vault of more than ${String(vaultSizeFloor)} notes.`,
         '',
-        '| Asked | Time |',
+        '| Asked | Speed |',
         '| --- | --- |',
-        `| From the cache | ${cachedInMilliseconds.toFixed(3)} ms |`,
-        `| Obsidian's own | ${originalInMilliseconds.toFixed(3)} ms |`
+        `| From the cache | at least ${String(requiredSpeedup)}× faster |`,
+        '| Obsidian\'s own | the baseline |',
+        '',
+        `The exact times change from run to run. This capture fails whenever the cache is less than ${String(requiredSpeedup)}× faster.`
       ]);
 
       await sleep(SETTLE_DELAY_IN_MILLISECONDS);
 
-      return { cachedInMilliseconds, originalInMilliseconds };
+      return { cachedInMilliseconds, noteCount, originalInMilliseconds };
     },
-    input: { hubNotePath: HUB_NOTE_PATH, iterations: MEASUREMENT_ITERATIONS, resultNotePath: RESULT_NOTE_PATH },
+    input: {
+      hubNotePath: HUB_NOTE_PATH,
+      iterations: MEASUREMENT_ITERATIONS,
+      requiredSpeedup: REQUIRED_SPEEDUP,
+      resultNotePath: RESULT_NOTE_PATH,
+      vaultSizeFloor: VAULT_SIZE_FLOOR
+    },
     vaultPath: vaultPath()
   });
 }
@@ -514,9 +545,11 @@ interface BacklinkCounts {
 }
 
 /**
- * How long each implementation took, in milliseconds.
+ * How long each implementation took, in milliseconds, and how many notes the
+ * vault they were timed in had.
  */
 interface BacklinkMeasurement {
   readonly cachedInMilliseconds: number;
+  readonly noteCount: number;
   readonly originalInMilliseconds: number;
 }
