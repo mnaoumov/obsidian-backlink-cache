@@ -26,6 +26,7 @@ import { join } from 'node:path';
 import process from 'node:process';
 import { sleep as sleepInNode } from 'obsidian-dev-utils/async';
 import {
+  applyObsidianTheme,
   captureObsidianScreenshot,
   evalInObsidian,
   labelScreenshot,
@@ -175,8 +176,6 @@ beforeAll(async () => {
       const INDEX_TIMEOUT_IN_MILLISECONDS = 25_000;
       const SETTLE_DELAY_IN_MILLISECONDS = 1500;
 
-      app.changeTheme('obsidian');
-
       await waitUntil({
         message: 'the staged vault to appear',
         predicate: () => Boolean(app.vault.getFileByPath(hubNotePath)),
@@ -201,6 +200,11 @@ beforeAll(async () => {
   // meaningless until it has finished — a Backlinks pane that is still filling in
   // photographs as a plugin that found nothing.
   await waitForIndex();
+
+  // Not a bare `app.changeTheme('obsidian')`: that only schedules the config save, so a config reload landing
+  // first drops the theme and every frame comes out light. This saves at once, waits until the theme is on
+  // screen and on disk, and makes `captureObsidianScreenshot` refuse any frame shot after the theme was lost.
+  await applyObsidianTheme({ theme: 'dark', vaultPath: vaultPath() });
 });
 
 describe('desktop store screenshots', () => {
