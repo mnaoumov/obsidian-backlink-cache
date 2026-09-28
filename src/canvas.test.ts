@@ -432,13 +432,23 @@ describe('CanvasComponent.onload', () => {
     expect(app.metadataCache.deletePath).toHaveBeenCalledWith('a.canvas');
   });
 
-  it('should reload backlinks view on cleanup', () => {
+  it('should remove the canvas caches on cleanup while the core plugin is enabled', () => {
+    const created = createComponent();
+
+    loadWithCanvasCorePlugin(created, true);
+    vi.mocked(reloadBacklinksView).mockClear();
+    created.component.unload();
+
+    expect(reloadBacklinksView).toHaveBeenCalled();
+  });
+
+  it('should leave cleanup alone while the core plugin is disabled, since its disable already ran', () => {
     const created = createComponent();
 
     loadWithCanvasCorePlugin(created, false);
     created.component.unload();
 
-    expect(reloadBacklinksView).toHaveBeenCalled();
+    expect(reloadBacklinksView).not.toHaveBeenCalled();
   });
 
   it('should process canvas files when the core plugin is enabled through the change signal', () => {

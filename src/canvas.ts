@@ -11,6 +11,7 @@ import { TFile } from 'obsidian';
 import { invokeAsyncSafely } from 'obsidian-dev-utils/async';
 import { getCanvasReferences } from 'obsidian-dev-utils/obsidian/canvas';
 import { ComponentEx } from 'obsidian-dev-utils/obsidian/components/component-ex';
+import { CorePluginToggleComponent } from 'obsidian-dev-utils/obsidian/components/core-plugin-toggle-component';
 import { isCanvasFile } from 'obsidian-dev-utils/obsidian/file-system';
 import { loop } from 'obsidian-dev-utils/obsidian/loop';
 
@@ -68,41 +69,25 @@ export class CanvasComponent extends ComponentEx {
     this.registerEvent(this.app.vault.on('delete', this.handleFileDelete.bind(this)));
     this.registerEvent(this.app.vault.on('rename', this.handleFileRename.bind(this)));
 
-    const canvasCorePlugin = this.app.internalPlugins.getPluginById(InternalPluginName.Canvas);
-    if (!canvasCorePlugin) {
-      return;
-    }
-
     /*
-     * Obsidian publishes this itself: `InternalPlugin.enable()` sets `enabled` as its first statement and
-     * raises `change` on the manager as its last, and `disable()` mirrors that, so the flag read inside the
-     * handler is always the post-transition one. Obsidian's own Core plugins settings tab listens to the same
-     * signal. Diffing it replaces a monkey patch of both `onUserEnable` and `onUserDisable` on the
-     * `CanvasPluginInstance` prototype, which every vault shares - and it also catches a toggle that was not
-     * driven by the user, which neither `onUser*` hook ever fired for.
+     * Runs the enable at load when Canvas is already enabled, then on each edge of its `enabled` flag, which
+     * Obsidian publishes through the `change` signal of `app.internalPlugins` - a toggle not driven by the user
+     * included. The disable also runs on unload while Canvas is enabled, so the synthetic canvas caches never
+     * outlive the plugin.
      */
-    let wasCanvasCorePluginEnabled = canvasCorePlugin.enabled;
-    this.registerEvent(this.app.internalPlugins.on('change', () => {
-      const isCanvasCorePluginEnabled = canvasCorePlugin.enabled;
-      if (isCanvasCorePluginEnabled === wasCanvasCorePluginEnabled) {
-        return;
-      }
-      wasCanvasCorePluginEnabled = isCanvasCorePluginEnabled;
-
-      if (isCanvasCorePluginEnabled) {
-        this.onCanvasCorePluginEnable();
-      } else {
-        this.onCanvasCorePluginDisable();
-      }
-    }));
-
-    if (canvasCorePlugin.enabled) {
-      this.onCanvasCorePluginEnable();
-    }
-
-    this.register(() => {
-      this.onCanvasCorePluginDisable();
-    });
+    this.addChild(
+      new CorePluginToggleComponent({
+        app: this.app,
+        corePluginId: InternalPluginName.Canvas,
+        onDisable: (): void => {
+          this.onCanvasCorePluginDisable();
+        },
+        onEnable: (): void => {
+          this.onCanvasCorePluginEnable();
+        },
+        shouldCallOnDisableOnUnload: true
+      })
+    );
   }
 
   private handleFileCreateOrModify(file: TAbstractFile): void {
