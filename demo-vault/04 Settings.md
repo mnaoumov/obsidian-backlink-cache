@@ -7,6 +7,11 @@ Open **Settings -> Community plugins -> Backlink Cache** to configure the plugin
 - `shouldShowProgressBarOnLoad`
   - when on, a progress bar is shown while the cache is built as the vault loads. This is reassuring in large vaults where the initial build takes a moment; turn it off for a quieter startup.
 
+One more key is bookkeeping rather than a toggle you set, shown here because it is in your `data.json`:
+
+- `isAdvancedMetadataCacheSuggestionDeclined`
+  - whether you have already answered "not now" to the notice suggesting [Advanced Metadata Cache](https://community.obsidian.md/plugins/advanced-metadata-cache), the plugin that replaces this one. It silences the notice, not the banner at the top of this tab: opening these settings is a fresher signal than an answer you gave earlier.
+
 There is also a command, **Backlink Cache: Refresh backlink panels**, that rebuilds the visible Backlinks panes on demand.
 
 ## See the difference
