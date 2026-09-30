@@ -5,8 +5,10 @@ import type {
 } from 'obsidian';
 
 import { Component } from 'obsidian';
+import { noopAsync } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
+import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
@@ -15,6 +17,42 @@ import {
   it,
   vi
 } from 'vitest';
+
+interface ComponentModuleActual {
+  Component: new () => object;
+}
+
+interface PluginSuggestionComponentParams {
+  readonly isSuggestionDeclined: (this: void) => boolean;
+  readonly reason: string;
+  readonly setSuggestionDeclined: (this: void, isDeclined: boolean) => Promise<void>;
+  readonly suggestedPluginId: string;
+  readonly suggestedPluginName: string;
+}
+
+interface SuggestionSettings {
+  isAdvancedMetadataCacheSuggestionDeclined: boolean;
+}
+
+// Capture the `PluginSuggestionComponent` constructor argument so the closures the plugin hands it — the
+// declined-flag getter and setter — can be invoked directly. The stub returns a fresh real `Component` so
+// the real `PluginBase` lifecycle can load it as a child without reaching the community-plugin registry.
+const { pluginSuggestionStub } = vi.hoisted(() => ({
+  pluginSuggestionStub: vi.fn<(params: PluginSuggestionComponentParams) => object>()
+}));
+
+vi.mock('obsidian-dev-utils/obsidian/components/plugin-suggestion-component', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('obsidian-dev-utils/obsidian/components/plugin-suggestion-component')>();
+  const { Component: ComponentActual } = await vi.importActual<ComponentModuleActual>('obsidian');
+  // eslint-disable-next-line prefer-arrow-callback -- a vi.fn used with `new` must be a non-arrow function returning a fresh real Component.
+  pluginSuggestionStub.mockImplementation(function NamedStub() {
+    return new ComponentActual();
+  });
+  return {
+    ...actual,
+    PluginSuggestionComponent: pluginSuggestionStub
+  };
+});
 
 // --- Mocks for the plugin's OWN sibling modules (allowed: not obsidian-dev-utils / obsidian-test-mocks) ---
 
@@ -30,9 +68,16 @@ const hoisted = vi.hoisted(() => ({
 vi.mock('./plugin-settings-component.ts', () => ({
   // Extends the real obsidian-test-mocks Component so the real addChild lifecycle can load it.
   PluginSettingsComponent: class extends Component {
+    public settings: SuggestionSettings = { isAdvancedMetadataCacheSuggestionDeclined: false };
+
     public constructor(params: unknown) {
       super();
       hoisted.pluginSettingsComponentConstructor(params);
+    }
+
+    public editAndSave(editor: (settings: SuggestionSettings) => void): Promise<void> {
+      editor(this.settings);
+      return noopAsync();
     }
   }
 }));
@@ -119,5 +164,36 @@ describe('Plugin', () => {
     await plugin.onload();
     expect(addCommandSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'open-demo-vault' }));
   });
+
+  it('should suggest Advanced Metadata Cache as its successor', async () => {
+    await createLoadedPlugin(createApp());
+    expect(pluginSuggestionStub).toHaveBeenCalledOnce();
+    expect(suggestionParams().suggestedPluginId).toBe('advanced-metadata-cache');
+    expect(suggestionParams().suggestedPluginName).toBe('Advanced Metadata Cache');
+    expect(suggestionParams().reason).toContain('deprecated');
+  });
+
+  it('should hand the suggestion component to the settings tab', async () => {
+    await createLoadedPlugin(createApp());
+    expect(hoisted.pluginSettingsTabConstructor).toHaveBeenCalledWith(expect.objectContaining({
+      pluginSuggestionComponent: castTo<object>(ensureNonNullable(pluginSuggestionStub.mock.results[0]).value)
+    }));
+  });
+
+  it('should report the suggestion as not declined until the user says otherwise', async () => {
+    await createLoadedPlugin(createApp());
+    expect(suggestionParams().isSuggestionDeclined()).toBe(false);
+  });
+
+  it('should remember a declined suggestion in its own settings', async () => {
+    await createLoadedPlugin(createApp());
+    const params = suggestionParams();
+    await params.setSuggestionDeclined(true);
+    expect(params.isSuggestionDeclined()).toBe(true);
+  });
 });
+
+function suggestionParams(): PluginSuggestionComponentParams {
+  return ensureNonNullable(pluginSuggestionStub.mock.calls[0])[0];
+}
 /* eslint-enable @typescript-eslint/no-extraneous-class -- End of test file. */

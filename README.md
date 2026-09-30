@@ -2,6 +2,9 @@
 
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/mnaoumov) [![GitHub release](https://img.shields.io/github/v/release/mnaoumov/obsidian-backlink-cache)](https://github.com/mnaoumov/obsidian-backlink-cache/releases) [![GitHub downloads](https://img.shields.io/github/downloads/mnaoumov/obsidian-backlink-cache/total)](https://github.com/mnaoumov/obsidian-backlink-cache/releases) [![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/mnaoumov/obsidian-backlink-cache)
 
+> [!WARNING]
+> **Backlink Cache is deprecated and will get no further updates.** Install [Advanced Metadata Cache](https://community.obsidian.md/plugins/advanced-metadata-cache) instead: it carries the same backlink cache and more. Once it is enabled, disable and uninstall Backlink Cache. The plugin still shows this suggestion when it loads, and in its settings.
+
 Asking [Obsidian](https://obsidian.md/) which notes link to this one means scanning every note in the vault. On a large vault that is slow enough to be felt — the Backlinks pane lags, and every plugin that needs backlinks pays the same cost, repeatedly.
 
 This plugin keeps a backlink index and answers from it instead. The Backlinks pane gets faster, and so does anything else that asks. On a small vault you will not notice; that is the point at which you do not need it.
@@ -59,15 +62,9 @@ To use the updated signatures from your own plugin, copy [types.d.ts](./types.d.
 
 ## Installation
 
-The plugin is available in [the official Community Plugins repository](https://community.obsidian.md/plugins/backlink-cache).
+Do not install this plugin: install [Advanced Metadata Cache](https://community.obsidian.md/plugins/advanced-metadata-cache) from the official Community Plugins repository instead.
 
-### Beta versions
-
-To install the latest beta release of this plugin (regardless if it is available in [the official Community Plugins repository](https://community.obsidian.md) or not), follow these steps:
-
-1. Ensure you have the [BRAT plugin](https://community.obsidian.md/plugins/obsidian42-brat) installed and enabled.
-2. Click [Install via BRAT](https://intradeus.github.io/http-protocol-redirector?r=obsidian://brat?plugin=https://github.com/mnaoumov/obsidian-backlink-cache).
-3. An Obsidian pop-up window should appear. In the window, click the `Add plugin` button once and wait a few seconds for the plugin to install.
+Backlink Cache is leaving that repository, and its last release is the one already installed in your vault. It keeps working, but it will not be updated.
 
 ## Debugging
 
