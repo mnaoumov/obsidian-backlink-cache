@@ -20,6 +20,8 @@ const SCENARIO_TIMEOUT_IN_MS = 120_000;
 
 interface NoticeContent {
   readonly buttonTexts: string[];
+  // The code marks outside the buttons, which carry their own.
+  readonly codeTexts: string[];
   readonly text: string;
 }
 
@@ -44,6 +46,9 @@ async function runStep(step: Step): Promise<NoticeResult> {
       function readNotice(noticeEl: HTMLElement): NoticeContent {
         return {
           buttonTexts: [...noticeEl.querySelectorAll('button')].map((buttonEl) => buttonEl.textContent),
+          codeTexts: [...noticeEl.querySelectorAll('code')]
+            .filter((codeEl) => codeEl.closest('button') === null)
+            .map((codeEl) => codeEl.textContent),
           text: noticeEl.textContent
         };
       }
@@ -82,7 +87,7 @@ async function runStep(step: Step): Promise<NoticeResult> {
           if (!app.plugins.enabledPlugins.has(PLUGIN_ID)) {
             await app.plugins.enablePluginAndSave(PLUGIN_ID);
           }
-          return { buttonTexts: [], isPluginEnabledAfterClick: true, text: '' };
+          return { buttonTexts: [], codeTexts: [], isPluginEnabledAfterClick: true, text: '' };
         }
         case 'showSuccessorEnabledNotice': {
           await app.vault.adapter.mkdir(successorFolder);
@@ -152,7 +157,12 @@ describe('successor notice', () => {
   it('suggests installing Advanced Metadata Cache while it is not installed', async () => {
     const result = await runStep('showSuggestionNotice');
 
-    expect(result.text).toContain('Advanced Metadata Cache replaced it');
+    expect(result.text).toContain(
+      'Backlink Cache no longer does anything: Advanced Metadata Cache replaced it.'
+        + ' Install it to keep the backlink cache, then uninstall Backlink Cache.'
+    );
+    // The first mark is the suggestion's own header naming this plugin; the other three are the reason's.
+    expect(result.codeTexts).toEqual(['Backlink Cache', 'Backlink Cache', 'Advanced Metadata Cache', 'Backlink Cache']);
   }, SCENARIO_TIMEOUT_IN_MS);
 
   it('asks to be removed, with only uninstall and disable, once Advanced Metadata Cache is enabled', async () => {

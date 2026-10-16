@@ -1,6 +1,7 @@
 import { PluginSettingsTabComponent } from '@mnaoumov/obsidian-lib/components/plugin-settings-tab-component';
 import { PluginSuggestionComponent } from '@mnaoumov/obsidian-lib/components/plugin-suggestion-component';
 import { PluginDataHandler } from '@mnaoumov/obsidian-lib/data-handler';
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
 import { PluginBase } from '@mnaoumov/obsidian-lib/plugin/plugin';
 import { PluginEventSourceImpl } from '@mnaoumov/obsidian-lib/plugin/plugin-event-source';
 
@@ -11,9 +12,6 @@ import {
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { SuccessorEnabledComponent } from './successor-enabled-component.ts';
-
-const SUGGESTION_REASON = 'Backlink Cache no longer does anything: Advanced Metadata Cache replaced it.'
-  + ' Install it to keep the backlink cache, then uninstall Backlink Cache.';
 
 // The plugin's one job is to point to its successor. It used to keep a backlink cache, and every part of that
 // is gone: `Advanced Metadata Cache` carries it now.
@@ -34,7 +32,7 @@ export class Plugin extends PluginBase {
         isSuggestionDeclined: (): boolean => pluginSettingsComponent.settings.isAdvancedMetadataCacheSuggestionDeclined,
         pluginNoticeComponent: this.pluginNoticeComponent,
         pluginSettingsComponent,
-        reason: SUGGESTION_REASON,
+        reason: createSuggestionReason(this.manifest.name),
         // `editAndSave`, not `setProperty`: a decline has to outlive a reload, and `setProperty` only edits
         // the in-memory state.
         setSuggestionDeclined: async (isDeclined): Promise<void> => {
@@ -72,4 +70,15 @@ export class Plugin extends PluginBase {
       })
     );
   }
+}
+
+function createSuggestionReason(pluginName: string): DocumentFragment {
+  return createFragment((fragment) => {
+    appendCodeBlock(fragment, pluginName);
+    fragment.appendText(' no longer does anything: ');
+    appendCodeBlock(fragment, ADVANCED_METADATA_CACHE_PLUGIN_NAME);
+    fragment.appendText(' replaced it. Install it to keep the backlink cache, then uninstall ');
+    appendCodeBlock(fragment, pluginName);
+    fragment.appendText('.');
+  });
 }
