@@ -57,9 +57,9 @@ vi.mock('obsidian-dev-utils/obsidian/components/plugin-suggestion-component', as
 // --- Mocks for the plugin's OWN sibling modules (allowed: not obsidian-dev-utils / obsidian-test-mocks) ---
 
 const hoisted = vi.hoisted(() => ({
-  backlinkCacheComponentConstructor: vi.fn(),
   pluginSettingsComponentConstructor: vi.fn(),
-  pluginSettingsTabConstructor: vi.fn()
+  pluginSettingsTabConstructor: vi.fn(),
+  successorEnabledComponentConstructor: vi.fn()
 }));
 
 // `PluginDataHandler` and `PluginEventSourceImpl` are NOT stubbed: since obsidian-dev-utils 93.2 the base
@@ -90,12 +90,12 @@ vi.mock('./plugin-settings-tab.ts', () => ({
   }
 }));
 
-vi.mock('./backlink-cache-component.ts', () => ({
+vi.mock('./successor-enabled-component.ts', () => ({
   // Extends the real obsidian-test-mocks Component so the real addChild lifecycle can load it.
-  BacklinkCacheComponent: class extends Component {
+  SuccessorEnabledComponent: class extends Component {
     public constructor(params: unknown) {
       super();
-      hoisted.backlinkCacheComponentConstructor(params);
+      hoisted.successorEnabledComponentConstructor(params);
     }
   }
 }));
@@ -143,7 +143,7 @@ describe('Plugin', () => {
     await createLoadedPlugin(createApp());
     expect(hoisted.pluginSettingsComponentConstructor).toHaveBeenCalledOnce();
     expect(hoisted.pluginSettingsTabConstructor).toHaveBeenCalledOnce();
-    expect(hoisted.backlinkCacheComponentConstructor).toHaveBeenCalledOnce();
+    expect(hoisted.successorEnabledComponentConstructor).toHaveBeenCalledOnce();
   });
 
   it('should add the plugin settings tab via its child component', async () => {
@@ -151,18 +151,31 @@ describe('Plugin', () => {
     expect(castTo<SettingTabsHolder>(plugin).settingTabs__).toHaveLength(1);
   });
 
-  it('should register the refresh backlink panels command via its command handler', async () => {
+  it('should register none of its former commands, since pointing to its successor is its only job', async () => {
     const plugin = new Plugin(createApp(), createManifest());
     const addCommandSpy = vi.spyOn(plugin, 'addCommand');
     await plugin.onload();
-    expect(addCommandSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'refresh-backlink-panels' }));
+    // The base plugin may still register commands of its own, so only this plugin's former ones are asserted.
+    const commandIds = addCommandSpy.mock.calls.map(([command]) => command.id);
+    expect(commandIds).not.toContain('refresh-backlink-panels');
+    expect(commandIds).not.toContain('open-demo-vault');
   });
 
-  it('should register the open demo vault command via its command handler', async () => {
-    const plugin = new Plugin(createApp(), createManifest());
-    const addCommandSpy = vi.spyOn(plugin, 'addCommand');
-    await plugin.onload();
-    expect(addCommandSpy).toHaveBeenCalledWith(expect.objectContaining({ id: 'open-demo-vault' }));
+  it('should ask to be removed once Advanced Metadata Cache is enabled', async () => {
+    await createLoadedPlugin(createApp());
+    expect(hoisted.successorEnabledComponentConstructor).toHaveBeenCalledWith(expect.objectContaining({
+      pluginId: 'backlink-cache',
+      pluginName: 'Backlink Cache',
+      successorPluginId: 'advanced-metadata-cache',
+      successorPluginName: 'Advanced Metadata Cache'
+    }));
+  });
+
+  it('should hand the successor-enabled component to the settings tab', async () => {
+    await createLoadedPlugin(createApp());
+    expect(hoisted.pluginSettingsTabConstructor).toHaveBeenCalledWith(expect.objectContaining({
+      successorEnabledComponent: expect.any(Component) as unknown
+    }));
   });
 
   it('should suggest Advanced Metadata Cache as its successor', async () => {
@@ -170,7 +183,7 @@ describe('Plugin', () => {
     expect(pluginSuggestionStub).toHaveBeenCalledOnce();
     expect(suggestionParams().suggestedPluginId).toBe('advanced-metadata-cache');
     expect(suggestionParams().suggestedPluginName).toBe('Advanced Metadata Cache');
-    expect(suggestionParams().reason).toContain('deprecated');
+    expect(suggestionParams().reason).toContain('Advanced Metadata Cache replaced it');
   });
 
   it('should hand the suggestion component to the settings tab', async () => {

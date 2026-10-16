@@ -1,7 +1,7 @@
 {
   "name": "backlink-cache",
   "version": "2.17.0",
-  "description": "Stores backlink cache to speed up `app.metadataCache.getBacklinksForFile`",
+  "description": "Points to its successor, Advanced Metadata Cache, and does nothing else",
   "keywords": [],
   "homepage": "https://github.com/mnaoumov/obsidian-backlink-cache#readme",
   "bugs": "https://github.com/mnaoumov/obsidian-backlink-cache/issues",
@@ -14,7 +14,6 @@
     "build": "jiti scripts/build.ts",
     "build:clean": "jiti scripts/build-clean.ts",
     "build:compile": "jiti scripts/build-compile.ts",
-    "capture:screenshots": "jiti scripts/capture-screenshots.ts",
     "commit": "jiti scripts/commit.ts",
     "dev": "jiti scripts/dev.ts",
     "find-overexposed": "jiti scripts/find-overexposed.ts",
@@ -33,7 +32,6 @@
     "test:integration": "jiti scripts/test-integration.ts",
     "test:integration:android": "jiti scripts/test-integration-android.ts",
     "test:integration:desktop": "jiti scripts/test-integration-desktop.ts",
-    "test:integration:desktop:performance": "jiti scripts/test-integration-desktop-performance.ts",
     "test:integration:no-app": "jiti scripts/test-integration-no-app.ts",
     "test:watch": "jiti scripts/test-watch.ts",
     "version": "jiti scripts/version.ts"
@@ -66,7 +64,6 @@
     "obsidian-dev-utils": "^107.0.0",
     "obsidian-integration-testing": "^17.3.0",
     "obsidian-test-mocks": "^7.0.0",
-    "sharp": "^0.35.4",
     "typescript": "6.0.3",
     "vitest": "^5.0.1"
   }

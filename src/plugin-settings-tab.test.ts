@@ -8,8 +8,6 @@ import type { PluginSuggestionComponent } from 'obsidian-dev-utils/obsidian/comp
 
 import { noopAsync } from 'obsidian-dev-utils/function';
 import { castTo } from 'obsidian-dev-utils/object-utils';
-import { SuggestedPluginState } from 'obsidian-dev-utils/obsidian/components/plugin-suggestion-component';
-import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 import { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
 import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
 import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
@@ -22,6 +20,8 @@ import {
   vi
 } from 'vitest';
 
+import type { SuccessorEnabledComponent } from './successor-enabled-component.ts';
+
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
 import { PluginSettings } from './plugin-settings.ts';
 
@@ -33,81 +33,80 @@ interface VisibleDefinition {
   visible: () => boolean;
 }
 
+const SUGGESTION_ROW_INDEX = 0;
+const SUCCESSOR_ENABLED_ROW_INDEX = 1;
+
 let app: AppOriginal;
-let getSuggestedPluginState: ReturnType<typeof vi.fn<() => SuggestedPluginState>>;
-let renderBanner: ReturnType<typeof vi.fn<(containerEl: HTMLElement) => void>>;
+let isSuccessorEnabled: ReturnType<typeof vi.fn<() => boolean>>;
+let renderSuggestionBanner: ReturnType<typeof vi.fn<(containerEl: HTMLElement) => void>>;
+let renderSuccessorEnabledBanner: ReturnType<typeof vi.fn<(containerEl: HTMLElement) => void>>;
 
 beforeEach(() => {
   vi.clearAllMocks();
   app = App.createConfigured__().asOriginalType__();
-  getSuggestedPluginState = vi.fn<() => SuggestedPluginState>(() => SuggestedPluginState.NotInstalled);
-  renderBanner = vi.fn<(containerEl: HTMLElement) => void>();
-  vi.spyOn(PluginSettingsTabBase.prototype, 'bind').mockImplementation((params) => params.valueComponent);
+  isSuccessorEnabled = vi.fn<() => boolean>(() => false);
+  renderSuggestionBanner = vi.fn<(containerEl: HTMLElement) => void>();
+  renderSuccessorEnabledBanner = vi.fn<(containerEl: HTMLElement) => void>();
 });
 
 describe('PluginSettingsTab', () => {
-  it('should declare the suggestion banner row first and the two toggles after it', () => {
+  it('should declare only the two banner rows and no settings', () => {
     const tab = createTab();
 
-    expect(settingNames(tab)).toEqual(['', 'Should automatically refresh backlink panels', 'Should show progress bar on load']);
+    expect(tab.getSettingDefinitions()).toHaveLength(2);
   });
 
-  it('should keep the banner row out of the settings search', () => {
+  it('should keep both banner rows out of the settings search', () => {
     const tab = createTab();
 
-    expect(castTo<SearchableDefinition>(ensureNonNullable(tab.getSettingDefinitions()[0])).searchable).toBe(false);
+    expect(tab.getSettingDefinitions().map((definition) => castTo<SearchableDefinition>(definition).searchable)).toEqual([false, false]);
   });
 
-  it('should show the banner row while the suggested plugin is not enabled', () => {
+  it('should show the suggestion row, not the successor row, while the successor is not enabled', () => {
     const tab = createTab();
 
-    expect(isBannerRowVisible(tab)).toBe(true);
+    expect(isRowVisible(tab, SUGGESTION_ROW_INDEX)).toBe(true);
+    expect(isRowVisible(tab, SUCCESSOR_ENABLED_ROW_INDEX)).toBe(false);
   });
 
-  it('should hide the banner row once the suggested plugin is enabled', () => {
-    getSuggestedPluginState.mockReturnValue(SuggestedPluginState.Enabled);
+  it('should show the successor row, not the suggestion row, once the successor is enabled', () => {
+    isSuccessorEnabled.mockReturnValue(true);
     const tab = createTab();
 
-    expect(isBannerRowVisible(tab)).toBe(false);
+    expect(isRowVisible(tab, SUGGESTION_ROW_INDEX)).toBe(false);
+    expect(isRowVisible(tab, SUCCESSOR_ENABLED_ROW_INDEX)).toBe(true);
   });
 
-  it('should render the banner into an emptied row element', () => {
+  it('should render the suggestion banner into an emptied row element', () => {
     const tab = createTab();
-    const setting = new SettingEx(tab.containerEl);
-    setting.setName('Leftover');
+    const setting = createLeftoverSetting(tab);
 
-    renderRow(tab, 0, setting);
+    renderRow(tab, SUGGESTION_ROW_INDEX, setting);
 
-    expect(renderBanner).toHaveBeenCalledWith(setting.settingEl);
+    expect(renderSuggestionBanner).toHaveBeenCalledWith(setting.settingEl);
     expect(setting.settingEl.textContent).toBe('');
   });
 
-  it('should bind shouldAutomaticallyRefreshBacklinkPanels via addToggle', () => {
+  it('should render the successor banner into an emptied row element', () => {
     const tab = createTab();
+    const setting = createLeftoverSetting(tab);
 
-    renderRow(tab, 1, new SettingEx(tab.containerEl));
+    renderRow(tab, SUCCESSOR_ENABLED_ROW_INDEX, setting);
 
-    expect(boundKeys()).toEqual(['shouldAutomaticallyRefreshBacklinkPanels']);
-  });
-
-  it('should bind shouldShowProgressBarOnLoad via addToggle', () => {
-    const tab = createTab();
-
-    renderRow(tab, 2, new SettingEx(tab.containerEl));
-
-    expect(boundKeys()).toEqual(['shouldShowProgressBarOnLoad']);
+    expect(renderSuccessorEnabledBanner).toHaveBeenCalledWith(setting.settingEl);
+    expect(setting.settingEl.textContent).toBe('');
   });
 });
 
-function boundKeys(): unknown[] {
-  return vi.mocked(PluginSettingsTabBase.prototype.bind).mock.calls.map((call) => call[0].propertyName);
+function createLeftoverSetting(tab: PluginSettingsTab): SettingEx {
+  const setting = new SettingEx(tab.containerEl);
+  setting.setName('Leftover');
+  return setting;
 }
 
 function createMockSettingsComponent(): PluginSettingsComponentBase<PluginSettings> {
   const validationMessages = {
-    isAdvancedMetadataCacheSuggestionDeclined: '',
-    shouldAutomaticallyRefreshBacklinkPanels: '',
-    shouldShowProgressBarOnLoad: ''
+    isAdvancedMetadataCacheSuggestionDeclined: ''
   };
   return strictProxy<PluginSettingsComponentBase<PluginSettings>>({
     defaultSettings: new PluginSettings(),
@@ -132,26 +131,29 @@ function createTab(): PluginSettingsTab {
     plugin,
     pluginSettingsComponent: createMockSettingsComponent(),
     pluginSuggestionComponent: strictProxy<PluginSuggestionComponent>({
-      getSuggestedPluginState,
-      renderBanner
+      renderBanner: renderSuggestionBanner
+    }),
+    successorEnabledComponent: strictProxy<SuccessorEnabledComponent>({
+      isSuccessorEnabled,
+      renderBanner: renderSuccessorEnabledBanner
     })
   });
 }
 
 /**
- * Evaluates the banner row's `visible` predicate the way Obsidian does on every render.
+ * Evaluates one row's `visible` predicate the way Obsidian does on every render.
  *
  * @param tab - The settings tab.
+ * @param index - The index of the row.
  * @returns Whether the row would be rendered.
  */
-function isBannerRowVisible(tab: PluginSettingsTab): boolean {
-  const visible = castTo<VisibleDefinition>(ensureNonNullable(tab.getSettingDefinitions()[0])).visible;
+function isRowVisible(tab: PluginSettingsTab, index: number): boolean {
+  const visible = castTo<VisibleDefinition>(ensureNonNullable(tab.getSettingDefinitions()[index])).visible;
   return visible();
 }
 
 /**
- * Invokes one declared row's `render` callback the way Obsidian does when the tab is opened, so the rows are
- * still exercised now that they are declarative.
+ * Invokes one declared row's `render` callback the way Obsidian does when the tab is opened.
  *
  * @param tab - The settings tab.
  * @param index - The index of the row.
@@ -164,14 +166,4 @@ function renderRow(tab: PluginSettingsTab, index: number, setting: SettingEx): v
   }
 
   definition.render(setting, castTo<SettingGroup>(null));
-}
-
-/**
- * Reads the names of the declared rows.
- *
- * @param tab - The settings tab.
- * @returns The names.
- */
-function settingNames(tab: PluginSettingsTab): string[] {
-  return tab.getSettingDefinitions().map((definition) => 'name' in definition ? definition.name : '');
 }
