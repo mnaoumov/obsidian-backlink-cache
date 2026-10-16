@@ -7,7 +7,7 @@ const PLUGIN_ID = 'backlink-cache';
 /**
  * Clears a previous "Not now" and reloads the plugin, so the successor suggestion shows again.
  *
- * Manual equivalent: delete the plugin's `data.json`, then disable and enable **Backlink Cache** in
+ * Manual equivalent: delete the plugin's `data.json`, then disable and enable **`Backlink Cache`** in
  * **Settings -> Community plugins**.
  */
 export async function showSuggestionAgain(app: App): Promise<void> {

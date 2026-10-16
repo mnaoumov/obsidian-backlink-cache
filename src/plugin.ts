@@ -16,7 +16,7 @@ const SUGGESTION_REASON = 'Backlink Cache no longer does anything: Advanced Meta
   + ' Install it to keep the backlink cache, then uninstall Backlink Cache.';
 
 // The plugin's one job is to point to its successor. It used to keep a backlink cache, and every part of that
-// is gone: Advanced Metadata Cache carries it now.
+// is gone: `Advanced Metadata Cache` carries it now.
 export class Plugin extends PluginBase {
   protected override onloadImpl(): void {
     const pluginSettingsComponent = this.addChild(
