@@ -1,62 +1,60 @@
 import type { SettingDefinitionItem } from 'obsidian';
 import type { PluginSuggestionComponent } from 'obsidian-dev-utils/obsidian/components/plugin-suggestion-component';
 import type { PluginSettingsTabBaseConstructorParams } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
+import type { SettingEx } from 'obsidian-dev-utils/obsidian/setting-ex';
 
-import { SuggestedPluginState } from 'obsidian-dev-utils/obsidian/components/plugin-suggestion-component';
 import { PluginSettingsTabBase } from 'obsidian-dev-utils/obsidian/plugin/plugin-settings-tab';
 
 import type { PluginSettings } from './plugin-settings.ts';
+import type { SuccessorEnabledComponent } from './successor-enabled-component.ts';
 
 interface PluginSettingsTabConstructorParams extends PluginSettingsTabBaseConstructorParams<PluginSettings> {
   readonly pluginSuggestionComponent: PluginSuggestionComponent;
+  readonly successorEnabledComponent: SuccessorEnabledComponent;
 }
 
+// The tab holds no settings: its only content is one banner pointing to the successor, the suggestion while the
+// successor is not enabled, and the uninstall/disable banner once it is.
 export class PluginSettingsTab extends PluginSettingsTabBase<PluginSettings> {
   private readonly pluginSuggestionComponent: PluginSuggestionComponent;
+  private readonly successorEnabledComponent: SuccessorEnabledComponent;
 
   public constructor(params: PluginSettingsTabConstructorParams) {
     super(params);
     this.pluginSuggestionComponent = params.pluginSuggestionComponent;
+    this.successorEnabledComponent = params.successorEnabledComponent;
   }
 
   protected override getSettingDefinitionItems(): SettingDefinitionItem[] {
     return [
-      // The suggestion banner has to travel as a row: Obsidian renders the declarative definitions and never
-      // calls `display()` once `getSettingDefinitions()` is non-empty, so there is no container to write into
-      // otherwise. The row body is emptied first, leaving the Setting element as a bare host for the banner.
+      // A banner has to travel as a row: Obsidian renders the declarative definitions and never calls `display()`
+      // once `getSettingDefinitions()` is non-empty, so there is no container to write into otherwise. The row
+      // body is emptied first, leaving the Setting element as a bare host for the banner.
       this.settingEx({
         name: '',
         render: (setting) => {
-          setting.settingEl.empty();
-          this.pluginSuggestionComponent.renderBanner(setting.settingEl);
+          this.renderBanner(setting, (containerEl) => {
+            this.pluginSuggestionComponent.renderBanner(containerEl);
+          });
         },
         searchable: false,
-        visible: () => this.pluginSuggestionComponent.getSuggestedPluginState() !== SuggestedPluginState.Enabled
+        visible: () => !this.successorEnabledComponent.isSuccessorEnabled()
       }),
       this.settingEx({
-        desc: 'Whether to refresh the backlink panels automatically when a note is saved.',
-        name: 'Should automatically refresh backlink panels',
+        name: '',
         render: (setting) => {
-          setting.addToggle((toggle) => {
-            this.bind({
-              propertyName: 'shouldAutomaticallyRefreshBacklinkPanels',
-              valueComponent: toggle
-            });
+          this.renderBanner(setting, (containerEl) => {
+            this.successorEnabledComponent.renderBanner(containerEl);
           });
-        }
-      }),
-      this.settingEx({
-        desc: 'Whether to show progress bar on load.',
-        name: 'Should show progress bar on load',
-        render: (setting) => {
-          setting.addToggle((toggle) => {
-            this.bind({
-              propertyName: 'shouldShowProgressBarOnLoad',
-              valueComponent: toggle
-            });
-          });
-        }
+        },
+        searchable: false,
+        visible: () => this.successorEnabledComponent.isSuccessorEnabled()
       })
     ];
+  }
+
+  private renderBanner(setting: SettingEx, render: (containerEl: HTMLElement) => void): void {
+    setting.settingEl.empty();
+    render(setting.settingEl);
   }
 }

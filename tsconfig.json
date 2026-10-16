@@ -30,7 +30,6 @@
     "./eslint.config.mts",
     "./scripts/**/*.ts",
     "./src/**/*.ts",
-    "./types.d.ts",
     "./vitest.config.ts"
   ]
 }

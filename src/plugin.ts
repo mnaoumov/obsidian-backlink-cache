@@ -1,4 +1,3 @@
-import { OpenDemoVaultCommandHandler } from 'obsidian-dev-utils/obsidian/command-handlers/open-demo-vault-command-handler';
 import { PluginSettingsTabComponent } from 'obsidian-dev-utils/obsidian/components/plugin-settings-tab-component';
 import { PluginSuggestionComponent } from 'obsidian-dev-utils/obsidian/components/plugin-suggestion-component';
 import { PluginDataHandler } from 'obsidian-dev-utils/obsidian/data-handler';
@@ -9,17 +8,17 @@ import {
   ADVANCED_METADATA_CACHE_PLUGIN_ID,
   ADVANCED_METADATA_CACHE_PLUGIN_NAME
 } from './advanced-metadata-cache.ts';
-import { BacklinkCacheComponent } from './backlink-cache-component.ts';
-import { RefreshBacklinkPanelsCommandHandler } from './command-handlers/refresh-backlink-panels-command-handler.ts';
 import { PluginSettingsComponent } from './plugin-settings-component.ts';
 import { PluginSettingsTab } from './plugin-settings-tab.ts';
+import { SuccessorEnabledComponent } from './successor-enabled-component.ts';
 
-const SUGGESTION_REASON = 'Backlink Cache is deprecated and will get no further updates.'
-  + ' Advanced Metadata Cache replaces it, with the same backlink cache and more.'
-  + ' Once it is enabled, disable and uninstall Backlink Cache.';
+const SUGGESTION_REASON = 'Backlink Cache no longer does anything: Advanced Metadata Cache replaced it.'
+  + ' Install it to keep the backlink cache, then uninstall Backlink Cache.';
 
+// The plugin's one job is to point to its successor. It used to keep a backlink cache, and every part of that
+// is gone: Advanced Metadata Cache carries it now.
 export class Plugin extends PluginBase {
-  protected override async onloadImpl(): Promise<void> {
+  protected override onloadImpl(): void {
     const pluginSettingsComponent = this.addChild(
       new PluginSettingsComponent({
         dataHandler: new PluginDataHandler(this),
@@ -28,6 +27,7 @@ export class Plugin extends PluginBase {
     );
     this.pluginSettingsComponent = pluginSettingsComponent;
 
+    // Shown while the successor is not enabled: installed but disabled, or not installed at all.
     const pluginSuggestionComponent = this.addChild(
       new PluginSuggestionComponent({
         app: this.app,
@@ -47,10 +47,23 @@ export class Plugin extends PluginBase {
       })
     );
 
+    // Shown once the successor is enabled.
+    const successorEnabledComponent = this.addChild(
+      new SuccessorEnabledComponent({
+        app: this.app,
+        pluginId: this.manifest.id,
+        pluginName: this.manifest.name,
+        pluginNoticeComponent: this.pluginNoticeComponent,
+        successorPluginId: ADVANCED_METADATA_CACHE_PLUGIN_ID,
+        successorPluginName: ADVANCED_METADATA_CACHE_PLUGIN_NAME
+      })
+    );
+
     const pluginSettingsTab = new PluginSettingsTab({
       plugin: this,
       pluginSettingsComponent,
-      pluginSuggestionComponent
+      pluginSuggestionComponent,
+      successorEnabledComponent
     });
     this.addChild(
       new PluginSettingsTabComponent({
@@ -58,25 +71,5 @@ export class Plugin extends PluginBase {
         pluginSettingsTab
       })
     );
-
-    const backlinkCacheComponent = this.addChild(
-      new BacklinkCacheComponent({
-        abortSignalComponent: this.abortSignalComponent,
-        app: this.app,
-        consoleDebugComponent: this.consoleDebugComponent,
-        pluginNoticeComponent: this.pluginNoticeComponent,
-        pluginSettingsComponent
-      })
-    );
-
-    await this.commandHandlerComponent.registerCommandHandlers(() => [
-      new RefreshBacklinkPanelsCommandHandler(backlinkCacheComponent),
-      new OpenDemoVaultCommandHandler({
-        app: this.app,
-        pluginId: this.manifest.id,
-        pluginNoticeComponent: this.pluginNoticeComponent,
-        pluginVersion: this.manifest.version
-      })
-    ]);
   }
 }
