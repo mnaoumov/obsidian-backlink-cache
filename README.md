@@ -3,7 +3,7 @@
 [![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-ffdd00?logo=buy-me-a-coffee&logoColor=black)](https://www.buymeacoffee.com/mnaoumov) [![GitHub release](https://img.shields.io/github/v/release/mnaoumov/obsidian-backlink-cache)](https://github.com/mnaoumov/obsidian-backlink-cache/releases) [![GitHub downloads](https://img.shields.io/github/downloads/mnaoumov/obsidian-backlink-cache/total)](https://github.com/mnaoumov/obsidian-backlink-cache/releases) [![Coverage: 100%](https://img.shields.io/badge/coverage-100%25-brightgreen)](https://github.com/mnaoumov/obsidian-backlink-cache)
 
 > [!WARNING]
-> **Backlink Cache no longer does anything but point to its successor.** Install [Advanced Metadata Cache](https://community.obsidian.md/plugins/advanced-metadata-cache) instead: it carries the backlink cache this plugin used to keep, and more. Once it is enabled, uninstall Backlink Cache.
+> **`Backlink Cache` no longer does anything but point to its successor.** Install [Advanced Metadata Cache](https://community.obsidian.md/plugins/advanced-metadata-cache) instead: it carries the backlink cache this plugin used to keep, and more. Once it is enabled, uninstall `Backlink Cache`.
 
 This plugin used to keep a backlink index for [Obsidian](https://obsidian.md/), so that `app.metadataCache.getBacklinksForFile()` answered without rescanning the vault. That cache now lives in [Advanced Metadata Cache](https://community.obsidian.md/plugins/advanced-metadata-cache), and since version 3.0.0 every part of it is gone from here.
 
@@ -20,8 +20,8 @@ A copy of the vault ships with every release. You can access it via any of the f
 
 ## What it does
 
-- **It suggests installing Advanced Metadata Cache** while that plugin is not enabled, with a notice on load and a banner in its settings. [01 Successor suggestion](<./demo-vault/01 Successor suggestion.md>)
-- **It asks to be removed** once Advanced Metadata Cache is enabled, with exactly two buttons: uninstall Backlink Cache, or disable it. [01 Successor suggestion](<./demo-vault/01 Successor suggestion.md>)
+- **It suggests installing `Advanced Metadata Cache`** while that plugin is not enabled, with a notice on load and a banner in its settings. [01 Successor suggestion](<./demo-vault/01 Successor suggestion.md>)
+- **It asks to be removed** once `Advanced Metadata Cache` is enabled, with exactly two buttons: uninstall `Backlink Cache`, or disable it. [01 Successor suggestion](<./demo-vault/01 Successor suggestion.md>)
 
 Nothing else. It no longer patches `getBacklinksForFile()`, indexes canvases, or registers any command.
 

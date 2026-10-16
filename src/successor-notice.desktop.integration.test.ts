@@ -8,7 +8,7 @@ import {
 } from 'vitest';
 
 /*
- * Pins the plugin's one job in a real Obsidian: on load it points to Advanced Metadata Cache, and once that
+ * Pins the plugin's one job in a real Obsidian: on load it points to `Advanced Metadata Cache`, and once that
  * successor is enabled it asks to be removed, with exactly an uninstall and a disable button.
  *
  * The successor is a stub plugin written into the temporary vault under the real id, so the test never reaches
