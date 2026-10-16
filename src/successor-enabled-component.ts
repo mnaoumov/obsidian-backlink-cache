@@ -1,14 +1,14 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
 import type { App } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import { ButtonComponent } from 'obsidian';
-import { convertAsyncToSync } from 'obsidian-dev-utils/async';
-import { ComponentEx } from 'obsidian-dev-utils/obsidian/components/component-ex';
-import { CallbackLayoutReadyComponent } from 'obsidian-dev-utils/obsidian/components/layout-ready-component';
+import { ComponentEx } from '@mnaoumov/obsidian-lib/components/component-ex';
+import { CallbackLayoutReadyComponent } from '@mnaoumov/obsidian-lib/components/layout-ready-component';
 import {
   getInstalledPluginState,
   InstalledPluginState
-} from 'obsidian-dev-utils/obsidian/plugin/plugin-install-state';
+} from '@mnaoumov/obsidian-lib/plugin/plugin-install-state';
+import { convertAsyncToSync } from '@mnaoumov/typescript-lib/async';
+import { ButtonComponent } from 'obsidian';
 
 interface SuccessorEnabledComponentConstructorParams {
   readonly app: App;

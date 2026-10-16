@@ -1,13 +1,13 @@
+import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
 import type {
   App as AppOriginal,
   Notice
 } from 'obsidian';
-import type { PluginNoticeComponent } from 'obsidian-dev-utils/obsidian/components/plugin-notice-component';
 
-import { waitForAllAsyncOperations } from 'obsidian-dev-utils/async';
-import { noopAsync } from 'obsidian-dev-utils/function';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { waitForAllAsyncOperations } from '@mnaoumov/typescript-test-toolkit/async-operation-tracking';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,

@@ -1,7 +1,5 @@
 import type { App } from 'obsidian';
 
-import { configureCommunityPlugin } from 'obsidian-dev-utils/obsidian/community-plugins';
-
 const PLUGIN_ID = 'backlink-cache';
 
 /**
@@ -11,7 +9,14 @@ const PLUGIN_ID = 'backlink-cache';
  * **Settings -> Community plugins**.
  */
 export async function showSuggestionAgain(app: App): Promise<void> {
-  await configureCommunityPlugin({ app, pluginId: PLUGIN_ID, settings: { isAdvancedMetadataCacheSuggestionDeclined: false } });
+  // No library import: `CodeScript Toolkit` serves only its own bundled modules to vault scripts, and the
+  // settings are edited while the plugin is disabled, so it cannot save over them.
   await app.plugins.disablePlugin(PLUGIN_ID);
+  const dataPath = `${app.vault.configDir}/plugins/${PLUGIN_ID}/data.json`;
+  const data: Record<string, unknown> = await app.vault.adapter.exists(dataPath)
+    ? JSON.parse(await app.vault.adapter.read(dataPath)) as Record<string, unknown>
+    : {};
+  data['isAdvancedMetadataCacheSuggestionDeclined'] = false;
+  await app.vault.adapter.write(dataPath, `${JSON.stringify(data, null, 2)}\n`);
   await app.plugins.enablePlugin(PLUGIN_ID);
 }

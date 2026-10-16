@@ -4,11 +4,11 @@ import type {
   PluginManifest
 } from 'obsidian';
 
+import { noopAsync } from '@mnaoumov/typescript-lib/function';
+import { castTo } from '@mnaoumov/typescript-lib/object-utils';
+import { ensureNonNullable } from '@mnaoumov/typescript-lib/type-guards';
+import { strictProxy } from '@mnaoumov/typescript-test-toolkit/strict-proxy';
 import { Component } from 'obsidian';
-import { noopAsync } from 'obsidian-dev-utils/function';
-import { castTo } from 'obsidian-dev-utils/object-utils';
-import { strictProxy } from 'obsidian-dev-utils/strict-proxy';
-import { ensureNonNullable } from 'obsidian-dev-utils/type-guards';
 import { App } from 'obsidian-test-mocks/obsidian';
 import {
   afterEach,
@@ -41,8 +41,8 @@ const { pluginSuggestionStub } = vi.hoisted(() => ({
   pluginSuggestionStub: vi.fn<(params: PluginSuggestionComponentParams) => object>()
 }));
 
-vi.mock('obsidian-dev-utils/obsidian/components/plugin-suggestion-component', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('obsidian-dev-utils/obsidian/components/plugin-suggestion-component')>();
+vi.mock('@mnaoumov/obsidian-lib/components/plugin-suggestion-component', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@mnaoumov/obsidian-lib/components/plugin-suggestion-component')>();
   const { Component: ComponentActual } = await vi.importActual<ComponentModuleActual>('obsidian');
   // eslint-disable-next-line prefer-arrow-callback -- a vi.fn used with `new` must be a non-arrow function returning a fresh real Component.
   pluginSuggestionStub.mockImplementation(function NamedStub() {
@@ -54,7 +54,7 @@ vi.mock('obsidian-dev-utils/obsidian/components/plugin-suggestion-component', as
   };
 });
 
-// --- Mocks for the plugin's OWN sibling modules (allowed: not obsidian-dev-utils / obsidian-test-mocks) ---
+// --- Mocks for the plugin's OWN sibling modules (allowed: not @mnaoumov/obsidian-lib / obsidian-test-mocks) ---
 
 const hoisted = vi.hoisted(() => ({
   pluginSettingsComponentConstructor: vi.fn(),
@@ -62,7 +62,7 @@ const hoisted = vi.hoisted(() => ({
   successorEnabledComponentConstructor: vi.fn()
 }));
 
-// `PluginDataHandler` and `PluginEventSourceImpl` are NOT stubbed: since obsidian-dev-utils 93.2 the base
+// `PluginDataHandler` and `PluginEventSourceImpl` are NOT stubbed: the `@mnaoumov/obsidian-lib` base
 // builds its own settings component out of them during `onload`, and that component really calls
 // `pluginEventSource.on`, so a bare `vi.fn()` double makes the base throw before `onloadImpl` runs.
 vi.mock('./plugin-settings-component.ts', () => ({
