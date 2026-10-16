@@ -183,7 +183,20 @@ describe('Plugin', () => {
     expect(pluginSuggestionStub).toHaveBeenCalledOnce();
     expect(suggestionParams().suggestedPluginId).toBe('advanced-metadata-cache');
     expect(suggestionParams().suggestedPluginName).toBe('Advanced Metadata Cache');
-    expect(suggestionParams().reason).toContain('Advanced Metadata Cache replaced it');
+    const reason = suggestionParams().reason;
+    expect(reason).toBeInstanceOf(DocumentFragment);
+    const reasonFragment = castTo<DocumentFragment>(reason);
+    expect(reasonFragment.textContent).toBe(
+      'Backlink Cache no longer does anything: Advanced Metadata Cache replaced it.'
+        + ' Install it to keep the backlink cache, then uninstall Backlink Cache.'
+    );
+  });
+
+  it('should mark the plugin names in the suggestion reason as code', async () => {
+    await createLoadedPlugin(createApp());
+    const reasonFragment = castTo<DocumentFragment>(suggestionParams().reason);
+    const codeTexts = [...reasonFragment.querySelectorAll('code')].map((codeEl) => codeEl.textContent);
+    expect(codeTexts).toEqual(['Backlink Cache', 'Advanced Metadata Cache', 'Backlink Cache']);
   });
 
   it('should hand the suggestion component to the settings tab', async () => {
