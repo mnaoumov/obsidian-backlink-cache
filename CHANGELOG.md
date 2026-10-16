@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## 3.0.0
+
+- feat!: merge reducing the plugin to pointing to its successor
+
 ## 2.17.0
 
 - chore(cspell): merge accepting 'lintable'
