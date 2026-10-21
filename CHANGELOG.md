@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 3.0.1
+
+- fix: merge tidying the successor-enabled notice and banner
+- chore(github): point questions to Discussions from the new-issue page
+- ci: merge attesting release assets through the toolkit's reusable workflow
+- fix: merge marking the plugin names in the successor suggestion reason as code
+- chore(deps): merge moving off obsidian-dev-utils onto the @mnaoumov packages
+- docs: merge marking plugin names as code in docs, demo vault and comments
+
 ## 3.0.0
 
 - feat!: merge reducing the plugin to pointing to its successor
