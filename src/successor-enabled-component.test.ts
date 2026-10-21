@@ -87,19 +87,18 @@ describe('SuccessorEnabledComponent', () => {
     expect(showNotice).not.toHaveBeenCalled();
   });
 
-  it('should show the owner-worded notice once the successor is enabled', async () => {
+  it('should show the notice saying the successor replaces this plugin once the successor is enabled', async () => {
     enableSuccessor();
 
     await loadComponent(createComponent());
 
     const noticeEl = renderedNotice();
     expect(noticeEl.textContent).toContain(
-      `You have ${SUCCESSOR_PLUGIN_NAME} installed which is a successor for ${PLUGIN_NAME}`
+      `${SUCCESSOR_PLUGIN_NAME} is enabled and replaces ${PLUGIN_NAME}, which no longer does anything.`
+        + ' Uninstall it, or disable it if you want to keep the files.'
     );
     expect([...noticeEl.querySelectorAll('code')].map((codeEl) => codeEl.textContent)).toEqual([
       SUCCESSOR_PLUGIN_NAME,
-      PLUGIN_NAME,
-      PLUGIN_NAME,
       PLUGIN_NAME
     ]);
   });
@@ -109,10 +108,19 @@ describe('SuccessorEnabledComponent', () => {
 
     await loadComponent(createComponent());
 
-    expect(buttons(renderedNotice()).map((buttonEl) => buttonEl.textContent)).toEqual([
-      `Uninstall ${PLUGIN_NAME}`,
-      `Disable ${PLUGIN_NAME}`
-    ]);
+    expect(buttons(renderedNotice()).map((buttonEl) => buttonEl.textContent)).toEqual(['Uninstall', 'Disable']);
+  });
+
+  it('should make uninstall the call to action and lay both buttons out in one row', async () => {
+    enableSuccessor();
+
+    await loadComponent(createComponent());
+
+    const [uninstallButtonEl, disableButtonEl] = buttons(renderedNotice());
+    expect(uninstallButtonEl?.classList.contains('mod-cta')).toBe(true);
+    expect(disableButtonEl?.classList.contains('mod-cta')).toBe(false);
+    expect(uninstallButtonEl?.parentElement).toBe(disableButtonEl?.parentElement);
+    expect(uninstallButtonEl?.parentElement?.classList.contains('backlink-cache-successor-enabled-buttons')).toBe(true);
   });
 
   it('should uninstall the plugin from the uninstall button', async () => {
@@ -142,7 +150,7 @@ describe('SuccessorEnabledComponent', () => {
 
     createComponent().renderBanner(containerEl);
 
-    expect(containerEl.textContent).toContain(`which is a successor for ${PLUGIN_NAME}`);
+    expect(containerEl.textContent).toContain(`is enabled and replaces ${PLUGIN_NAME}`);
     expect(buttons(containerEl)).toHaveLength(2);
   });
 });
