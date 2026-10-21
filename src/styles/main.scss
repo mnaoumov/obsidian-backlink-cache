@@ -1,0 +1,15 @@
+/**
+ * See default library styles: https://github.com/mnaoumov/obsidian-lib/blob/main/src/styles/main.scss
+ * See available library css classes: https://github.com/mnaoumov/obsidian-lib/blob/main/src/css-class.ts
+ */
+
+/*
+ * The uninstall and disable buttons of the successor-enabled notice and settings banner: one row with a gap, so
+ * they read as one choice, wrapping onto a second row on a narrow (mobile) screen.
+ */
+.backlink-cache-successor-enabled-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--size-4-2);
+  margin-top: var(--size-4-3);
+}

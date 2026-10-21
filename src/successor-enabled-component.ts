@@ -71,26 +71,26 @@ export class SuccessorEnabledComponent extends ComponentEx {
     this.renderContent(containerEl.createDiv());
   }
 
-  private addButton(buttonsEl: HTMLElement, verb: string, onClick: () => Promise<void>): ButtonComponent {
-    const button = new ButtonComponent(buttonsEl).onClick(convertAsyncToSync(onClick));
-    button.buttonEl.appendText(`${verb} `);
-    button.buttonEl.createEl('code', { text: this.pluginName });
-    return button;
-  }
-
   private renderContent(containerEl: DocumentFragment | HTMLElement): void {
     const messageEl = containerEl.createDiv();
-    messageEl.appendText('You have ');
     messageEl.createEl('code', { text: this.successorPluginName });
-    messageEl.appendText(' installed which is a successor for ');
+    messageEl.appendText(' is enabled and replaces ');
     messageEl.createEl('code', { text: this.pluginName });
+    messageEl.appendText(', which no longer does anything. Uninstall it, or disable it if you want to keep the files.');
 
-    const buttonsEl = containerEl.createDiv();
-    this.addButton(buttonsEl, 'Uninstall', async () => {
-      await this.app.plugins.uninstallPlugin(this.pluginId);
-    }).setCta();
-    this.addButton(buttonsEl, 'Disable', async () => {
-      await this.app.plugins.disablePluginAndSave(this.pluginId);
-    });
+    // The labels are the bare verbs: the message right above names the plugin, and a notice is too narrow for two
+    // labels that repeat its name to share one row.
+    const buttonsEl = containerEl.createDiv({ cls: 'backlink-cache-successor-enabled-buttons' });
+    new ButtonComponent(buttonsEl)
+      .setButtonText('Uninstall')
+      .setCta()
+      .onClick(convertAsyncToSync(async () => {
+        await this.app.plugins.uninstallPlugin(this.pluginId);
+      }));
+    new ButtonComponent(buttonsEl)
+      .setButtonText('Disable')
+      .onClick(convertAsyncToSync(async () => {
+        await this.app.plugins.disablePluginAndSave(this.pluginId);
+      }));
   }
 }

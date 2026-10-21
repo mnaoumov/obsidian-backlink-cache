@@ -20,7 +20,7 @@ const SCENARIO_TIMEOUT_IN_MS = 120_000;
 
 interface NoticeContent {
   readonly buttonTexts: string[];
-  // The code marks outside the buttons, which carry their own.
+  // The code marks outside the buttons.
   readonly codeTexts: string[];
   readonly text: string;
 }
@@ -108,7 +108,7 @@ async function runStep(step: Step): Promise<NoticeResult> {
           await app.plugins.enablePluginAndSave(SUCCESSOR_PLUGIN_ID);
           await reloadPlugin();
 
-          const noticeEl = await waitForNotice('is a successor for');
+          const noticeEl = await waitForNotice('is enabled and replaces');
           const result = readNotice(noticeEl);
           const disableButtonEl = [...noticeEl.querySelectorAll('button')].find((buttonEl) => buttonEl.textContent.startsWith('Disable'));
           if (!disableButtonEl) {
@@ -168,8 +168,13 @@ describe('successor notice', () => {
   it('asks to be removed, with only uninstall and disable, once Advanced Metadata Cache is enabled', async () => {
     const result = await runStep('showSuccessorEnabledNotice');
 
-    expect(result.text).toContain('You have Advanced Metadata Cache installed which is a successor for Backlink Cache');
-    expect(result.buttonTexts).toEqual(['Uninstall Backlink Cache', 'Disable Backlink Cache']);
+    expect(result.text).toContain(
+      'Advanced Metadata Cache is enabled and replaces Backlink Cache, which no longer does anything.'
+        + ' Uninstall it, or disable it if you want to keep the files.'
+    );
+    // The first mark is the notice's own header naming this plugin.
+    expect(result.codeTexts).toEqual(['Backlink Cache', 'Advanced Metadata Cache', 'Backlink Cache']);
+    expect(result.buttonTexts).toEqual(['Uninstall', 'Disable']);
     expect(result.isPluginEnabledAfterClick).toBe(false);
   }, SCENARIO_TIMEOUT_IN_MS);
 });
