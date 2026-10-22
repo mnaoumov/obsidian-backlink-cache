@@ -39,7 +39,7 @@ To show them, run the following command in the `DevTools Console`:
 window.DEBUG.enable('backlink-cache');
 ```
 
-For more details, refer to the [documentation](https://mnaoumov.dev/obsidian-dev-utils/guides/debugging/).
+For more details, refer to the [documentation](https://mnaoumov.dev/obsidian-lib/guides/debugging/).
 
 ## Changelog
 

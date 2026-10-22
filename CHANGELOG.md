@@ -17,7 +17,7 @@
 
 - chore(cspell): merge accepting 'lintable'
 - docs(demo-vault): merge documenting the successor suggestion
-- feat: merge suggesting Advanced Metadata Cache as the successor
+- feat: merge suggesting `Advanced Metadata Cache` as the successor
 - test(screenshots): merge setting the desktop capture theme with applyObsidianTheme
 - refactor: merge watching core-plugin toggles through CorePluginToggleComponent
 - chore(test): merge dropping the perf eval-cap overrides obsidian-dev-utils now provides
@@ -120,7 +120,7 @@
 - docs: standardize demo-vault README
 - docs: drop per-plugin demo-vault setup notes (bootstrap covered by the obsidian-dev-utils harness)
 - docs: unnumber demo-vault setup notes
-- docs(demo-vault): create the Backlink Cache demo vault
+- docs(demo-vault): create the `Backlink Cache` demo vault
 - docs: update
 - docs: migrate to AGENTS.md
 - chore: update libs
