@@ -17,9 +17,8 @@
     "creatordate",
     "Debouncer",
     "frontmatter",
-    "GHSA",
     "hotreload",
-    "hrqm",
+    "katex",
     "lezer",
     "lintable",
     "Linkpath",
@@ -32,12 +31,14 @@
     "postversion",
     "preversion",
     "rescanning",
-    "smol",
     "subkey",
     "tsbuildinfo",
     "undercounts",
     "unvalidated",
     "wdio"
+  ],
+  "ignoreRegExpList": [
+    "/GHSA(-[0-9a-z]{4}){3}/gi"
   ],
   "ignoreWords": [],
   "import": [],
