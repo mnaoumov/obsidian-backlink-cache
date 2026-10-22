@@ -16,6 +16,6 @@ Do not bring any of the old cache behavior back here: it belongs in `Advanced Me
 
 ## Invariant: the GitHub repo is never archived
 
-The plugin is retired in favour of `Advanced Metadata Cache`, but the GitHub repo is NOT archived, and must not be archived again. An archived repo stops installed copies from receiving updates, so the successor notices and any later fix would never reach existing users. Pushes and releases work as in any other repo.
+The plugin is retired in favour of `Advanced Metadata Cache`, but the GitHub repo is NOT archived, and must not be archived again. Archiving it on 2026-10-17 made the community directory archive the plugin, and on 2026-10-18 the directory's mirror bot dropped it from `obsidian-releases`' `community-plugins.json` (commit `5d9123fad`). Obsidian checks for updates against that list only, so from then on installed copies stopped receiving updates. Pushes and releases work as in any other repo.
 
-The plugin is still hidden from browsing in the community directory. Restoring the listing is a separate manual act on the directory dashboard, and it is the owner's call.
+Taking the repo out of the archive does not put the plugin back on that list. The listing has to be restored by hand on the directory's plugin dashboard; the next mirror run then adds it back, and updates flow again.
