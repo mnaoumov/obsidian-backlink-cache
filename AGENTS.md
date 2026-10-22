@@ -14,8 +14,8 @@ Do not bring any of the old cache behavior back here: it belongs in `Advanced Me
 
 `successor-notice.desktop.integration.test.ts` pins both notices in a real Obsidian, using a stub successor written into the temporary vault. Obsidian counts a plugin as enabled only once it is in the saved `enabledPlugins` set, so the stub is enabled with `enablePluginAndSave`, not `enablePlugin`.
 
-## Invariant: the GitHub repo is archived and the plugin is hidden from the directory
+## Invariant: the GitHub repo is never archived
 
-The GitHub repo is archived on purpose, so it is read-only: a push fails with `This repository was archived so it is read-only`. Archiving does not stop updates reaching users who already have the plugin installed. Any push, release included, needs the owner's approval of a short window: `gh repo unarchive mnaoumov/obsidian-backlink-cache --yes` right before the push, then `gh repo archive mnaoumov/obsidian-backlink-cache --yes` as soon as the push (and any release workflow it starts) has finished, so the repo spends minutes out of the archive, not hours.
+The plugin is retired in favour of `Advanced Metadata Cache`, but the GitHub repo is NOT archived, and must not be archived again. An archived repo stops installed copies from receiving updates, so the successor notices and any later fix would never reach existing users. Pushes and releases work as in any other repo.
 
-The plugin stays hidden from browsing in the community directory. Lifting the archive lets the listing be restored from the directory dashboard, but that is a separate manual act, and it is not done.
+The plugin is still hidden from browsing in the community directory. Restoring the listing is a separate manual act on the directory dashboard, and it is the owner's call.
