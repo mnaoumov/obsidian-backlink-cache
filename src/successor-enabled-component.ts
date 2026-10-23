@@ -3,6 +3,7 @@ import type { App } from 'obsidian';
 
 import { ComponentEx } from '@mnaoumov/obsidian-lib/components/component-ex';
 import { CallbackLayoutReadyComponent } from '@mnaoumov/obsidian-lib/components/layout-ready-component';
+import { appendCodeBlock } from '@mnaoumov/obsidian-lib/html-element';
 import {
   getInstalledPluginState,
   InstalledPluginState
@@ -60,9 +61,14 @@ export class SuccessorEnabledComponent extends ComponentEx {
           return;
         }
 
-        this.pluginNoticeComponent.showNotice(createFragment((fragmentEl) => {
-          this.renderContent(fragmentEl);
-        }));
+        // It stays until the user picks one of its two buttons: no timeout, no hiding on a stray click and no
+        // close button, because there is deliberately no decline. Both buttons unload this plugin, which hides it.
+        this.pluginNoticeComponent.showNotice(
+          createFragment((fragmentEl) => {
+            this.renderContent(fragmentEl);
+          }),
+          { shouldHideOnClick: false, shouldShowCloseButton: false }
+        );
       })
     );
   }
@@ -73,9 +79,11 @@ export class SuccessorEnabledComponent extends ComponentEx {
 
   private renderContent(containerEl: DocumentFragment | HTMLElement): void {
     const messageEl = containerEl.createDiv();
-    messageEl.createEl('code', { text: this.successorPluginName });
+    // `appendCodeBlock`, not a bare `<code>`: inside a notice a bare one only changes the font, so the names do not
+    // read as code.
+    appendCodeBlock(messageEl, this.successorPluginName);
     messageEl.appendText(' is enabled and replaces ');
-    messageEl.createEl('code', { text: this.pluginName });
+    appendCodeBlock(messageEl, this.pluginName);
     messageEl.appendText(', which no longer does anything. Uninstall it, or disable it if you want to keep the files.');
 
     // The labels are the bare verbs: the message right above names the plugin, and a notice is too narrow for two

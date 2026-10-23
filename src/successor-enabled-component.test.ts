@@ -1,4 +1,7 @@
-import type { PluginNoticeComponent } from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
+import type {
+  PluginNoticeComponent,
+  PluginNoticeComponentShowNoticeOptions
+} from '@mnaoumov/obsidian-lib/components/plugin-notice-component';
 import type {
   App as AppOriginal,
   Notice
@@ -33,7 +36,9 @@ const SUCCESSOR_PLUGIN_NAME = 'Advanced Metadata Cache';
 let appMock: App;
 let app: AppOriginal;
 let disablePluginAndSave: ReturnType<typeof vi.fn<(id: string) => Promise<void>>>;
-let showNotice: ReturnType<typeof vi.fn<(message: DocumentFragment | string) => Notice>>;
+type ShowNotice = (message: DocumentFragment | string, options?: PluginNoticeComponentShowNoticeOptions) => Notice;
+
+let showNotice: ReturnType<typeof vi.fn<ShowNotice>>;
 let uninstallPlugin: ReturnType<typeof vi.fn<(id: string) => Promise<void>>>;
 
 beforeEach(() => {
@@ -47,7 +52,7 @@ beforeEach(() => {
   uninstallPlugin = vi.fn<(id: string) => Promise<void>>(() => noopAsync());
   const lifecycle: PluginLifecycle = { disablePluginAndSave, uninstallPlugin };
   Object.assign(appMock.plugins, lifecycle);
-  showNotice = vi.fn<(message: DocumentFragment | string) => Notice>(() => strictProxy<Notice>({}));
+  showNotice = vi.fn<ShowNotice>(() => strictProxy<Notice>({}));
 });
 
 afterEach(() => {
@@ -101,6 +106,24 @@ describe('SuccessorEnabledComponent', () => {
       SUCCESSOR_PLUGIN_NAME,
       PLUGIN_NAME
     ]);
+  });
+
+  it('should style both plugin names as rendered inline code, which a bare code element is not inside a notice', async () => {
+    enableSuccessor();
+
+    await loadComponent(createComponent());
+
+    for (const codeEl of renderedNotice().querySelectorAll('code')) {
+      expect(codeEl.parentElement?.matches('.markdown-rendered.code')).toBe(true);
+    }
+  });
+
+  it('should keep the notice up until a button is used: no timeout, no hiding on click and no close button', async () => {
+    enableSuccessor();
+
+    await loadComponent(createComponent());
+
+    expect(ensureNonNullable(showNotice.mock.calls[0])[1]).toEqual({ shouldHideOnClick: false, shouldShowCloseButton: false });
   });
 
   it('should offer exactly two buttons, uninstall and disable', async () => {
