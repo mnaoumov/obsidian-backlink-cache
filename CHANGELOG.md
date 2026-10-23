@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 3.0.2
+
+- fix: the successor notice stays until you uninstall or disable the plugin, and shows the plugin names as code
+- docs: merge keeping the repo out of the archive, so installed copies keep receiving updates
+- chore(deps): merge moving to obsidian-lib 6 and obsidian-dev-toolkit 5
+
 ## 3.0.1
 
 - fix: merge tidying the successor-enabled notice and banner
