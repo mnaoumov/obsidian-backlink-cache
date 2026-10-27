@@ -19,7 +19,7 @@ import {
 } from 'vitest';
 
 interface ComponentModuleActual {
-  Component: new () => object;
+  readonly Component: new () => object;
 }
 
 interface PluginSuggestionComponentParams {
@@ -31,7 +31,7 @@ interface PluginSuggestionComponentParams {
 }
 
 interface SuggestionSettings {
-  isAdvancedMetadataCacheSuggestionDeclined: boolean;
+  readonly isAdvancedMetadataCacheSuggestionDeclined: boolean;
 }
 
 // Capture the `PluginSuggestionComponent` constructor argument so the closures the plugin hands it — the
@@ -104,7 +104,7 @@ vi.mock('./successor-enabled-component.ts', () => ({
 import { Plugin } from './plugin.ts';
 
 interface SettingTabsHolder {
-  settingTabs__: unknown[];
+  readonly settingTabs__: unknown[];
 }
 
 function createApp(): AppOriginal {
