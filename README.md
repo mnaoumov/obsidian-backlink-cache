@@ -25,6 +25,14 @@ A copy of the vault ships with every release. You can access it via any of the f
 
 Nothing else. It no longer patches `getBacklinksForFile()`, indexes canvases, or registers any command.
 
+## See also
+
+[My other Obsidian resources](https://github.com/mnaoumov/obsidian-resources)
+
+| Plugin | Features | How `Backlink Cache` differs |
+| --- | --- | --- |
+| [`Advanced Metadata Cache`](https://community.obsidian.md/plugins/advanced-metadata-cache) (my plugin) | Backlink index; names, titles, headings, properties and unlinked mentions | Superseded by `Advanced Metadata Cache`; only suggests installing it and removing this plugin |
+
 ## Installation
 
 Do not install this plugin: install [Advanced Metadata Cache](https://community.obsidian.md/plugins/advanced-metadata-cache) from the official Community Plugins repository instead.
@@ -56,10 +64,6 @@ Contributions are welcome — see [CONTRIBUTING](./CONTRIBUTING.md) to get set u
 <a href="https://www.buymeacoffee.com/mnaoumov" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" height="60" width="217"></a>
 
 <!-- markdownlint-enable MD033 -->
-
-## My other Obsidian resources
-
-[See my other Obsidian resources](https://github.com/mnaoumov/obsidian-resources).
 
 ## License
 
