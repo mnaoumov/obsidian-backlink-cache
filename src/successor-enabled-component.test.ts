@@ -24,8 +24,8 @@ import {
 import { SuccessorEnabledComponent } from './successor-enabled-component.ts';
 
 interface PluginLifecycle {
-  disablePluginAndSave: (id: string) => Promise<void>;
-  uninstallPlugin: (id: string) => Promise<void>;
+  readonly disablePluginAndSave: (id: string) => Promise<void>;
+  readonly uninstallPlugin: (id: string) => Promise<void>;
 }
 
 const PLUGIN_ID = 'backlink-cache';
