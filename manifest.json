@@ -1,7 +1,7 @@
 {
   "id": "backlink-cache",
   "name": "Backlink Cache",
-  "version": "3.0.2",
+  "version": "3.0.3",
   "minAppVersion": "1.14.5",
   "description": "Points to its successor, Advanced Metadata Cache, and does nothing else.",
   "author": "mnaoumov",
