@@ -41,6 +41,7 @@
     "@vitest/coverage-v8": "$@vitest/coverage-v8",
     "deepmerge-ts": "^8.0.2",
     "eslint": "$eslint",
+    "glob": "^14.0.3",
     "katex": "^0.18.2",
     "moment": "^2.31.0",
     "re2js": "^2.9.1",
