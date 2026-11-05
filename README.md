@@ -11,7 +11,7 @@ This plugin used to keep a backlink index for [Obsidian](https://obsidian.md/), 
 
 **The documentation is an interactive demo vault.** Its one feature note explains both notices and lets you bring the suggestion back.
 
-**[Start reading here](<./demo-vault/00 Start.md>)** — it is plain markdown, so it works on GitHub with nothing installed.
+**[Start reading here](<./demo-vault/00 Start.md>)** — it is plain markdown, so it works on `GitHub` with nothing installed.
 
 A copy of the vault ships with every release. You can access it via any of the following:
 
