@@ -2,250 +2,270 @@
 
 ## 3.0.3
 
-- chore(deps): float `obsidian-lib` to ^10.5.0
-- docs: add issue-filing instructions for AI agents
-- chore(github): give the bug form the field ids bug-report links prefill
-- build(deps): override re2js to ^2.9.1 for GHSA-gg6h-894w-4m9c
-- build(deps): bump `typescript-dev-toolkit` to ^5.2.0
-- build(deps): bump `obsidian-dev-toolkit` to ^7.1.1 and `typescript-dev-toolkit` to ^5.1.0
-- chore(deps): update vulnerable development dependencies
-- refactor: adopt readonly interface members
-- docs(readme): combine related resources and plugin comparisons
+This release has 2 documentation changes. 7 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Documentation
+
+- add issue-filing instructions for AI agents
+- **readme:** combine related resources and plugin comparisons
 
 ## 3.0.2
 
-- fix: the successor notice stays until you uninstall or disable the plugin, and shows the plugin names as code
-- docs: merge keeping the repo out of the archive, so installed copies keep receiving updates
-- chore(deps): merge moving to `obsidian-lib` 6 and `obsidian-dev-toolkit` 5
+This release has 1 fix and 1 documentation change. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### Fixed
+
+- the successor notice stays until you uninstall or disable the plugin, and shows the plugin names as code
+
+### Documentation
+
+- merge keeping the repo out of the archive, so installed copies keep receiving updates
 
 ## 3.0.1
 
-- fix: merge tidying the successor-enabled notice and banner
-- chore(github): point questions to Discussions from the new-issue page
-- ci: merge attesting release assets through the toolkit's reusable workflow
-- fix: merge marking the plugin names in the successor suggestion reason as code
-- chore(deps): merge moving off `obsidian-dev-utils` onto the @mnaoumov packages
-- docs: merge marking plugin names as code in docs, demo vault and comments
+This release has 2 fixes and 1 documentation change. 3 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Fixed
+
+- merge tidying the successor-enabled notice and banner
+- merge marking the plugin names in the successor suggestion reason as code
+
+### Documentation
+
+- merge marking plugin names as code in docs, demo vault and comments
 
 ## 3.0.0
 
-- feat!: merge reducing the plugin to pointing to its successor
+This release has 1 breaking change.
+
+### Breaking changes
+
+- merge reducing the plugin to pointing to its successor
 
 ## 2.17.0
 
-- chore(`cspell`): merge accepting 'lintable'
-- docs(demo-vault): merge documenting the successor suggestion
-- feat: merge suggesting `Advanced Metadata Cache` as the successor
-- test(screenshots): merge setting the desktop capture theme with applyObsidianTheme
-- refactor: merge watching core-plugin toggles through CorePluginToggleComponent
-- chore(test): merge dropping the perf eval-cap overrides `obsidian-dev-utils` now provides
-- test(screenshots): merge the reconciled desktop capture staging
-- test(screenshots): make the two Measurements store frames reproducible
-- chore(deps): merge floating `obsidian-integration-testing` to ^17.0.1
-- chore(deps): merge floating `obsidian-test-mocks` to ^7.0.0
-- fix(backlinks): merge reading the held metadata cache so a refresh never saves the editor
-- fix(canvas): merge loading the canvas index Obsidian leaves unloaded
-- fix(backlinks): merge patching the pane when it opens after load
-- fix(backlinks): merge installing the pane patch once per session
-- fix(test): merge the headless demo-vault toolkit install
-- fix(deps): restore the lockfile's missing resolved and integrity fields
-- refactor(canvas): replace the core-plugin prototype patches with a change subscription
-- refactor(backlinks): drop the shared-prototype onUserEnable patch
-- build(`markdownlint`): forbid hard-wrapped markdown paragraphs
-- test: move the three desktop index waits to Node, so a stall names itself
-- fix(test): restore the performance project's vault wiring and transport budget
-- fix(deps): float devalue to 5.9.4, clearing GHSA-9rgm-9g3h-6x36
-- test: record the capture suites' big-vault budgets as deliberately under the cap
-- chore(deps): drop the dead markdown-it override
-- chore(deps): drop the dead js-yaml override
-- style(comments): stop capitalizing the middle of a wrapped comment
-- docs: replace the private rule-id citations with what they assert
-- docs: name the library and the sibling plugins so a reader can resolve them
-- docs: replace the private tracker references with what they pointed at
-- chore(deps): move to `obsidian-dev-utils` 103
-- chore: adopt the `npm run gate` branch gate
-- docs: say where the debug command is run
-- docs: name the unversioned demo-vault asset and the folder it unzips into
-- chore: make the LICENSE copyright line lintable and guard it against the year roll-over
-- test(test-mocks): drop the hand-rolled app.plugins stub, and sweep the dependencies
-- fix(build): wire build:compile to buildCompile and drop the duplicate leaf script
+This release has 1 new feature, 9 fixes and 6 documentation changes. 20 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- merge suggesting `Advanced Metadata Cache` as the successor
+
+### Fixed
+
+- **backlinks:** merge reading the held metadata cache so a refresh never saves the editor
+- **canvas:** merge loading the canvas index Obsidian leaves unloaded
+- **backlinks:** merge patching the pane when it opens after load
+- **backlinks:** merge installing the pane patch once per session
+- **test:** merge the headless demo-vault toolkit install
+- **deps:** restore the lockfile's missing resolved and integrity fields
+- **test:** restore the performance project's vault wiring and transport budget
+- **deps:** float devalue to 5.9.4, clearing GHSA-9rgm-9g3h-6x36
+- **build:** wire build:compile to buildCompile and drop the duplicate leaf script
+
+### Documentation
+
+- **demo-vault:** merge documenting the successor suggestion
+- replace the private rule-id citations with what they assert
+- name the library and the sibling plugins so a reader can resolve them
+- replace the private tracker references with what they pointed at
+- say where the debug command is run
+- name the unversioned demo-vault asset and the folder it unzips into
 
 ## 2.16.5
 
-- chore(deps): sweep caret-ranged dependencies to latest
-- fix(deps): move to `obsidian-integration-testing` 11 and `obsidian-dev-utils` 96.5.2
-- fix(deps): drop the brace-expansion file: override that breaks a clean install
-- docs: point plugin-directory links at community.obsidian.md
+This release has 2 fixes and 1 documentation change. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### Fixed
+
+- **deps:** move to `obsidian-integration-testing` 11 and `obsidian-dev-utils` 96.5.2
+- **deps:** drop the brace-expansion file: override that breaks a clean install
+
+### Documentation
+
+- point plugin-directory links at community.obsidian.md
 
 ## 2.16.4
 
-- docs(readme): render the same in Obsidian's plugin page as on `GitHub`
-- chore: update libs
-- chore: update `obsidian-dev-utils` to 94.6.1
-- chore: update `obsidian-dev-utils` to 94.6.0
-- fix: override deepmerge-ts to clear GHSA-ggr8-5vv4-36mx
-- test: gate the demo vault by clicking every code button
-- chore: teach `cspell` the advisory wording
-- chore: update libs
-- docs: add store screenshots and surface them in the README
-- docs(demo-vault): give the settings note its buttons
+This release has 1 fix and 3 documentation changes. 6 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Fixed
+
+- override deepmerge-ts to clear GHSA-ggr8-5vv4-36mx
+
+### Documentation
+
+- **readme:** render the same in Obsidian's plugin page as on `GitHub`
+- add store screenshots and surface them in the README
+- **demo-vault:** give the settings note its buttons
 
 ## 2.16.3
 
-- docs: make the demo vault the documentation, in the standard layout
-- feat(demo-vault): migrate to `obsidian-dev-utils` 93.3.1 and adopt the authoring convention
+This release has 1 new feature and 1 documentation change.
+
+### New
+
+- **demo-vault:** migrate to `obsidian-dev-utils` 93.3.1 and adopt the authoring convention
+
+### Documentation
+
+- make the demo vault the documentation, in the standard layout
 
 ## 2.16.2
 
-- chore: update libs and adopt `obsidian-integration-testing` 10
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 2.16.1
 
-- chore: update libs
-- fix: re #17
-- refactor(test): collapse the shared integration suites into one cross-platform file each
-- chore: update libs
-- chore(`vitest`): adopt the shared Obsidian plugin `vitest` configuration
+This release has 1 fix. 4 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Fixed
+
+- re #17
 
 ## 2.16.0
 
-- refactor(settings): move the settings tab onto the declarative settings API
-- chore: align the brace-expansion pin check with the rest of the workspace
-- chore: update libs and clear the `npm` audit
-- docs: fix the demo vault download instructions
+This release has 1 documentation change. 3 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Documentation
+
+- fix the demo vault download instructions
 
 ## 2.15.0
 
-- feat: re #13
-- refactor(canvas): consume `obsidian-dev-utils` getCanvasReferences, drop duplicated extraction
-- chore: update libs
-- chore: update libs
-- docs: drop stale CLAUDE.md "Known Issues" pointers from perf test comments
-- test(perf): isolate bulk-delete harness from native system-trash cost
+This release has 1 new feature and 1 documentation change. 4 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- \[FR\] Obsidian is adding native support to backlinks in Canvas files (#13)
+
+### Documentation
+
+- drop stale CLAUDE.md "Known Issues" pointers from perf test comments
 
 ## 2.14.5
 
-- chore: update libs
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 2.14.4
 
-- chore: update libs
-- chore(demo-vault): drop committed Invocables placeholder
-- fix(demo-vault): export invoke() from startup script; add Invocables folder
+This release has 1 fix. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Fixed
+
+- **demo-vault:** export invoke() from startup script; add Invocables folder
 
 ## 2.14.3
 
-- docs: standardize demo-vault README
-- docs: drop per-plugin demo-vault setup notes (bootstrap covered by the `obsidian-dev-utils` harness)
-- docs: unnumber demo-vault setup notes
-- docs(demo-vault): create the `Backlink Cache` demo vault
-- docs: update
-- docs: migrate to AGENTS.md
-- chore: update libs
-- chore: update libs
+This release has 6 documentation changes. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Documentation
+
+- standardize demo-vault README
+- drop per-plugin demo-vault setup notes (bootstrap covered by the `obsidian-dev-utils` harness)
+- unnumber demo-vault setup notes
+- **demo-vault:** create the `Backlink Cache` demo vault
+- update
+- migrate to AGENTS.md
 
 ## 2.14.2
 
-- chore: update libs
-- chore: update libs
-- chore: update `obsidian-dev-utils` to 85.0.0
-- refactor: pass params objects to backlink cache helpers
-- build: lock typescript to 6.0.3
-- test: wire integration-testing vitest-setup into integration projects
-- chore: update libs
-- chore: sort tsconfig types
+This release has maintenance changes only. 8 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
 
 ## 2.14.1
 
-- refactor: new template
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 2.14.0
 
-- perf: make faster
+This release has 1 improvement.
+
+### Improved
+
+- make faster
 
 ## 2.13.0
 
-- test: add real-Obsidian functional guard for the getCache canvas patch
-- test: add real-Obsidian functional guard for the backlink panel patch
-- test: add real-Obsidian on/off perf tripwire for core patches
-- test: add deterministic complexity-scaling guards for index lookups
-- test: add real-Obsidian perf guard for updateRelatedLinks patch
-- feat: make bulk folder deletion O(N) by patching updateRelatedLinks
-- chore: update libs
-- chore: unify tsconfig
-- test: cleanup
+This release has 1 new feature. 8 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### New
+
+- make bulk folder deletion O(N) by patching updateRelatedLinks
 
 ## 2.12.8
 
-- test: avoid reimplementing
-- refactor: monkey around
+This release has maintenance changes only. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
 
 ## 2.12.7
 
-- test: add README-call integration tests for desktop and mobile
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 2.12.6
 
-- refactor: new template
-- chore: update version script
+This release has maintenance changes only. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
 
 ## 2.12.5
 
-- chore: update libs
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 2.12.4
 
-- chore: update libs
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 2.12.3
 
-- chore: update libs
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 2.12.2
 
-- refactor: new template
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 2.12.1
 
-- chore: fix typo
-- chore: update template
+This release has maintenance changes only. 2 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
 
 ## 2.12.0
 
-- feat: add Refresh backlink panels command re #14
-- chore: update libs
+This release has 1 new feature. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### New
+
+- add Refresh backlink panels command re #14
 
 ## 2.11.21
 
-- chore: update libs
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 2.11.20
 
-- fix: properly disable extra notices re #11
-- chore: update libs
+This release has 1 fix. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### Fixed
+
+- properly disable extra notices re #11
 
 ## 2.11.19
 
-- chore: update libs
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 2.11.18
 
-- chore: update libs
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 2.11.17
 
-- chore: update libs
-- chore: lint
-- chore: enable `markdownlint`
+This release has maintenance changes only. 3 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
 
 ## 2.11.16
 
-- fix: build
-- chore: update libs
+This release has 1 fix. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
+
+### Fixed
+
+- build
 
 ## 2.11.15
 
-- chore: enable conventional commits
+This release has maintenance changes only. 1 maintenance commit (tests, build, CI, refactoring, dependencies) is not listed.
 
 ## 2.11.14
 
@@ -305,9 +325,17 @@
 
 ## 2.11.0
 
+This release has 1 other change.
+
+### Other changes
+
 - Improve precision for multi links in frontmatter
 
 ## 2.10.0
+
+This release has 1 other change.
+
+### Other changes
 
 - Add setting shouldShowProgressBarOnLoad (#8)
 
@@ -330,6 +358,10 @@
 
 ## 2.8.0
 
+This release has 1 other change.
+
+### Other changes
+
 - handleFileCreate/handleFileModify
 
 ## 2.7.6
@@ -337,6 +369,10 @@
 - Fix counts()
 
 ## 2.7.5
+
+This release has 2 other changes.
+
+### Other changes
 
 - Improve performance
 - Prevent double init
@@ -355,24 +391,44 @@
 
 ## 2.7.1
 
+This release has 1 other change.
+
+### Other changes
+
 - New template
 
 ## 2.7.0
 
+This release has 1 other change.
+
+### Other changes
+
 - Switch to progress bar
 
 ## 2.6.0
+
+This release has 2 other changes.
+
+### Other changes
 
 - Install typescript
 - Ensure all pending operations terminated
 
 ## 2.5.0
 
+This release has 3 other changes.
+
+### Other changes
+
 - Use strongly typed canvas references
 - Use CanvasReference
 - Use canvas.d.ts
 
 ## 2.4.0
+
+This release has 10 other changes.
+
+### Other changes
 
 - Parse metadata frontmatter links
 - Add auto-refresh
@@ -387,6 +443,10 @@
 
 ## 2.3.0
 
+This release has 1 other change.
+
+### Other changes
+
 - Pass proper CanvasEphemeralState to highlight the node
 
 ## 2.2.15
@@ -399,10 +459,18 @@
 
 ## 2.2.13
 
+This release has 2 other changes.
+
+### Other changes
+
 - Lint
 - Update task name
 
 ## 2.2.12
+
+This release has 1 other change.
+
+### Other changes
 
 - format
 
@@ -428,6 +496,10 @@
 
 ## 2.2.6
 
+This release has 1 other change.
+
+### Other changes
+
 - Remove non-standard setImmediate
 
 ## 2.2.5
@@ -435,6 +507,10 @@
 - Minor changes
 
 ## 2.2.4
+
+This release has 1 other change.
+
+### Other changes
 
 - Refactor
 
@@ -444,6 +520,10 @@
 
 ## 2.2.2
 
+This release has 1 other change.
+
+### Other changes
+
 - Refactor abortSignal
 
 ## 2.2.1
@@ -452,17 +532,33 @@
 
 ## 2.2.0
 
+This release has 1 other change.
+
+### Other changes
+
 - Refactor loop
 
 ## 2.1.2
+
+This release has 1 other change.
+
+### Other changes
 
 - Read JSON without console.log errors
 
 ## 2.1.1
 
+This release has 1 other change.
+
+### Other changes
+
 - Better check for incomplete canvas
 
 ## 2.1.0
+
+This release has 2 other changes.
+
+### Other changes
 
 - Show canvas backlinks only if Canvas plugin enabled
 - Don't fail on invalid canvas
@@ -472,6 +568,10 @@
 - Enable backlinks for canvas files
 
 ## 1.11.5
+
+This release has 1 other change.
+
+### Other changes
 
 - Rename next
 
@@ -497,26 +597,50 @@
 
 ## 1.10.0
 
+This release has 1 other change.
+
+### Other changes
+
 - Allow passing path or file
 
 ## 1.9.0
 
-- Invoke `processPendingActions` sync
-- Refactor to `monkey-around`
+This release has 2 other changes.
+
+### Other changes
+
+- Invoke processPendingActions sync
+- Refactor to monkey-around
 
 ## 1.8.1
+
+This release has 1 other change.
+
+### Other changes
 
 - Fix init order
 
 ## 1.8.0
 
+This release has 1 other change.
+
+### Other changes
+
 - Stop initializing if unloaded
 
 ## 1.7.0
 
+This release has 1 other change.
+
+### Other changes
+
 - Fix race conditions
 
 ## 1.6.0
+
+This release has 1 other change.
+
+### Other changes
 
 - Skip file if the cache could not be loaded
 
@@ -530,9 +654,17 @@
 
 ## 1.5.4
 
+This release has 1 other change.
+
+### Other changes
+
 - Avoid repetitive actions to improve performance
 
 ## 1.5.3
+
+This release has 1 other change.
+
+### Other changes
 
 - Switch debounce timeout to one minute
 
@@ -542,22 +674,42 @@
 
 ## 1.5.1
 
+This release has 1 other change.
+
+### Other changes
+
 - Refactor
 
 ## 1.5.0
+
+This release has 1 other change.
+
+### Other changes
 
 - Add support for missing file argument
 
 ## 1.4.0
 
+This release has 1 other change.
+
+### Other changes
+
 - Keep original func
 
 ## 1.3.0
+
+This release has 2 other changes.
+
+### Other changes
 
 - Process in alphabetic order
 - Debounce bulk operations
 
 ## 1.2.0
+
+This release has 1 other change.
+
+### Other changes
 
 - Update cache only when layout is ready
 
