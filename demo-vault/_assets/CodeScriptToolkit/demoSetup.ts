@@ -1,6 +1,7 @@
 import type { App } from 'obsidian';
 
 const PLUGIN_ID = 'backlink-cache';
+const JSON_INDENT = 2;
 
 /**
  * Clears a previous "Not now" and reloads the plugin, so the successor suggestion shows again.
@@ -17,6 +18,6 @@ export async function showSuggestionAgain(app: App): Promise<void> {
     ? JSON.parse(await app.vault.adapter.read(dataPath)) as Record<string, unknown>
     : {};
   data['isAdvancedMetadataCacheSuggestionDeclined'] = false;
-  await app.vault.adapter.write(dataPath, `${JSON.stringify(data, null, 2)}\n`);
+  await app.vault.adapter.write(dataPath, `${JSON.stringify(data, null, JSON_INDENT)}\n`);
   await app.plugins.enablePlugin(PLUGIN_ID);
 }
