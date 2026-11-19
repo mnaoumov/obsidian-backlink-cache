@@ -341,8 +341,7 @@ This release has 1 other change.
 
 ## 2.9.0
 
-- Support links to non-existing files
-  - fix: <https://github.com/mnaoumov/obsidian-better-markdown-links/issues/18>
+- The backlink cache now also records links that point to files that do not exist yet ([obsidian-better-markdown-links#18](https://github.com/mnaoumov/obsidian-better-markdown-links/issues/18)).
 
 ## 2.8.3
 
