@@ -1,5 +1,16 @@
 # CHANGELOG
 
+## 3.0.4
+
+This release has 4 documentation changes. 6 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
+
+### Documentation
+
+- **changelog:** rewrite the 2.9.0 entry as readable notes
+- **changelog:** regroup the published release notes for readers
+- make issue attachments optional and strongly encouraged
+- link to the Obsidian resources page
+
 ## 3.0.3
 
 This release has 2 documentation changes. 7 maintenance commits (tests, build, CI, refactoring, dependencies) are not listed.
