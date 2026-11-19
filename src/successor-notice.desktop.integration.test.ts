@@ -39,8 +39,8 @@ async function runStep(step: Step): Promise<NoticeResult> {
       const WAIT_TIMEOUT_IN_MS = 5000;
       const successorFolder = `${app.vault.configDir}/plugins/${SUCCESSOR_PLUGIN_ID}`;
 
-      function findNotice(fragment: string): HTMLElement | undefined {
-        return [...document.querySelectorAll<HTMLElement>('.notice')].find((noticeEl) => noticeEl.textContent.includes(fragment));
+      function findNotice(fragment: string): HTMLElement | null {
+        return [...document.querySelectorAll<HTMLElement>('.notice')].find((noticeEl) => noticeEl.textContent.includes(fragment)) ?? null;
       }
 
       function readNotice(noticeEl: HTMLElement): NoticeContent {
@@ -62,16 +62,13 @@ async function runStep(step: Step): Promise<NoticeResult> {
       }
 
       async function waitForNotice(fragment: string): Promise<HTMLElement> {
-        let noticeEl: HTMLElement | undefined;
         await waitUntil({
           message: `a notice containing "${fragment}"`,
-          predicate: () => {
-            noticeEl = findNotice(fragment);
-            return noticeEl !== undefined;
-          },
+          predicate: () => findNotice(fragment) !== null,
           timeoutInMilliseconds: WAIT_TIMEOUT_IN_MS
         });
-        if (!noticeEl) {
+        const noticeEl = findNotice(fragment);
+        if (noticeEl === null) {
           throw new Error(`No notice containing "${fragment}".`);
         }
         return noticeEl;

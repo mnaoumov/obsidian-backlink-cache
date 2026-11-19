@@ -123,6 +123,8 @@ async function createLoadedPlugin(app: AppOriginal): Promise<Plugin> {
 
 function createManifest(): PluginManifest {
   return strictProxy<PluginManifest>({
+    // eslint-disable-next-line unicorn/name-replacements -- Mirrors Obsidian's `PluginManifest.dir`, which the `obsidian-lib` 11 plugin base reads on load.
+    dir: '.obsidian/plugins/backlink-cache',
     id: 'backlink-cache',
     name: 'Backlink Cache',
     version: '1.0.0'
